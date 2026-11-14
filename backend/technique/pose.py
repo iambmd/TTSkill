@@ -178,6 +178,50 @@ def dominant_side(track: PoseTrack) -> str:
     return "right" if pr > pl else "left"
 
 
+def paddle_scores(video: str | Path, track: PoseTrack, every: int = 4) -> dict:
+    """Count red-rubber pixels around each wrist over sampled frames. The bat hand holds
+    the paddle, so this is a stronger cue than swing speed (the free arm also swings,
+    and walking between points moves both arms)."""
+    if len(track.times) == 0:
+        return {"left": 0, "right": 0}
+    xy = _interp_nan(track.lm[:, :, :2]) * np.array([track.width, track.height])
+    torso = np.median(np.linalg.norm((xy[:, L_SHOULDER] + xy[:, R_SHOULDER]) / 2
+                                     - (xy[:, L_HIP] + xy[:, R_HIP]) / 2, axis=1))
+    r = max(12, int(torso * 0.45))
+    cap = cv2.VideoCapture(str(video))
+    scores = {"left": 0, "right": 0}
+    i = 0
+    while i < len(track.times):
+        cap.set(cv2.CAP_PROP_POS_FRAMES, i * int(track.meta.get("stride", 1)))
+        ok, frame = cap.read()
+        if not ok:
+            break
+        if track.valid[i]:
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            red = (((hsv[..., 0] < 10) | (hsv[..., 0] > 170)) & (hsv[..., 1] > 110)
+                   & (hsv[..., 2] > 60))
+            for side, wi in (("left", L_WRIST), ("right", R_WRIST)):
+                x, y = xy[i, wi].astype(int)
+                scores[side] += int(red[max(0, y - r):y + r, max(0, x - r):x + r].sum())
+        i += every
+    cap.release()
+    return scores
+
+
+def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto") -> tuple[str, str]:
+    """Pick the bat arm (as a MediaPipe side label). Returns (side, how).
+    Order: paddle colour near a wrist (when clearly one-sided) > the user's --hand > the
+    faster wrist."""
+    sc = paddle_scores(video, track)
+    lo, hi = sorted(sc.values())
+    if hi > 2000 and hi > 1.8 * max(lo, 1):
+        return max(sc, key=sc.get), f"paddle colour near wrist {sc}"
+    if hand in ("left", "right"):
+        return hand, "user"
+    side = dominant_side(track)
+    return (side if side != "unknown" else "right"), "faster wrist"
+
+
 def swing_peaks(track: PoseTrack, side: str | None = None, min_gap_s: float = 0.5) -> np.ndarray:
     """Frame indices of swing peaks (max wrist speed of the bat hand)."""
     side = side or dominant_side(track)

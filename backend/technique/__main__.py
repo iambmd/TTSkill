@@ -21,6 +21,8 @@ def main():
     ap.add_argument("--analyzer", default="auto", choices=["auto", "claude", "offline"])
     ap.add_argument("--start", type=float, help="window start (s); default: auto")
     ap.add_argument("--end", type=float, help="window end (s)")
+    ap.add_argument("--hand", default="auto", choices=["auto", "left", "right"],
+                    help="player's bat hand; auto detects the paddle near a wrist")
     ap.add_argument("--window", type=float, default=8.0, help="auto window length (s)")
     args = ap.parse_args()
 
@@ -29,7 +31,7 @@ def main():
     if args.video:
         win = (args.start, args.end) if args.start is not None and args.end is not None else None
         res = run_video(args.video, args.out, args.stroke, args.player, args.analyzer,
-                        window=win, window_s=args.window)
+                        window=win, window_s=args.window, hand=args.hand)
     else:
         res = run_text(args.text, args.out, args.stroke, args.player, args.analyzer)
     print(json.dumps(res, indent=2))

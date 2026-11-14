@@ -23,10 +23,10 @@ from .video_prompt import build_prompts
 
 
 def technique_breakdown(video_path: str, job_dir: str, stroke: str = "forehand",
-                        player: Optional[str] = None) -> dict:
+                        player: Optional[str] = None, hand: str = "auto") -> dict:
     """Full pipeline on a video: finds the best rally, extracts pose, writes the stroke
     breakdown JSON + text-to-video prompt, and renders the vertical breakdown video."""
-    return run_video(video_path, job_dir, stroke, player)
+    return run_video(video_path, job_dir, stroke, player, hand=hand)
 
 
 def technique_from_text(text: str, job_dir: str, stroke: str = "forehand",
@@ -49,8 +49,8 @@ def extract_pose(video_path: str, job_dir: str, start: float, end: float) -> dic
     tr = pose.extract_pose(clip)
     with open(out / "pose.pkl", "wb") as f:
         pickle.dump(tr, f)
-    side = pose.dominant_side(tr)
-    summary = pose.summarize(tr, side if side != "unknown" else "right")
+    side, _ = pose.bat_side(clip, tr)
+    summary = pose.summarize(tr, side)
     (out / "pose_summary.json").write_text(json.dumps(summary, indent=2))
     return summary
 
@@ -61,8 +61,7 @@ def analyze_technique(job_dir: str, stroke: str = "forehand", player: Optional[s
     out = Path(job_dir)
     with open(out / "pose.pkl", "rb") as f:
         tr = pickle.load(f)
-    side = pose.dominant_side(tr)
-    side = side if side != "unknown" else "right"
+    side, _ = pose.bat_side(out / "clip.mp4", tr)
     keys, pi = key_moments(tr, side)
     summary = pose.summarize(tr, side)
     clip = str(out / "clip.mp4")
@@ -86,9 +85,8 @@ def render_breakdown(job_dir: str) -> str:
     with open(out / "pose.pkl", "rb") as f:
         tr = pickle.load(f)
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
-    side = pose.dominant_side(tr)
-    return _render(str(out / "clip.mp4"), tr, b, str(out / "breakdown.mp4"),
-                   side if side != "unknown" else "right")
+    side, _ = pose.bat_side(out / "clip.mp4", tr)
+    return _render(str(out / "clip.mp4"), tr, b, str(out / "breakdown.mp4"), side)
 
 
 TOOLS = [technique_breakdown, technique_from_text, find_rallies, extract_pose,

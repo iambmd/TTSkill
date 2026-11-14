@@ -82,3 +82,24 @@ def test_sample_longest_rally_found():
     r = audio.find_rallies(SAMPLE)
     best = max(r, key=lambda x: x["hits"])
     assert best["start"] < 60 < best["end"]
+
+
+def test_bat_side_uses_paddle_colour_then_user_hand(tmp_path):
+    import cv2
+    from technique.pose import bat_side
+    tr = _fake_track(n=30)
+    vid = str(tmp_path / "v.mp4")
+    wr = cv2.VideoWriter(vid, cv2.VideoWriter_fourcc(*"mp4v"), 30, (1280, 720))
+    for _ in range(30):
+        wr.write(np.full((720, 1280, 3), 90, np.uint8))  # grey: no paddle visible
+    wr.release()
+    assert bat_side(vid, tr, "left") == ("left", "user")
+    # paint a red paddle at the left-wrist position (x=0.40, y=0.50)
+    wr = cv2.VideoWriter(vid, cv2.VideoWriter_fourcc(*"mp4v"), 30, (1280, 720))
+    for _ in range(30):
+        f = np.full((720, 1280, 3), 90, np.uint8)
+        cv2.circle(f, (512, 360), 40, (0, 0, 220), -1)
+        wr.write(f)
+    wr.release()
+    side, how = bat_side(vid, tr, "right")
+    assert side == "left" and how.startswith("paddle")

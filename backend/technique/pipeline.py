@@ -77,7 +77,8 @@ def key_moments(track: pose.PoseTrack, side: str,
 def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional[str] = None,
               analyzer: str = "auto", window: Optional[tuple[float, float]] = None,
               window_s: float = 8.0, t2v_provider: str = "none",
-              progress: Optional[Progress] = None) -> dict:
+              progress: Optional[Progress] = None, hand: str = "auto") -> dict:
+    """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible)."""
     t0 = time.time()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -95,9 +96,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
                                 start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
     track = pose.extract_pose(clip)
-    side = pose.dominant_side(track)
-    if side == "unknown":
-        side = "right"
+    side, how = pose.bat_side(clip, track, hand)
+    _log(progress, f"bat hand: {side} ({how})")
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
     keys, peak_i = key_moments(track, side, hits)
@@ -118,6 +118,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         _log(progress, f"{a.name} failed ({e}); using offline analyzer")
         b = OfflineAnalyzer().from_video(clip, stroke, frame_times, summary, keys, player,
                                          contact_metrics=contact)
+    b.handedness = side if (how != "faster wrist") else b.handedness
     # make sure every step has a usable time inside the clip
     for s, k in zip(b.steps, keys):
         if s.key_time_s is None or not (0 <= s.key_time_s <= dur):
@@ -137,6 +138,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         "stroke": stroke,
         "window": {k: v for k, v in win.items() if k != "hit_times"},
         "analyzer": b.source,
+        "bat_hand": {"side": side, "how": how},
         "key_times_s": keys,
         "outputs": {
             "breakdown_json": str(out / "breakdown.json"),
