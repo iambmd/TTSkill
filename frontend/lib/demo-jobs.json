@@ -10,7 +10,7 @@
       "player": "Ma Long",
       "video": "MaLongForehandPractice_Sample.mp4",
       "analyzer": "offline-pose-template",
-      "elapsed_s": 37.5
+      "elapsed_s": 46.3
     },
     "resultUrl": "/demo/breakdown.mp4",
     "breakdown": {
@@ -34,7 +34,7 @@
             "Turn the waist",
             "back leg"
           ],
-          "key_time_s": 5.616666666666667,
+          "key_time_s": 5.766666666666667,
           "callouts": [
             "WAIST TURN",
             "WEIGHT BACK"
@@ -65,7 +65,7 @@
             "forehead",
             "Reset feet"
           ],
-          "key_time_s": 6.416666666666667,
+          "key_time_s": 6.166666666666667,
           "callouts": [
             "BACK TO READY"
           ]
