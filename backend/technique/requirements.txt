@@ -1,0 +1,9 @@
+# Technique breakdown pipeline (Feature A). Python 3.11. Also needs ffmpeg on PATH.
+numpy>=2.0
+scipy>=1.13
+opencv-python-headless>=4.10
+mediapipe>=0.10.20
+pillow>=10.0
+pydantic>=2.6
+anthropic>=0.40   # optional: only used when ANTHROPIC_API_KEY is set
+pytest>=8.0
