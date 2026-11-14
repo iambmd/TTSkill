@@ -1,0 +1,125 @@
+{
+  "demo-breakdown": {
+    "id": "demo-breakdown",
+    "kind": "breakdown",
+    "status": "done",
+    "progress": 1,
+    "message": "Cached run of the technique pipeline on the sample clip (IMG_8782.MOV, forehand). Picked the longest rally by ball-contact sound, 53.08 to 61.08 s.",
+    "params": {
+      "stroke": "forehand",
+      "player": "",
+      "video": "IMG_8782.MOV",
+      "analyzer": "offline-pose-template",
+      "elapsed_s": 42.4
+    },
+    "resultUrl": "/demo/breakdown.mp4",
+    "breakdown": {
+      "player": "Player",
+      "stroke": "forehand",
+      "handedness": "unknown",
+      "headline": "Load low. Drive through.",
+      "grip": "Shakehand grip, relaxed; index finger on the backhand rubber, thumb soft.",
+      "stance": "Shoulder-width base with fairly upright legs (knees ~170 deg).",
+      "swing_path": "Low-to-high and forward, turning the waist; bat closes over the ball.",
+      "contact_point": "Ball met between waist and chest, in front of the body, elbow open to ~117 deg.",
+      "follow_through": "Bat finishes near the forehead, then snaps back to neutral.",
+      "steps": [
+        {
+          "title": "Load the bat side",
+          "lines": [
+            "Turn the waist back.",
+            "Weight onto the back leg."
+          ],
+          "highlight_words": [
+            "Turn the waist",
+            "back leg"
+          ],
+          "key_time_s": 4.95,
+          "callouts": [
+            "WAIST TURN",
+            "WEIGHT BACK"
+          ]
+        },
+        {
+          "title": "Drive through contact",
+          "lines": [
+            "Hit at the top of the bounce.",
+            "Brush forward and up."
+          ],
+          "highlight_words": [
+            "top of the bounce",
+            "forward and up"
+          ],
+          "key_time_s": 5.3,
+          "callouts": [
+            "CONTACT IN FRONT"
+          ]
+        },
+        {
+          "title": "Recover to ready",
+          "lines": [
+            "Finish by the forehead.",
+            "Reset feet for the next ball."
+          ],
+          "highlight_words": [
+            "forehead",
+            "Reset feet"
+          ],
+          "key_time_s": 5.75,
+          "callouts": [
+            "BACK TO READY"
+          ]
+        }
+      ],
+      "source": "offline-pose-template"
+    }
+  },
+  "demo-autocut": {
+    "id": "demo-autocut",
+    "kind": "autocut",
+    "status": "done",
+    "progress": 1,
+    "message": "Cached run on the sample clip (IMG_8782.MOV, 3:35). Found 19 rallies; these are the top 5 by shot count, best first, padded 1.5 s each side.",
+    "params": {
+      "video": "IMG_8782.MOV",
+      "mode": "highlights",
+      "top_n": 5,
+      "threshold": 3.0,
+      "gap": 1.6,
+      "min_hits": 4
+    },
+    "resultUrl": "/demo/highlights.mp4",
+    "rallies": [
+      {
+        "start": 55.51,
+        "end": 66.28,
+        "hits": 15,
+        "shots": 8
+      },
+      {
+        "start": 186.67,
+        "end": 194.41,
+        "hits": 14,
+        "shots": 7
+      },
+      {
+        "start": 27.46,
+        "end": 34.3,
+        "hits": 12,
+        "shots": 6
+      },
+      {
+        "start": 145.78,
+        "end": 149.97,
+        "hits": 9,
+        "shots": 4
+      },
+      {
+        "start": 14.42,
+        "end": 19.05,
+        "hits": 8,
+        "shots": 4
+      }
+    ]
+  }
+}
