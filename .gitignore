@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+.vercel
+__pycache__/
+.venv/
+*.mov
+*.MOV
+samples/
+backend/data/
+data/
