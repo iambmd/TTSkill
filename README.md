@@ -45,10 +45,10 @@ To try the UI without Python, run `cd frontend && npm run dev`; the API routes t
 
 ## Judging demo
 
-Cached results from the sample clip (IMG_8782.MOV) ship with the frontend, so the demo never waits on the pipeline:
+Cached results ship with the frontend, so the demo never waits on the pipeline:
 
-- `/jobs/demo-breakdown`: forehand breakdown video and steps from the technique pipeline.
-- `/jobs/demo-autocut`: top 5 rallies by shot count, cut into a 49 s highlight reel.
+- `/jobs/demo-breakdown`: forehand breakdown video and steps from the technique pipeline, on a clip of Ma Long.
+- `/jobs/demo-autocut`: from IMG_8782.MOV, the top 5 rallies by shot count, cut into a 49 s highlight reel.
 
 Set `DEMO_MODE=1` for the frontend to make every submission return these results instantly. Files: `frontend/lib/demo-jobs.json` and `frontend/public/demo/*.mp4`.
 

@@ -4,24 +4,24 @@
     "kind": "breakdown",
     "status": "done",
     "progress": 1,
-    "message": "Cached run of the technique pipeline on the sample clip (IMG_8782.MOV, forehand). Picked the longest rally by ball-contact sound, 53.08 to 61.08 s.",
+    "message": "Cached run of the technique pipeline on a 15 s clip of Ma Long's forehand practice. Bat hand: right (found from paddle colour near each wrist).",
     "params": {
       "stroke": "forehand",
-      "player": "",
-      "video": "IMG_8782.MOV",
+      "player": "Ma Long",
+      "video": "MaLongForehandPractice_Sample.mp4",
       "analyzer": "offline-pose-template",
-      "elapsed_s": 42.4
+      "elapsed_s": 37.5
     },
     "resultUrl": "/demo/breakdown.mp4",
     "breakdown": {
-      "player": "Player",
+      "player": "Ma Long",
       "stroke": "forehand",
-      "handedness": "unknown",
+      "handedness": "right",
       "headline": "Load low. Drive through.",
       "grip": "Shakehand grip, relaxed; index finger on the backhand rubber, thumb soft.",
-      "stance": "Shoulder-width base with fairly upright legs (knees ~170 deg).",
+      "stance": "Wide base with deep knee bend (knees ~116 deg).",
       "swing_path": "Low-to-high and forward, turning the waist; bat closes over the ball.",
-      "contact_point": "Ball met between waist and chest, in front of the body, elbow open to ~117 deg.",
+      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~119 deg.",
       "follow_through": "Bat finishes near the forehead, then snaps back to neutral.",
       "steps": [
         {
@@ -34,7 +34,7 @@
             "Turn the waist",
             "back leg"
           ],
-          "key_time_s": 4.95,
+          "key_time_s": 5.616666666666667,
           "callouts": [
             "WAIST TURN",
             "WEIGHT BACK"
@@ -50,7 +50,7 @@
             "top of the bounce",
             "forward and up"
           ],
-          "key_time_s": 5.3,
+          "key_time_s": 5.966666666666667,
           "callouts": [
             "CONTACT IN FRONT"
           ]
@@ -65,7 +65,7 @@
             "forehead",
             "Reset feet"
           ],
-          "key_time_s": 5.75,
+          "key_time_s": 6.416666666666667,
           "callouts": [
             "BACK TO READY"
           ]
