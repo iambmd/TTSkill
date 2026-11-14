@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 import numpy as np
+from scipy.ndimage import uniform_filter1d
 
 from . import audio, media, pose
 from .analyze import OfflineAnalyzer, get_analyzer, normalize_stroke
@@ -28,8 +29,11 @@ def _log(progress: Optional[Progress], msg: str):
 
 def choose_window(src: str, duration: float, window_s: float, workdir: Path,
                   progress: Optional[Progress] = None) -> dict:
-    if duration <= window_s * 1.25:
-        return {"start": 0.0, "end": duration, "reason": "whole clip"}
+    if duration <= max(window_s * 1.25, 20.0):
+        # short clips (e.g. a Short of a pro drilling): analyse all of it; the renderer
+        # only plays the part around the key moments
+        return {"start": 0.0, "end": duration, "reason": "whole clip",
+                "hit_times": [h for r in audio.find_rallies(src) for h in r["hit_times"]]}
     rallies = audio.find_rallies(src)
     if rallies:
         best = max(rallies, key=lambda r: (r["hits"], r["end"] - r["start"]))
@@ -48,9 +52,12 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
 
 def key_moments(track: pose.PoseTrack, side: str,
                 hit_times: Optional[list[float]] = None) -> tuple[list[float], int]:
-    """[preparation, contact, recovery] times (s) and the contact frame index.
-    Contact = a fast bat-hand swing peak, preferring ones that line up with a ball-contact
-    sound (when hit times are known) so walking or bat-twirling is not picked."""
+    """[preparation, contact, finish] times (s) and the contact frame index.
+
+    Contact = a fast bat-hand swing peak on the *forward* (upward) swing, preferring
+    peaks that line up with a ball-contact sound when hit times are known (so walking or
+    the drop into the backswing is not picked). Preparation = the lowest bat-hand point
+    just before it (end of backswing); finish = the highest point just after it."""
     pk = pose.swing_peaks(track, side)
     dur = float(track.times[-1]) if len(track.times) else 0.0
     if len(pk) == 0:
@@ -58,20 +65,34 @@ def key_moments(track: pose.PoseTrack, side: str,
         return [max(0, dur * 0.3), dur * 0.5, min(dur, dur * 0.7)], mid
     l, r, _ = pose.wrist_speeds(track)
     v = r if side != "left" else l
-    # strongest swing that leaves room for the lead-in and the recovery
+    wi = pose.R_WRIST if side != "left" else pose.L_WRIST
+    xy = pose._interp_nan(track.lm[:, :, :2]) * np.array([track.width, track.height])
+    hip_y = (xy[:, pose.L_HIP, 1] + xy[:, pose.R_HIP, 1]) / 2
+    wy = uniform_filter1d(xy[:, wi, 1] - hip_y, size=max(1, int(track.fps * 0.07)))  # +down
+    vy = np.gradient(wy)
+    # strongest swing that leaves room for the lead-in and the finish
     ok = ([i for i in pk if 1.0 <= track.times[i] <= dur - 0.8]
           or [i for i in pk if 0.45 <= track.times[i] <= dur - 0.5] or list(pk))
     hits = np.array(hit_times or [])
 
     def score(i: int) -> float:
-        if len(hits) == 0:
-            return float(v[i])
-        dt = float(np.min(np.abs(hits - track.times[i])))
-        return float(v[i]) * (0.25 + np.exp(-(dt / 0.12) ** 2))
+        s_ = float(v[i]) * (1.0 if vy[i] < 0 else 0.3)  # upward = forward swing
+        if len(hits):
+            dt = float(np.min(np.abs(hits - track.times[i])))
+            s_ *= 0.25 + np.exp(-(dt / 0.12) ** 2)
+        return s_
 
     p = int(max(ok, key=score))
-    t = float(track.times[p])
-    return [max(0.0, t - 0.35), t, min(dur, t + 0.45)], p
+    win = max(2, int(0.6 * track.fps))
+    a0 = max(0, p - win)
+    prep = a0 + int(np.argmax(wy[a0:p + 1])) if p > a0 else p
+    b1 = min(len(wy), p + win + 1)
+    fin = p + int(np.argmin(wy[p:b1]))
+    gap = max(1, int(0.12 * track.fps))
+    prep = min(prep, p - gap) if p - gap >= 0 else 0
+    fin = max(fin, min(len(wy) - 1, p + gap))
+    T = track.times
+    return [float(T[max(prep, 0)]), float(T[p]), float(T[fin])], p
 
 
 def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional[str] = None,

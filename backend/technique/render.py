@@ -232,20 +232,23 @@ def blend(dst: np.ndarray, rgba: np.ndarray) -> np.ndarray:
 
 # ------------------------------------------------------------------ video area
 
-def compute_crop(track: PoseTrack, src_w: int, src_h: int) -> tuple[int, int, int]:
-    """Constant square crop (x, y, size) around the player over the whole clip."""
+def compute_crop(track: PoseTrack, src_w: int, src_h: int) -> tuple[int, int, int, int]:
+    """Constant crop (x, y, w, h) around the player over the whole clip. The crop is as
+    tall as the player needs (so heads/feet aren't cut off) and between 0.5:1 and 1:1 wide;
+    portrait sources end up pillarboxed in the square video band."""
     xy = track.lm[track.valid, :, :2] * np.array([src_w, src_h]) if track.valid.any() else None
     if xy is None or len(xy) == 0:
-        s = min(src_w, src_h)
-        return (src_w - s) // 2, (src_h - s) // 2, s
-    lo = np.nanpercentile(xy.reshape(-1, 2), 2, axis=0)
-    hi = np.nanpercentile(xy.reshape(-1, 2), 98, axis=0)
+        s_ = min(src_w, src_h)
+        return (src_w - s_) // 2, (src_h - s_) // 2, s_, s_
+    pts = xy.reshape(-1, 2)
+    lo = np.nanpercentile(pts, 2, axis=0)
+    hi = np.nanpercentile(pts, 98, axis=0)
     cx, cy = (lo + hi) / 2
-    size = max(hi - lo) * 1.5
-    size = int(np.clip(size, min(src_w, src_h) * 0.45, min(src_w, src_h)))
-    x = int(np.clip(cx - size / 2, 0, src_w - size))
-    y = int(np.clip(cy - size / 2, 0, src_h - size))
-    return x, y, size
+    ch = int(np.clip((hi[1] - lo[1]) * 1.35, src_h * 0.45, src_h))
+    cw = int(np.clip(max((hi[0] - lo[0]) * 1.4, ch * 0.5), 1, min(src_w, ch)))
+    x = int(np.clip(cx - cw / 2, 0, src_w - cw))
+    y = int(np.clip(cy - ch / 2, 0, src_h - ch))
+    return x, y, cw, ch
 
 
 def _add_glow(canvas: np.ndarray, glow: np.ndarray, sigma: float, gain: float):
@@ -264,7 +267,9 @@ class Scene:
         self.track = track
         sh, sw = frames[0].shape[:2]
         self.crop = compute_crop(track, sw, sh)
-        self.scale = VID_H / self.crop[2]
+        self.scale = VID_H / self.crop[3]
+        self.out_w = min(W, int(round(self.crop[2] * self.scale)))
+        self.x_off = (W - self.out_w) // 2
         n = len(track.times)
         self.pts = _interp_nan(track.lm[:, :, :2]) if n else np.zeros((0, 33, 2))
         self.pts = self.pts * np.array([sw, sh])
@@ -272,8 +277,8 @@ class Scene:
         self.wrist = R_WRIST if side != "left" else L_WRIST
 
     def to_out(self, p: np.ndarray) -> np.ndarray:
-        x, y, _ = self.crop
-        return (p - np.array([x, y])) * self.scale + np.array([0, VID_Y])
+        x, y = self.crop[:2]
+        return (p - np.array([x, y])) * self.scale + np.array([self.x_off, VID_Y])
 
     def _pose_idx(self, fi: int) -> int:
         return int(np.clip(fi, 0, len(self.pts) - 1))
@@ -293,13 +298,22 @@ class Scene:
             r = 140
             ramp = np.linspace(0, 1, r, dtype=np.float32)[:, None, None]
             Scene._RAMP = ramp
-        x, y, s = self.crop
-        src = self.frames[min(fi, len(self.frames) - 1)][y:y + s, x:x + s]
-        vid = cv2.resize(src, (W, VID_H), interpolation=cv2.INTER_AREA)
-        vid = cv2.transform(vid, Scene._TINT)
+        x, y, cw, ch = self.crop
+        src = self.frames[min(fi, len(self.frames) - 1)][y:y + ch, x:x + cw]
+        interp = cv2.INTER_AREA if self.out_w <= cw else cv2.INTER_CUBIC
+        clip = cv2.transform(cv2.resize(src, (self.out_w, VID_H), interpolation=interp),
+                             Scene._TINT)
+        bgf = np.array(BG, np.float32)
+        if self.out_w < W:  # pillarbox: fade the left/right edges into the background
+            e = min(90, self.out_w // 4)
+            hr = np.linspace(0, 1, e, dtype=np.float32)[None, :, None]
+            clip[:, :e] = (clip[:, :e] * hr + bgf * (1 - hr)).astype(np.uint8)
+            clip[:, -e:] = (clip[:, -e:] * hr[:, ::-1] + bgf * (1 - hr[:, ::-1])).astype(np.uint8)
+        vid = np.empty((VID_H, W, 3), np.uint8)
+        vid[:] = BG
+        vid[:, self.x_off:self.x_off + self.out_w] = clip
         # vignette top/bottom so the video melts into the background
         ramp, r = Scene._RAMP, Scene._RAMP.shape[0]
-        bgf = np.array(BG, np.float32)
         vid[:r] = (vid[:r] * ramp + bgf * (1 - ramp)).astype(np.uint8)
         vid[-r:] = (vid[-r:] * ramp[::-1] + bgf * (1 - ramp[::-1])).astype(np.uint8)
         if len(cache) > 8:
@@ -322,8 +336,13 @@ class Scene:
                     self._trail(canvas, pi)
                 if ring:
                     self._ring(canvas, self.to_out(self.pts[pi, self.wrist]), *ring)
-                    if connector:
-                        self._connector(canvas, self.to_out(self.pts[pi, self.wrist]), ring[0])
+                # keep the overlay inside the video band so it never runs under the text
+                canvas[:VID_Y] = BG
+                canvas[VID_Y + VID_H:] = BG
+                if ring and connector:
+                    c = self.to_out(self.pts[pi, self.wrist])
+                    c[1] = np.clip(c[1], VID_Y, VID_Y + VID_H - 1)
+                    self._connector(canvas, c, ring[0])
         return canvas
 
     def _skeleton(self, canvas, p):
@@ -345,6 +364,8 @@ class Scene:
             return
         pts = np.array([self.to_out(self.pts[i, self.wrist]) for i in idx]).astype(int)
         for k in range(1, len(pts)):
+            if np.linalg.norm(pts[k] - pts[k - 1]) > 0.18 * W:
+                continue  # tracking jump: don't draw a streak across the frame
             a = k / len(pts)
             col = (int(255 * a), int(230 * a), int(60 * a))  # BGR cyan fading
             cv2.line(canvas, tuple(pts[k - 1]), tuple(pts[k]), col, int(2 + 6 * a), cv2.LINE_AA)
@@ -402,9 +423,10 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
     def gen() -> Iterator[np.ndarray]:
         intro = layer_intro(b)
         for k in range(int(2.2 * FPS)):
-            yield blend(scene.draw(0, trail=False), intro)
-        cur = 0
+            yield blend(scene.draw(max(0, keys[0] - int(2.0 * fps_src)), trail=False), intro)
         lead, tail = int(0.5 * fps_src), int(0.35 * fps_src)
+        # start shortly before the first key moment instead of at the top of the clip
+        cur = max(0, keys[0] - lead - int(1.5 * fps_src))
         for si, kf in enumerate(keys):
             play = layer_step(b, si, "QUICK BREAKDOWN")
             paused = layer_step(b, si, "II  PAUSED")

@@ -121,10 +121,31 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                     break
             idx += 1
     cap.release()
+    lm_arr = np.stack(lms) if lms else np.zeros((0, 33, 4), np.float32)
+    w_arr = np.stack(worlds) if worlds else np.zeros((0, 33, 3), np.float32)
+    bad = implausible(lm_arr, w, h)
+    lm_arr[bad] = np.nan
+    w_arr[bad] = np.nan
     return PoseTrack(fps=fps / stride, width=w, height=h, times=np.array(times),
-                     lm=np.stack(lms) if lms else np.zeros((0, 33, 4)),
-                     world=np.stack(worlds) if worlds else np.zeros((0, 33, 3)),
-                     meta={"source_fps": fps, "stride": stride})
+                     lm=lm_arr, world=w_arr,
+                     meta={"source_fps": fps, "stride": stride, "rejected": int(bad.sum())})
+
+
+def implausible(lm: np.ndarray, w: int, h: int) -> np.ndarray:
+    """Flag garbage detections (e.g. a 'lying down' skeleton on a table edge): the torso
+    must be roughly upright and not tiny compared with the median torso."""
+    if len(lm) == 0:
+        return np.zeros(0, bool)
+    xy = lm[:, :, :2] * np.array([w, h])
+    sh = (xy[:, L_SHOULDER] + xy[:, R_SHOULDER]) / 2
+    hp = (xy[:, L_HIP] + xy[:, R_HIP]) / 2
+    v = hp - sh
+    length = np.linalg.norm(v, axis=1)
+    upright = v[:, 1] > 0.5 * length            # hips below shoulders, < ~60 deg lean
+    med = np.nanmedian(length) if np.isfinite(length).any() else 0
+    big_enough = length > 0.4 * med
+    ok = upright & big_enough
+    return ~ok & np.isfinite(length)
 
 
 # ---------------------------------------------------------------- analysis helpers
