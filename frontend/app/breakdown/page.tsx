@@ -6,6 +6,7 @@ import { submitJob } from "@/lib/submit";
 import { buttonClass, inputClass, labelClass } from "../ui";
 
 const STROKES = ["forehand", "backhand", "serve", "flick", "block", "footwork"] as const;
+const HANDS = [["auto", "Auto-detect"], ["right", "Right-handed"], ["left", "Left-handed"]] as const;
 
 export default function BreakdownPage() {
   const router = useRouter();
@@ -64,6 +65,20 @@ export default function BreakdownPage() {
             </label>
           ))}
         </div>
+      </fieldset>
+      <fieldset>
+        <legend className={labelClass}>Bat hand</legend>
+        <div className="flex flex-wrap gap-2">
+          {HANDS.map(([value, label], i) => (
+            <label key={value} className="cursor-pointer">
+              <input type="radio" name="hand" value={value} defaultChecked={i === 0} className="peer sr-only" />
+              <span className="block rounded-full border border-white/15 px-4 py-1.5 text-sm peer-checked:border-accent peer-checked:text-accent">
+                {label}
+              </span>
+            </label>
+          ))}
+        </div>
+        <p className="mt-1 text-xs text-white/50">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
       </fieldset>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <button type="submit" disabled={busy} className={buttonClass}>

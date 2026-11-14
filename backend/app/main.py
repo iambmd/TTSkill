@@ -52,16 +52,19 @@ def create_breakdown(
     stroke: str = Form(...),
     text: str = Form(""),
     player: str = Form(""),
+    hand: str = Form("auto"),
     video: UploadFile | None = File(None),
 ) -> dict:
     if stroke not in STROKES:
         raise HTTPException(400, f"unknown stroke: {stroke}")
     if video is None and not text.strip():
         raise HTTPException(400, "provide a video or a text description")
-    params = {"stroke": stroke, "player": player, "text": text, "video": video.filename if video else None}
+    if hand not in ("auto", "left", "right"):
+        raise HTTPException(400, "hand must be auto, left or right")
+    params = {"stroke": stroke, "player": player, "text": text, "hand": hand, "video": video.filename if video else None}
     job = jobs.create("breakdown", params)
     path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}") if video else None
-    background.add_task(run_breakdown, job["id"], path, text, stroke, player)
+    background.add_task(run_breakdown, job["id"], path, text, stroke, player, hand)
     return job
 
 

@@ -4,4 +4,5 @@ python-multipart==0.0.20
 numpy==2.2.5
 scipy==1.15.2
 pytest==8.3.5
-# Added in later steps: opencv-python, mediapipe, anthropic, deepagents
+-r technique/requirements.txt
+# Added in later steps: deepagents
