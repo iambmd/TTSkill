@@ -1,0 +1,41 @@
+"""Structured stroke breakdown: the contract between analysis, prompting and rendering."""
+from __future__ import annotations
+
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
+
+Stroke = Literal["forehand", "backhand", "serve", "flick", "block", "footwork"]
+STROKES: tuple[str, ...] = ("forehand", "backhand", "serve", "flick", "block", "footwork")
+
+
+class Step(BaseModel):
+    title: str = Field(description="2-4 word step title, e.g. 'Read the attack'")
+    lines: List[str] = Field(description="Exactly two short coaching lines (max ~45 chars each)")
+    highlight_words: List[str] = Field(
+        default_factory=list, description="Words/phrases from `lines` to show in the accent color"
+    )
+    key_time_s: Optional[float] = Field(
+        default=None, description="Seconds into the analysed clip where this step is best shown"
+    )
+    callouts: List[str] = Field(
+        default_factory=list, description="1-2 tiny ALL-CAPS labels, e.g. 'BAT BEHIND BALL'"
+    )
+
+
+class StrokeBreakdown(BaseModel):
+    player: str = Field(default="Player", description="Player name if known")
+    stroke: str = Field(description="One of forehand, backhand, serve, flick, block, footwork")
+    handedness: Literal["right", "left", "unknown"] = "unknown"
+    headline: str = Field(description="3-6 word hook, e.g. 'Stretched wide? Counter and recover.'")
+    grip: str = Field(description="Grip style and how it is held for this stroke")
+    stance: str = Field(description="Feet, knee bend, body angle to the table")
+    swing_path: str = Field(description="Backswing -> forward swing path, low-to-high etc.")
+    contact_point: str = Field(description="Where/when the bat meets the ball relative to the body and bounce")
+    follow_through: str = Field(description="Finish position and recovery")
+    steps: List[Step] = Field(description="Exactly three numbered coaching steps in time order")
+    source: str = Field(default="unknown", description="Which analyzer produced this")
+
+
+def breakdown_json_schema() -> dict:
+    return StrokeBreakdown.model_json_schema()
