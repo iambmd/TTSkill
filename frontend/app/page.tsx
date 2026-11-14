@@ -30,6 +30,11 @@ export default function Home() {
           </Link>
         ))}
       </section>
+      <section className="flex flex-wrap gap-3 text-sm">
+        <span className="text-white/70">See it on a real match:</span>
+        <Link href="/jobs/demo-breakdown" className="text-accent underline">Forehand breakdown demo</Link>
+        <Link href="/jobs/demo-autocut" className="text-accent underline">Highlights demo</Link>
+      </section>
     </div>
   );
 }

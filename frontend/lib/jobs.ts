@@ -1,8 +1,12 @@
 import "server-only";
 import { randomUUID } from "crypto";
 import type { Job } from "./submit";
+import demoJobs from "./demo-jobs.json";
 
 const BACKEND_URL = process.env.BACKEND_URL;
+// DEMO_MODE=1 answers every submission with the cached sample-clip result, so a live demo never waits on the pipeline.
+const DEMO_MODE = process.env.DEMO_MODE === "1";
+const DEMO_JOBS = demoJobs as Record<string, Job>;
 
 // In-memory store used only when BACKEND_URL is unset (local stub mode).
 const g = globalThis as unknown as { __ttskillJobs?: Map<string, Job> };
@@ -18,6 +22,7 @@ function describeForm(form: FormData): Record<string, unknown> {
 }
 
 export async function createJob(kind: Job["kind"], form: FormData): Promise<Response> {
+  if (DEMO_MODE) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
   if (BACKEND_URL) {
     const res = await fetch(`${BACKEND_URL}/jobs/${kind}`, { method: "POST", body: form });
     return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
@@ -36,6 +41,7 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
 }
 
 export async function getJob(id: string): Promise<Response> {
+  if (DEMO_JOBS[id]) return Response.json(DEMO_JOBS[id]);
   if (BACKEND_URL) {
     const res = await fetch(`${BACKEND_URL}/jobs/${id}`, { cache: "no-store" });
     if (!res.ok) return new Response(res.body, { status: res.status });
