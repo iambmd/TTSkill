@@ -84,6 +84,58 @@
     "hayata_h2": {
       "src": "https://www.nittaku.com/wp-content/uploads/2021/05/H2_ST.jpg",
       "page": "https://www.nittaku.com/products/rackets/post-154"
+    },
+    "h3": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom2_dhs-hurricane-3-39.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "h3_national": {
+      "src": "https://www.paddlepalace.com/cdn/shop/files/RCH3LB-dhs-hurricane-3-natl-ed-1.jpg?v=1776288486&width=720",
+      "page": "https://www.paddlepalace.com/"
+    },
+    "h8": {
+      "src": "https://www.paddlepalace.com/cdn/shop/files/RCH8A-dhs-hurricane-8.jpg?v=1776288486&width=720",
+      "page": "https://www.paddlepalace.com/"
+    },
+    "h8_20": {
+      "src": "https://www.paddlepalace.com/cdn/shop/files/RCH88M-dhs-hurricane-8-80m.jpg?v=1776288487&width=720",
+      "page": "https://www.paddlepalace.com/"
+    },
+    "long5": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom2_dhs-hurricane-long-5-cs.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "q968": {
+      "src": "https://i0.wp.com/tokspin.com/wp-content/uploads/2025/01/1-27.jpg?fit=800%2C800&ssl=1",
+      "page": "https://tokspin.com/"
+    },
+    "hurricane_sun": {
+      "src": "https://pongport.com/_next/image?url=https%3A%2F%2Fapi.pongport.com%2Fstatic%2Fdhs-s968-hurricane-sun.png&w=1080&q=90",
+      "page": "https://pongport.com/"
+    },
+    "falck_carbon": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom_y-falck-carbon.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "ma_lin_exoff": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom2_y-ma-lin-ex-off.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "mark_v": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom2_y-markv.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "dynasty_carbon": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom2_s-dynasty-carbon-xu-xin.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "timo_boll_alc": {
+      "src": "https://cdn.megaspin.net/store/images/products/zoom_b-timo-boll-alc.jpg",
+      "page": "https://www.megaspin.net/"
+    },
+    "hybrid_k3": {
+      "src": "https://www.paddlepalace.com/cdn/shop/files/RTHK3-tibhar-hybrid-k3.jpg?v=1776288571",
+      "page": "https://www.paddlepalace.com/"
     }
   }
 }
