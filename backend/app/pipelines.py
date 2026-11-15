@@ -37,6 +37,15 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args) -> None:
         path.unlink(missing_ok=True)
 
 
+def pick_segments(found: list, video: Path, mode: str, top_n: int) -> tuple[list, list[tuple[float, float]]]:
+    """Rallies to keep and their padded segments. Highlights: best rallies first, padding
+    never merges them so each stays its own clip. Full: every rally, overlaps merged."""
+    if mode == "highlights":
+        rallies = sorted(found, key=lambda r: -r.hits)[:top_n]
+        return rallies, padded_segments([(r.start, r.end) for r in rallies], duration(video), merge=False)
+    return found, padded_segments([(r.start, r.end) for r in found], duration(video))
+
+
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
     try:
         jobs.update(job_id, status="running", progress=0.1, message="Listening for ball contacts...")
@@ -46,13 +55,7 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
             jobs.update(job_id, status="failed", progress=1.0, rallies=[],
                         message="No rallies found. Try a lower hit threshold or fewer min hits.")
             return
-        if mode == "highlights":
-            # Best rallies first; padding never merges them so each stays its own clip.
-            rallies = sorted(found, key=lambda r: -r.hits)[:top_n]
-            segments = padded_segments([(r.start, r.end) for r in rallies], duration(video), merge=False)
-        else:
-            rallies = found
-            segments = padded_segments([(r.start, r.end) for r in rallies], duration(video))
+        rallies, segments = pick_segments(found, video, mode, top_n)
         jobs.update(job_id, progress=0.3, message=f"Found {len(found)} rallies. Cutting {len(segments)} clips...",
                     rallies=[r.to_dict() for r in rallies])
         cut_and_concat(video, segments, workdir, workdir / "result.mp4",
@@ -118,52 +121,61 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
         jobs.update(job_id, status="failed", message=str(exc))
 
 
+def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
+                hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None) -> dict:
+    """Find my pro match core, shared by the /jobs/match pipeline and the coach agent:
+    pose on the user's clip, body profile, height (entered or from the table), top 3 pros
+    with the same bat hand, form differences, and one compiled video at `dest`."""
+    from players.body import angle_curves, body_ratios
+    from players.compile import compile_matches
+    from players.match import match
+    from players.table import estimate_height_cm
+    from technique import media, pose
+    from technique.pipeline import choose_window, key_moments
+
+    out.mkdir(parents=True, exist_ok=True)
+    report(0.1, "Finding your best swings...")
+    info = media.probe(video)
+    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
+    clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
+    report(0.3, "Reading your body and swing with MediaPipe...")
+    track = pose.extract_pose(clip)
+    if not track.valid.any():
+        raise RuntimeError("No player found in the video. Film the whole body, side-on if you can.")
+    side, how = pose.bat_side(clip, track, hand)
+    hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
+    _, contact = key_moments(track, side, hits, direction="up")
+    body = body_ratios(track)
+    curves = angle_curves(track, side, contact)
+    if height_cm:
+        height = {"height_cm": round(height_cm), "method": "entered"}
+    else:
+        report(0.55, "Estimating your height from the table...")
+        height = estimate_height_cm(str(clip), track)
+    user = {**body, "height_cm": height["height_cm"] if height else None}
+    report(0.65, "Comparing you with the pros...")
+    matches = match(user, curves, stroke, side)
+    if not matches:
+        raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
+    report(0.75, "Putting their breakdowns together...")
+    result = compile_matches(matches, stroke, out / "parts", dest)
+    return {"matches": [{k: v for k, v in m.items() if k != "form"} for m in matches],
+            "you": {"bat_hand": side, "bat_hand_how": how, "height": height,
+                    "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}},
+            "video": str(result) if result else None}
+
+
 def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
               hand: str = "auto") -> None:
-    """Find my pro match: pose on the user's clip, body profile, height (entered or from the
-    table), top 3 pros with the same bat hand, form differences, one compiled video."""
     try:
-        from players.body import angle_curves, body_ratios
-        from players.compile import compile_matches
-        from players.match import match
-        from players.table import estimate_height_cm
-        from technique import media, pose
-        from technique.pipeline import choose_window, key_moments
-
-        out = jobs.job_dir(job_id) / "match"
-        out.mkdir(parents=True, exist_ok=True)
-        jobs.update(job_id, status="running", progress=0.1, message="Finding your best swings...")
-        info = media.probe(video)
-        win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
-        clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
-        jobs.update(job_id, progress=0.3, message="Reading your body and swing with MediaPipe...")
-        track = pose.extract_pose(clip)
-        if not track.valid.any():
-            raise RuntimeError("No player found in the video. Film the whole body, side-on if you can.")
-        side, how = pose.bat_side(clip, track, hand)
-        hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
-        _, contact = key_moments(track, side, hits, direction="up")
-        body = body_ratios(track)
-        curves = angle_curves(track, side, contact)
-        if height_cm:
-            height = {"height_cm": round(height_cm), "method": "entered"}
-        else:
-            jobs.update(job_id, progress=0.55, message="Estimating your height from the table...")
-            height = estimate_height_cm(str(clip), track)
-        user = {**body, "height_cm": height["height_cm"] if height else None}
-        jobs.update(job_id, progress=0.65, message="Comparing you with the pros...")
-        matches = match(user, curves, stroke, side)
-        if not matches:
-            raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
-        jobs.update(job_id, progress=0.75, message="Putting their breakdowns together...")
-        result = compile_matches(matches, stroke, out / "parts", jobs.job_dir(job_id) / "result.mp4")
-        top = matches[0]
+        jobs.update(job_id, status="running", progress=0.05, message="Starting...")
+        res = match_video(video, stroke, jobs.job_dir(job_id) / "match", jobs.job_dir(job_id) / "result.mp4",
+                          height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m))
+        top = res["matches"][0]
         jobs.update(job_id, status="done", progress=1.0,
                     message=f"You play most like {top['name']} ({top['score']}% body match).",
-                    resultUrl=f"/jobs/{job_id}/result" if result else None,
-                    matches=[{k: v for k, v in m.items() if k != "form"} for m in matches],
-                    you={"bat_hand": side, "bat_hand_how": how, "height": height,
-                         "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}})
+                    resultUrl=f"/jobs/{job_id}/result" if res["video"] else None,
+                    matches=res["matches"], you=res["you"])
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

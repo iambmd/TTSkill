@@ -20,6 +20,19 @@ This is the initial scaffold.
 | Breakdown pipeline (pose, Claude, render) | Stub |
 | deepagents wrapper | TODO |
 
+## Built with deepagents
+
+**TT Coach** (`/coach`, `backend/agent/coach.py`) is a [LangChain deepagents](https://github.com/langchain-ai/deepagents) agent with Claude (`claude-opus-5-5`) as its model. You type one request, such as "here's my match, show my best rallies and fix my forehand", and add a video or link.
+
+- **Planning.** The agent starts with `write_todos`, a short plan for exactly what you asked. The todo list streams into the job record, so the page shows it ticking off live.
+- **Subagents.** The main agent delegates with the `task` tool:
+  - `clip_analyst` finds rallies, cuts highlight reels and measures pose (`detect_rallies`, `cut_highlights`, `extract_pose`).
+  - `player_matcher` finds the closest pros and the form differences (`match_players`).
+  - `coach_writer` writes three cards in the style from `backend/style/swift_style.json`, then renders them (`render_breakdown`).
+- **Virtual file system.** The agent saves its plan and notes (`/plan.md`, `/rallies.json`, `/pose_summary.json`, `/matches.json`, `/cards.md`, `/notes.md`) in deepagents' in-state file system. Subagents pass results through those files instead of the chat, and the page shows them under "Coach's notes". The agent only gets the file tools; there is no shell.
+- **Tools.** `download_url`, `detect_rallies`, `cut_highlights`, `extract_pose`, `render_breakdown` and `match_players` (`backend/agent/tools.py`) are thin wrappers over the same pipelines the classic pages use. Each video a tool makes shows up on the page as soon as it's ready.
+- **Fallback.** Without `ANTHROPIC_API_KEY`, or if the agent fails, the same tools run on a fixed plan built from the request, with the same live todo list. The classic endpoints (`/jobs/breakdown`, `/jobs/autocut`, `/jobs/match`) are unchanged.
+
 ## Layout
 
 ```
@@ -59,6 +72,7 @@ Set `DEMO_MODE=1` for the frontend to make every submission return these results
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional), `text` and/or `video` or `url`, `player`, `hand` |
+| POST | `/jobs/coach` | multipart: `request` (text), `video` or `url` |
 | POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
 | GET | `/jobs/{id}` | job status, progress, params, detected rallies |
 | GET | `/jobs/{id}/result` | result MP4 |

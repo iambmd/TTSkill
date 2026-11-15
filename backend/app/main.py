@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import re
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadFile
@@ -139,6 +140,44 @@ def create_match(
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
         background.add_task(run_match, job["id"], path, *args)
     return job
+
+
+@app.post("/jobs/coach", status_code=201)
+def create_coach(
+    background: BackgroundTasks,
+    request: str = Form(...),
+    video: UploadFile | None = File(None),
+    url: str = Form(""),
+) -> dict:
+    """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
+    Falls back to the classic pipelines when there is no API key or the agent fails."""
+    from agent.coach import run_coach
+
+    request = request.strip()
+    if not request:
+        raise HTTPException(400, "Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
+    link = None if has_file(video) else check_link(url)
+    if not has_file(video) and link is None:
+        raise HTTPException(400, "Add a video: upload a clip or paste a YouTube link.")
+    params = {"request": request, "video": video.filename if link is None else link["title"],
+              "url": link and link["url"]}
+    job = jobs.create("coach", params)
+    path = None
+    if not link:
+        path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
+    background.add_task(run_coach, job["id"], path, link and link["url"], request)
+    return job
+
+
+@app.get("/jobs/{job_id}/files/{name}")
+def get_file(job_id: str, name: str) -> FileResponse:
+    """Videos the coach agent made (highlights.mp4, breakdown.mp4, pro_matches.mp4)."""
+    if not re.fullmatch(r"[\w-]{1,64}\.mp4", name) or not re.fullmatch(r"[0-9a-f]{32}", job_id):
+        raise HTTPException(404, "not found")
+    path = jobs.job_dir(job_id) / name
+    if not path.exists():
+        raise HTTPException(404, "not found")
+    return FileResponse(path, media_type="video/mp4", filename=f"ttskill-{name}")
 
 
 @app.get("/jobs/{job_id}")

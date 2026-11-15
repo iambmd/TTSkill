@@ -6,4 +6,5 @@ scipy>=1.15.2
 pytest==8.3.5
 -r technique/requirements.txt
 yt-dlp[default]>=2026.10.26  # pasted YouTube links (app/download.py)
-# Added in later steps: deepagents
+deepagents>=0.7.38  # TT Coach agent (agent/coach.py)
+langchain-anthropic>=1.7.10

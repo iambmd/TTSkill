@@ -1,6 +1,6 @@
 export type Job = {
   id: string;
-  kind: "breakdown" | "autocut" | "match";
+  kind: "breakdown" | "autocut" | "match" | "coach";
   status: "queued" | "running" | "done" | "failed";
   progress: number;
   message?: string;
@@ -10,6 +10,12 @@ export type Job = {
   rallies?: { start: number; end: number; hits: number; shots: number }[];
   strokeType?: { key: string | null; label: string; detected: boolean } | null;
   matches?: ProMatch[];
+  todos?: { content: string; status: "pending" | "in_progress" | "completed" }[];
+  agentFiles?: { name: string; preview: string }[];
+  outputs?: { kind: string; title: string; url: string; summary: string }[];
+  engine?: "deepagents" | "fallback";
+  engineNote?: string;
+  summary?: string;
   you?: { bat_hand: string; height: { height_cm: number; method: string } | null };
 };
 

@@ -4,6 +4,13 @@ import { ArrowIcon } from "./ui";
 
 const tools = [
   {
+    href: "/coach",
+    tag: "TT Coach",
+    title: "Just ask",
+    body: "One request, one video: \"show my best rallies and fix my forehand\". The coach plans it, runs the tools and shows its work.",
+    cta: "Ask the coach",
+  },
+  {
     href: "/breakdown",
     tag: "Technique Breakdown",
     title: "Copy the pros",
@@ -41,7 +48,7 @@ export default function Home() {
         </div>
         <HeroVideo />
       </section>
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="grid gap-3 sm:grid-cols-2">
         {tools.map((t, i) => (
           <Link
             key={t.href} href={t.href}
