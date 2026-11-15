@@ -7,6 +7,9 @@ video), computes the body profile and joint-angle curves, and deletes the raw do
 Two good clips per stroke are kept. Clips and videos stay in backend/data/players/
 (git-ignored); players.json gets the clip references and profiles.json the numbers.
 
+A clip downloaded by hand to backend/data/players/manual/<player-id>_<stroke>.mp4 (for
+when YouTube blocks downloads) is used instead: no search, no download.
+
 Usage: cd backend && .venv/bin/python -m players.build [--only ma-long] [--workers 4]"""
 from __future__ import annotations
 
@@ -28,6 +31,7 @@ CLIPS_PER_STROKE = 2
 SEARCH_RESULTS = 8
 SECTION_S = 120
 WINDOW_S = 8.0
+MANUAL = DATA / "manual"
 _YDL = {"quiet": True, "no_warnings": True, "noprogress": True, "js_runtimes": {"node": {}}}
 
 
@@ -99,7 +103,7 @@ def process_clip(raw: str, out_dir: str, name: str, stroke: str, hand: str) -> d
     win = choose_window(raw, info["duration"], WINDOW_S, out, progress=lambda m: None)
     start, end = win["start"], min(win["end"], win["start"] + WINDOW_S)
     res = run_video(raw, out_dir, stroke=stroke, player=name, analyzer="offline",
-                    window=(start, end), hand=hand, progress=lambda m: None)
+                    window=(start, end), hand=hand, trust_hand=True, progress=lambda m: None)
     track = pose.load_track(res["outputs"]["pose_track"])
     summary = json.loads(Path(res["outputs"]["pose_summary_json"]).read_text())
     side = res["bat_hand"]["side"]
@@ -123,6 +127,10 @@ def build(only: list[str] | None, workers: int) -> None:
             prof = profiles["players"].get(p["id"], {"strokes": {}})
             p.setdefault("clips", {})
             for stroke in STROKES:
+                local = manual_clip(p["id"], stroke)
+                if local:
+                    _add_manual(pool, p, prof, stroke, local)
+                    continue
                 if len(prof["strokes"].get(stroke, [])) >= CLIPS_PER_STROKE:
                     continue  # already built: the script resumes where it stopped
                 kept, pending = [], []
@@ -153,15 +161,44 @@ def build(only: list[str] | None, workers: int) -> None:
     shutil.rmtree(raw_dir, ignore_errors=True)
 
 
+def manual_clip(player_id: str, stroke: str) -> Path | None:
+    """The clip downloaded by hand for this player and stroke, if there is one."""
+    f = MANUAL / f"{player_id}_{stroke}.mp4"
+    return f if f.is_file() else None
+
+
+def _add_manual(pool: ProcessPoolExecutor, p: dict, prof: dict, stroke: str, file: Path) -> None:
+    """Build one stroke from a hand-downloaded clip, unless it is already built."""
+    rel =str(file.relative_to(DATA))
+    have = prof["strokes"].get(stroke, [])
+    if any(c.get("file") == rel for c in have) or len(have) >= CLIPS_PER_STROKE:
+        return  # already built
+    outd = DATA / p["id"] / f"{stroke}_manual"
+    outd.mkdir(parents=True, exist_ok=True)
+    try:
+        r = pool.submit(process_clip, str(file), str(outd), p["name"], stroke, p["bat_hand"]).result()
+    except Exception as e:
+        print(f"  failed {rel}: {str(e)[:160]}", flush=True)
+        r = {"valid": False}
+    if not r.get("valid"):
+        print(f"  rejected {rel}: visible={r.get('visible')} swings={r.get('swings')}", flush=True)
+        shutil.rmtree(outd, ignore_errors=True)
+        return
+    _store(p, prof, stroke, [{**r, "file": rel, "title": f"{p['name']} {stroke} (manual clip)",
+                              "breakdown": str((outd / "breakdown.mp4").relative_to(DATA))}])
+    print(f"{p['name']} {stroke}: built from {rel}", flush=True)
+
+
 def _store(p: dict, prof: dict, stroke: str, kept: list[dict]) -> None:
-    """Append new clips to the player's roster entry and profile (keeps earlier ones)."""
-    have = {c["url"] for c in prof["strokes"].get(stroke, [])}
+    """Append new clips to the player's roster entry and profile (keeps earlier ones). A clip's
+    source is its YouTube URL, or its file under manual/ when it was downloaded by hand."""
+    have = {c.get("url") or c.get("file") for c in prof["strokes"].get(stroke, [])}
     for k in kept:
-        url = f"https://www.youtube.com/watch?v={k['id']}"
-        if url in have or len(prof["strokes"].get(stroke, [])) >= CLIPS_PER_STROKE:
+        src = {"file": k["file"]} if k.get("file") else {"url": f"https://www.youtube.com/watch?v={k['id']}"}
+        if (src.get("url") or src.get("file")) in have or len(prof["strokes"].get(stroke, [])) >= CLIPS_PER_STROKE:
             continue
-        p["clips"].setdefault(stroke, []).append({"url": url, "title": k["title"], "start": k["start"], "end": k["end"]})
-        prof["strokes"].setdefault(stroke, []).append({"url": url, "breakdown": k["breakdown"], "curves": k["curves"],
+        p["clips"].setdefault(stroke, []).append({**src, "title": k["title"], "start": k["start"], "end": k["end"]})
+        prof["strokes"].setdefault(stroke, []).append({**src, "breakdown": k["breakdown"], "curves": k["curves"],
                                                        "stroke_type": k["stroke_type"], "body": k["body"]})
 
 

@@ -124,8 +124,9 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
               analyzer: str = "auto", window: Optional[tuple[float, float]] = None,
               window_s: float = 8.0, t2v_provider: str = "none",
               progress: Optional[Progress] = None, hand: str = "auto",
-              stroke_type: Optional[str] = None) -> dict:
-    """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible).
+              stroke_type: Optional[str] = None, trust_hand: bool = False) -> dict:
+    """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible;
+    with trust_hand, always used).
     stroke: a broad stroke, or "" / "auto" to read it from the swing.
     stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect."""
     t0 = time.time()
@@ -148,7 +149,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     _log(progress, "running MediaPipe pose")
     track = pose.extract_pose(clip)
     pose.require_player(track)
-    side, how = pose.bat_side(clip, track, hand)
+    side, how = pose.bat_side(clip, track, hand, trust_hand)
     _log(progress, f"bat hand: {side} ({how})")
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]

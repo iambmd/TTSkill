@@ -17,6 +17,8 @@ backend/data/*
 backend/data/players/*
 !backend/data/players/players.json
 !backend/data/players/profiles.json
+# Hand-downloaded pro clips for players.build (never commit)
+backend/data/players/manual/
 
 # Style references (reference only: never commit or serve)
 backend/data/style_ref/

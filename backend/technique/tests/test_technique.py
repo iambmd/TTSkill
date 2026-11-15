@@ -103,3 +103,5 @@ def test_bat_side_uses_paddle_colour_then_user_hand(tmp_path):
     wr.release()
     side, how = bat_side(vid, tr, "right")
     assert side == "left" and how.startswith("paddle")
+    # a known bat hand (roster pro) beats the paddle colour
+    assert bat_side(vid, tr, "right", trust_hand=True) == ("right", "known")

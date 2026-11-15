@@ -17,12 +17,6 @@
             "title": "Malong's Forehand Loop Breakdown",
             "start": 0.0,
             "end": 8.0
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=tF1BiUA4NpA",
-            "title": "Ma Long | Forehand technique slow motion | Comprehensive Forehand",
-            "start": 0.0,
-            "end": 8.0
           }
         ],
         "backhand": [
@@ -53,30 +47,18 @@
       "clips": {
         "forehand": [
           {
-            "url": "https://www.youtube.com/watch?v=gdU4l98m_hQ",
-            "title": "Table tennis in slow motion (240fps). Fan Zhendong, forehand loop",
-            "start": 0.0,
-            "end": 8.0
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=Sd5GjRFEyIE",
-            "title": "Table tennis in slow motion 240fps  Fan Zhendong, forehand loop",
+            "file": "manual/fan-zhendong_forehand.mp4",
+            "title": "Fan Zhendong forehand (manual clip)",
             "start": 0.0,
             "end": 8.0
           }
         ],
         "backhand": [
           {
-            "url": "https://www.youtube.com/watch?v=kbTWaJZRQ54",
-            "title": "Fan Zhendong Backhand Slow Motion",
-            "start": 1.73,
-            "end": 9.72
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=zy5PFEZCFjM",
-            "title": "Coach Wang Hao and Fan Zhendong very tough backhand training | Chengdu 2022",
-            "start": 97.43,
-            "end": 105.43
+            "file": "manual/fan-zhendong_backhand.mp4",
+            "title": "Fan Zhendong backhand (manual clip)",
+            "start": 0.0,
+            "end": 7.9
           }
         ]
       }
@@ -93,12 +75,6 @@
       "clips": {
         "forehand": [
           {
-            "url": "https://www.youtube.com/watch?v=IKxVsr1Tg1s",
-            "title": "Mind-Blowing 4K SLOW-MO Harimoto vs. Jang Woo-jin | Insane Best Points | Table Tennis in Slow Motion",
-            "start": 0.0,
-            "end": 8.0
-          },
-          {
             "url": "https://www.youtube.com/watch?v=RyaTg3GB_Wk",
             "title": "Tomokazu Harimoto Training | US Smash 2025",
             "start": 0.34,
@@ -106,12 +82,6 @@
           }
         ],
         "backhand": [
-          {
-            "url": "https://www.youtube.com/watch?v=nPexGu6mj7k",
-            "title": "Tomokazu Harimoto, Ma Long, Lin Gaoyuan, Xu Xin Training Demi Backhand Technique !",
-            "start": 94.63,
-            "end": 102.63
-          },
           {
             "url": "https://www.youtube.com/watch?v=CGnCDCPKQhY",
             "title": "Tomokazu Harimoto Backhand",
@@ -145,8 +115,22 @@
       "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Wang_Chuqin",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/wang-chuqin_forehand.mp4",
+            "title": "Wang Chuqin forehand (manual clip)",
+            "start": 0.0,
+            "end": 6.02
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/wang-chuqin_backhand.mp4",
+            "title": "Wang Chuqin backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -173,8 +157,22 @@
       "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Sun_Yingsha",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/sun-yingsha_forehand.mp4",
+            "title": "Sun Yingsha forehand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/sun-yingsha_backhand.mp4",
+            "title": "Sun Yingsha backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -229,8 +227,22 @@
       "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Hina_Hayata",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/hina-hayata_forehand.mp4",
+            "title": "Hina Hayata forehand (manual clip)",
+            "start": 0.0,
+            "end": 6.7
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/hina-hayata_backhand.mp4",
+            "title": "Hina Hayata backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -258,32 +270,13 @@
       "height_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov (cites rio2016.com), tabletennis.media",
       "bat_hand_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov",
       "clips": {
-        "forehand": [
-          {
-            "url": "https://www.youtube.com/watch?v=ZExF6XriLyU",
-            "title": "🏓 Dimitrij Ovtcharov - Forehand Topspin Training High Quality Slowmotion",
-            "start": 0.0,
-            "end": 8.0
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=5zox22abPzQ",
-            "title": "Dimitrij Ovtcharov 3 Point Forehand Topspin Training 2016!",
-            "start": 0.0,
-            "end": 8.0
-          }
-        ],
+        "forehand": [],
         "backhand": [
           {
             "url": "https://www.youtube.com/watch?v=z3Y5JZ6rs9Q",
             "title": "TableTennis Forehand and Backhand loop how Ovtcharov D. 2020 november",
             "start": 14.14,
             "end": 22.14
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=VMkR3wdc5sM",
-            "title": "The Ovtcharov Backhand Masterclass: Why He’s Built Different | Tactical Masterclass Episode 14",
-            "start": 22.94,
-            "end": 30.94
           }
         ]
       }
@@ -301,32 +294,13 @@
       "clips": {
         "forehand": [
           {
-            "url": "https://www.youtube.com/watch?v=aoO2CXEJD44",
-            "title": "Sora Matsushima Slowmo",
-            "start": 0.79,
-            "end": 3.57
-          },
-          {
             "url": "https://www.youtube.com/watch?v=UN_LQDkUjUA",
             "title": "Tomokazu Harimoto & Sora Matsushima Training | Singapore Smash 2025",
             "start": 62.98,
             "end": 70.97
           }
         ],
-        "backhand": [
-          {
-            "url": "https://www.youtube.com/watch?v=WuVR4xo_6-g",
-            "title": "🏓⚡💥Sora Matsushima’s Backhand Fast Punch & Pace Control | Tactical Masterclass Ep. 95 - Part 2",
-            "start": 0.0,
-            "end": 8.0
-          },
-          {
-            "url": "https://www.youtube.com/watch?v=HstCYhbshQg",
-            "title": "🛡️📐🇯🇵 Sora Matsushima’s Backhand Drive, Counter & Shift | Tactical Masterclass Episode 77 - Part 4",
-            "start": 0.0,
-            "end": 8.0
-          }
-        ]
+        "backhand": []
       }
     },
     {
@@ -340,7 +314,14 @@
       "height_source": "https://en.wikipedia.org/wiki/Xu_Xin_(table_tennis) (cites ITTF profile); older listings give 180-181 (approximate)",
       "bat_hand_source": "https://en.wikipedia.org/wiki/Xu_Xin_(table_tennis)",
       "clips": {
-        "forehand": [],
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=XLPTx8s2tSE",
+            "title": null,
+            "start": 58.52,
+            "end": 66.53
+          }
+        ],
         "backhand": []
       }
     },

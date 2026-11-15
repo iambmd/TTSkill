@@ -264,10 +264,14 @@ def paddle_scores(video: str | Path, track: PoseTrack, every: int = 4) -> dict:
     return scores
 
 
-def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto") -> tuple[str, str]:
+def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
+             trust_hand: bool = False) -> tuple[str, str]:
     """Pick the bat arm (as a MediaPipe side label). Returns (side, how).
     Order: paddle colour near a wrist (when clearly one-sided) > the user's --hand > the
-    faster wrist."""
+    faster wrist. trust_hand: `hand` is known (a roster pro), so it wins outright; red
+    arena furniture next to the free hand can fool the paddle colour."""
+    if trust_hand and hand in ("left", "right"):
+        return hand, "known"
     sc = paddle_scores(video, track)
     lo, hi = sorted(sc.values())
     if hi > 2000 and hi > 1.8 * max(lo, 1):

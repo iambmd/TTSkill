@@ -2,16 +2,24 @@
 
 import { useState } from "react";
 import data from "@/lib/pros.json";
+import productData from "@/lib/product-images.json";
 import { GearTabs } from "../gear-tabs";
 import { PageIntro, inputClass, labelClass } from "../ui";
-import { ProPhoto, SetupStrip } from "./pro-photo";
+import { ProPhoto, SetupStrip, type ProductImage } from "./pro-photo";
 
 type Pro = {
   name: string; country: string; grip: string; blade: string; fh: string; bh: string;
   sources: string[]; uncertain: boolean; note?: string; wiki: string[];
+  img?: { blade?: string; fh?: string; bh?: string };
 };
 const PROS = data.players as Pro[];
 const SOURCES = data.sources as Record<string, string>;
+const PRODUCTS = productData.products as Record<string, ProductImage>;
+const images = (p: Pro) => ({
+  blade: p.img?.blade ? PRODUCTS[p.img.blade] : undefined,
+  fh: p.img?.fh ? PRODUCTS[p.img.fh] : undefined,
+  bh: p.img?.bh ? PRODUCTS[p.img.bh] : undefined,
+});
 
 // Accent-free lowercase so "szocs" finds Szőcs.
 const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
@@ -31,7 +39,7 @@ function ProCard({ p }: { p: Pro }) {
           )}
         </div>
       </header>
-      <SetupStrip fh={p.fh} bh={p.bh} />
+      <SetupStrip blade={p.blade} fh={p.fh} bh={p.bh} images={images(p)} />
       <dl className="grid gap-2 text-sm">
         {([["Blade", p.blade], ["Forehand", p.fh], ["Backhand", p.bh]] as const).map(([k, v]) => (
           <div key={k} className="flex gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
