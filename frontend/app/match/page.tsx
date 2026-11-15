@@ -156,7 +156,7 @@ export default function MatchPage() {
       />
     </form>
       <ExampleSection
-        before={{ label: "Before", caption: "A clip of you hitting forehands" }}
+        before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player filming their forehand" }}
         after={{ label: "After", caption: "Your 3 closest pros and their breakdowns", vertical: true }}
         steps={[
           "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
