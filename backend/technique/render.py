@@ -17,6 +17,7 @@ from PIL import Image, ImageDraw, ImageFont
 from .media import encode_frames
 from .pose import CONNECTIONS, L_WRIST, NOSE, R_WRIST, PoseTrack, _interp_nan
 from .schema import StrokeBreakdown
+from .strokes import label as stroke_label
 
 W, H, FPS = 1080, 1920, 30
 VID_Y, VID_H = 560, 1080          # video area: y range [560, 1640)
@@ -153,7 +154,7 @@ def layer_intro(b: StrokeBreakdown) -> np.ndarray:
     d = ImageDraw.Draw(img)
     _brand(d)
     f = font("bold", 34)
-    t = f"QUICK BREAKDOWN · {b.stroke.upper()}"
+    t = f"QUICK BREAKDOWN · {stroke_label(b.stroke_type or b.stroke).upper()}"
     d.text(((W - d.textlength(t, font=f)) / 2, 190), t, font=f, fill=ACCENT)
     fh = font("black", 84)
     lines = _wrap(d, b.headline.upper(), fh, W - 120)

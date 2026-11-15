@@ -5,8 +5,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-Stroke = Literal["forehand", "backhand", "serve", "flick", "block", "footwork"]
-STROKES: tuple[str, ...] = ("forehand", "backhand", "serve", "flick", "block", "footwork")
+Stroke = Literal["forehand", "backhand", "serve", "flick", "block", "footwork", "chop"]
+STROKES: tuple[str, ...] = ("forehand", "backhand", "serve", "flick", "block", "footwork", "chop")
 
 
 class Step(BaseModel):
@@ -25,7 +25,12 @@ class Step(BaseModel):
 
 class StrokeBreakdown(BaseModel):
     player: str = Field(default="Player", description="Player name if known")
-    stroke: str = Field(description="One of forehand, backhand, serve, flick, block, footwork")
+    stroke: str = Field(description="One of forehand, backhand, serve, flick, block, footwork, chop")
+    stroke_type: Optional[str] = Field(
+        default=None,
+        description="Specific stroke: forehand_topspin, forehand_drive, forehand_loop_backspin, "
+                    "backhand_topspin, backhand_flick, backhand_push, chop, serve; null if unknown",
+    )
     handedness: Literal["right", "left", "unknown"] = "unknown"
     headline: str = Field(description="3-6 word hook, e.g. 'Stretched wide? Counter and recover.'")
     grip: str = Field(description="Grip style and how it is held for this stroke")

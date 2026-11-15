@@ -76,7 +76,8 @@ function titleFor(job: Job) {
 function eyebrowFor(job: Job) {
   if (job.kind === "breakdown") {
     const player = job.breakdown?.player ?? str(job.params.player);
-    const stroke = job.breakdown?.stroke ?? str(job.params.stroke);
+    const st = job.strokeType;
+    const stroke = st ? `${st.label}${st.detected ? " (auto-detected)" : ""}` : job.breakdown?.stroke ?? str(job.params.stroke);
     return ["Technique breakdown", player, stroke].filter(Boolean).join(" · ");
   }
   return `Match Auto-Cut · ${job.params.mode === "full" ? "Full match" : "Highlights"}`;

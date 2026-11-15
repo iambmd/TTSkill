@@ -7,13 +7,15 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, UploadF
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 
+from technique.strokes import STROKE_TYPES
+
 from . import download, jobs
 from .pipelines import fetch_then, run_autocut, run_breakdown
 
 app = FastAPI(title="TTSkill backend")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
-STROKES = {"forehand", "backhand", "serve", "flick", "block", "footwork"}
+STROKES = {"", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"}
 
 
 def save_upload(upload: UploadFile, dest: Path) -> Path:
@@ -73,7 +75,8 @@ def create_autocut(
 @app.post("/jobs/breakdown", status_code=201)
 def create_breakdown(
     background: BackgroundTasks,
-    stroke: str = Form(...),
+    stroke: str = Form(""),
+    stroke_type: str = Form(""),
     text: str = Form(""),
     player: str = Form(""),
     hand: str = Form("auto"),
@@ -82,6 +85,8 @@ def create_breakdown(
 ) -> dict:
     if stroke not in STROKES:
         raise HTTPException(400, f"unknown stroke: {stroke}")
+    if stroke_type and stroke_type not in STROKE_TYPES:
+        raise HTTPException(400, f"unknown stroke type: {stroke_type}")
     if hand not in ("auto", "left", "right"):
         raise HTTPException(400, "hand must be auto, left or right")
     if not has_file(video):
@@ -89,11 +94,11 @@ def create_breakdown(
     link = check_link(url) if video is None else None
     if video is None and link is None and not text.strip():
         raise HTTPException(400, "Upload a clip, paste a YouTube link, or describe the training.")
-    params = {"stroke": stroke, "player": player, "text": text, "hand": hand,
+    params = {"stroke": stroke, "stroke_type": stroke_type or "auto", "player": player, "text": text, "hand": hand,
               "video": video.filename if video else (link["title"] if link else None),
               "url": link and link["url"]}
     job = jobs.create("breakdown", params)
-    args = (text, stroke, player, hand)
+    args = (text, stroke, player, hand, stroke_type)
     if link:
         background.add_task(fetch_then, job["id"], link["url"], run_breakdown, *args)
     else:

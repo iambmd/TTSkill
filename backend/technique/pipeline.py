@@ -15,7 +15,7 @@ from typing import Callable, Optional
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 
-from . import audio, media, pose
+from . import audio, media, pose, strokes
 from .analyze import OfflineAnalyzer, get_analyzer, normalize_stroke
 from .render import render_breakdown, render_text_only
 from .video_prompt import build_prompts, generate_video
@@ -50,14 +50,15 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
     return {"start": s, "end": e, "reason": "most bat-hand motion"}
 
 
-def key_moments(track: pose.PoseTrack, side: str,
-                hit_times: Optional[list[float]] = None) -> tuple[list[float], int]:
+def key_moments(track: pose.PoseTrack, side: str, hit_times: Optional[list[float]] = None,
+                direction: str = "up", window_s: float = 0.6) -> tuple[list[float], int]:
     """[preparation, contact, finish] times (s) and the contact frame index.
 
-    Contact = a fast bat-hand swing peak on the *forward* (upward) swing, preferring
-    peaks that line up with a ball-contact sound when hit times are known (so walking or
-    the drop into the backswing is not picked). Preparation = the lowest bat-hand point
-    just before it (end of backswing); finish = the highest point just after it."""
+    Contact = a fast bat-hand swing peak moving in the stroke's `direction` (up for topspin
+    strokes, down for pushes and chops, any for serves), preferring peaks that line up with
+    a ball-contact sound when hit times are known (so walking or the drop into the backswing
+    is not picked). Preparation/finish = the bat hand's turning points within `window_s`
+    before/after contact (lowest then highest for upward strokes, the reverse for downward)."""
     pk = pose.swing_peaks(track, side)
     dur = float(track.times[-1]) if len(track.times) else 0.0
     if len(pk) == 0:
@@ -76,18 +77,25 @@ def key_moments(track: pose.PoseTrack, side: str,
     hits = np.array(hit_times or [])
 
     def score(i: int) -> float:
-        s_ = float(v[i]) * (1.0 if vy[i] < 0 else 0.3)  # upward = forward swing
+        along = direction == "any" or (vy[i] < 0) == (direction == "up")
+        s_ = float(v[i]) * (1.0 if along else 0.3)
         if len(hits):
             dt = float(np.min(np.abs(hits - track.times[i])))
             s_ *= 0.25 + np.exp(-(dt / 0.12) ** 2)
         return s_
 
     p = int(max(ok, key=score))
-    win = max(2, int(0.6 * track.fps))
+    win = max(2, int(window_s * track.fps))
     a0 = max(0, p - win)
-    prep = a0 + int(np.argmax(wy[a0:p + 1])) if p > a0 else p
     b1 = min(len(wy), p + win + 1)
-    fin = p + int(np.argmin(wy[p:b1]))
+    if direction == "down":   # highest point before, lowest after
+        prep = a0 + int(np.argmin(wy[a0:p + 1])) if p > a0 else p
+        fin = p + int(np.argmax(wy[p:b1]))
+    elif direction == "up":   # lowest point before (end of backswing), highest after
+        prep = a0 + int(np.argmax(wy[a0:p + 1])) if p > a0 else p
+        fin = p + int(np.argmin(wy[p:b1]))
+    else:
+        prep, fin = a0 + (p - a0) // 2, min(len(wy) - 1, p + win // 2)
     gap = max(1, int(0.12 * track.fps))
     prep = min(prep, p - gap) if p - gap >= 0 else 0
     fin = max(fin, min(len(wy) - 1, p + gap))
@@ -95,15 +103,37 @@ def key_moments(track: pose.PoseTrack, side: str,
     return [float(T[max(prep, 0)]), float(T[p]), float(T[fin])], p
 
 
+def _stroke_plan(track: pose.PoseTrack, side: str, hits: list[float], stroke: str,
+                 stroke_type: Optional[str]) -> tuple[Optional[str], Optional[dict]]:
+    """The stroke type to coach, and the pose features when it was auto-detected.
+    A chosen type wins; serve/flick map straight to a type; block/footwork have none;
+    otherwise the type is read from the swing (within the given wing, if any)."""
+    if stroke_type:
+        return stroke_type, None
+    if stroke in strokes.LEGACY_TYPE:
+        return strokes.LEGACY_TYPE[stroke], None
+    if stroke in ("block", "footwork"):
+        return None, None
+    _, p0 = key_moments(track, side, hits, direction="any")
+    wing = stroke if stroke in ("forehand", "backhand") else None
+    key, feats = strokes.detect(track, side, p0, wing=wing)
+    return key, feats
+
+
 def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional[str] = None,
               analyzer: str = "auto", window: Optional[tuple[float, float]] = None,
               window_s: float = 8.0, t2v_provider: str = "none",
-              progress: Optional[Progress] = None, hand: str = "auto") -> dict:
-    """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible)."""
+              progress: Optional[Progress] = None, hand: str = "auto",
+              stroke_type: Optional[str] = None) -> dict:
+    """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible).
+    stroke: a broad stroke, or "" / "auto" to read it from the swing.
+    stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect."""
     t0 = time.time()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    stroke = normalize_stroke(stroke)
+    stroke_type = strokes.resolve(stroke_type)
+    auto = (stroke or "").strip().lower() in ("", "auto")
+    stroke = "" if auto else normalize_stroke(stroke)
     info = media.probe(src)
     _log(progress, f"input {info['width']}x{info['height']} {info['duration']:.1f}s")
 
@@ -121,7 +151,15 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     _log(progress, f"bat hand: {side} ({how})")
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
-    keys, peak_i = key_moments(track, side, hits)
+    stroke_type, detected = _stroke_plan(track, side, hits, stroke, stroke_type)
+    st = strokes.STROKE_TYPES.get(stroke_type or "")
+    if st:
+        stroke = st.stroke
+        how_known = "auto-detected from the swing" if detected else "chosen"
+        _log(progress, f"stroke type: {st.label} ({how_known})")
+    stroke = stroke or "forehand"
+    keys, peak_i = key_moments(track, side, hits, direction=st.direction if st else "up",
+                               window_s=st.window_s if st else 0.6)
     summary = pose.summarize(track, side)
     contact = pose.pose_metrics(track, peak_i, side) if len(track.times) else {}
     (out / "pose_summary.json").write_text(json.dumps(summary, indent=2))
@@ -130,15 +168,19 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     frame_times = sorted(set([round(x, 2) for x in np.linspace(0.2, max(0.3, dur - 0.2), 6)] + keys))
     a = get_analyzer(analyzer)
     _log(progress, f"analysing with {a.name}")
+    kind = dict(stroke_type=stroke_type, detected=detected is not None)
     try:
         if isinstance(a, OfflineAnalyzer):
-            b = a.from_video(clip, stroke, frame_times, summary, keys, player, contact_metrics=contact)
+            b = a.from_video(clip, stroke, frame_times, summary, keys, player,
+                             contact_metrics=contact, **kind)
         else:
-            b = a.from_video(clip, stroke, frame_times, summary, keys, player)
+            b = a.from_video(clip, stroke, frame_times, summary, keys, player, **kind)
     except Exception as e:  # LLM failure must not kill the demo
         _log(progress, f"{a.name} failed ({e}); using offline analyzer")
         b = OfflineAnalyzer().from_video(clip, stroke, frame_times, summary, keys, player,
-                                         contact_metrics=contact)
+                                         contact_metrics=contact, **kind)
+    if b.stroke_type not in strokes.STROKE_TYPES:  # Claude may correct a detected type
+        b.stroke_type = stroke_type
     b.handedness = side if (how != "faster wrist") else b.handedness
     # make sure every step has a usable time inside the clip
     for s, k in zip(b.steps, keys):
@@ -157,6 +199,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         "kind": "technique_breakdown",
         "input": str(src),
         "stroke": stroke,
+        "stroke_type": b.stroke_type,
+        "stroke_type_detected": detected,
         "window": {k: v for k, v in win.items() if k != "hit_times"},
         "analyzer": b.source,
         "bat_hand": {"side": side, "how": how},
@@ -178,17 +222,29 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
 
 def run_text(text: str, out_dir: str, stroke: str = "forehand", player: Optional[str] = None,
              analyzer: str = "auto", t2v_provider: str = "none",
-             progress: Optional[Progress] = None) -> dict:
+             progress: Optional[Progress] = None, stroke_type: Optional[str] = None) -> dict:
     t0 = time.time()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
-    stroke = normalize_stroke(stroke)
+    stroke_type = strokes.resolve(stroke_type)
+    auto = (stroke or "").strip().lower() in ("", "auto")
+    detected = None
+    if not stroke_type and auto:
+        stroke_type = strokes.from_text(text)
+        detected = {"from": "text"} if stroke_type else None
+    elif not stroke_type:
+        stroke_type = strokes.LEGACY_TYPE.get(normalize_stroke(stroke))
+    st = strokes.STROKE_TYPES.get(stroke_type or "")
+    stroke = st.stroke if st else normalize_stroke(stroke)
+    kind = dict(stroke_type=stroke_type, detected=detected is not None)
     a = get_analyzer(analyzer)
     try:
-        b = a.from_text(text, stroke, player)
+        b = a.from_text(text, stroke, player, **kind)
     except Exception as e:
         _log(progress, f"{a.name} failed ({e}); using offline analyzer")
-        b = OfflineAnalyzer().from_text(text, stroke, player)
+        b = OfflineAnalyzer().from_text(text, stroke, player, **kind)
+    if b.stroke_type not in strokes.STROKE_TYPES:
+        b.stroke_type = stroke_type
     (out / "breakdown.json").write_text(b.model_dump_json(indent=2))
     prompts = build_prompts(b)
     (out / "video_prompt.json").write_text(json.dumps(prompts, indent=2))
@@ -196,6 +252,7 @@ def run_text(text: str, out_dir: str, stroke: str = "forehand", player: Optional
     video = render_text_only(b, str(out / "breakdown.mp4"))
     result = {
         "kind": "technique_breakdown", "input": "text", "stroke": stroke, "analyzer": b.source,
+        "stroke_type": b.stroke_type, "stroke_type_detected": detected,
         "outputs": {"breakdown_json": str(out / "breakdown.json"),
                     "video_prompt_json": str(out / "video_prompt.json"),
                     "overlay_video": video, "generated_video": generated},

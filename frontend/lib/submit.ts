@@ -8,12 +8,14 @@ export type Job = {
   resultUrl?: string | null;
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
+  strokeType?: { key: string | null; label: string; detected: boolean } | null;
 };
 
 /** Mirrors StrokeBreakdown in backend/technique/schema.py. */
 export type Breakdown = {
   player: string;
   stroke: string;
+  stroke_type?: string | null;
   handedness: string;
   headline: string;
   grip: string;
