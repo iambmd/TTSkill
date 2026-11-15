@@ -85,6 +85,8 @@ Cached results ship with the frontend, so the demo never waits on the pipeline:
 
 - `/jobs/demo-breakdown`: a Ma Long forehand breakdown in the new coaching style.
 - `/jobs/demo-autocut`: the top 5 rallies of a 3:35 match, cut into a 49 s highlight reel.
+- `/jobs/demo-breakdown`: forehand breakdown video and steps from the technique pipeline, on a clip of Ma Long.
+- `/jobs/demo-autocut`: from IMG_8782.MOV, the top 4 rallies by shot count, cut into a 42 s highlight reel (a pre-serve floor-bounce routine is filtered out).
 
 Set `DEMO_MODE=1` for the frontend to make every submission return these results instantly. The files are `frontend/lib/demo-jobs.json` and `frontend/public/demo/*.mp4`.
 

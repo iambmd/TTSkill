@@ -63,7 +63,13 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
         jobs.update(job_id, status="running", progress=0.1, message="Listening for ball contacts...")
         workdir = jobs.job_dir(job_id)
         found = detect_rallies(video, workdir, threshold, gap, min_hits)
-        warning = few_rallies_warning(len(found))
+        if found:
+            jobs.update(job_id, progress=0.2, message="Checking for pre-serve floor bounces...")
+            from .floor_bounce import drop_floor_bounces  # heavy imports (MediaPipe, OpenCV)
+            found, bounces = drop_floor_bounces(video, found)
+            if bounces:
+                print(f"dropped {len(bounces)} floor-bounce spans: {[r.to_dict() for r in bounces]}")
+        warning = few_rallies_warning(len(found))  # counted after floor bounces are dropped
         if not found:  # nothing to cut, but the advice is the result: done, not failed
             jobs.update(job_id, status="done", progress=1.0, rallies=[], warning=warning,
                         message="No rallies found.")

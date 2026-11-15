@@ -22,6 +22,7 @@ const ROUTES = {
   job: "@/app/api/jobs/[id]/route",
   result: "@/app/api/jobs/[id]/result/route",
   files: "@/app/api/jobs/[id]/files/[name]/route",
+  rubbers: "@/app/api/rubbers/route",
 } as const;
 
 const SHORT = "https://youtube.com/shorts/g3n9jVP0fMU";
@@ -40,6 +41,7 @@ async function route(name: keyof typeof ROUTES, env: { BACKEND_URL?: string; DEM
     job: () => import("@/app/api/jobs/[id]/route"),
     result: () => import("@/app/api/jobs/[id]/result/route"),
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
+    rubbers: () => import("@/app/api/rubbers/route"),
   };
   return imports[name]();
 }
@@ -311,6 +313,35 @@ describe("DEMO_MODE", () => {
     const { POST } = await route("match", { DEMO_MODE: "1" });
     const job = await (await POST!(post({ video: video(), stroke: "forehand" }))).json();
     expect(job).toMatchObject({ kind: "match", status: "queued" });
+  });
+});
+
+describe("GET /api/rubbers", () => {
+  const url = (q: string) => new Request(`http://test/api/rubbers?${q}`);
+  it("rejects unknown options", async () => {
+    const { GET } = await route("rubbers");
+    await expectError(await GET!(url("style=loop"), ctx({})), 400, "spin or speed");
+    await expectError(await GET!(url("rubber_type=x"), ctx({})), 400, "rubber type");
+    await expectError(await GET!(url("level=pro"), ctx({})), 400, "level");
+    await expectError(await GET!(url("budget=0"), ctx({})), 400, "budget");
+  });
+  it("ranks locally without a backend: within budget, $10 bands down from it, then user score", async () => {
+    const { GET } = await route("rubbers");
+    const body = await (await GET!(url("style=spin&rubber_type=inverted&level=beginner&budget=45"), ctx({}))).json();
+    expect(body.thickness).toBe("1.5-1.8 mm");
+    expect(body.results.length).toBe(8);
+    expect(body.results.every((r: { price: number }) => r.price <= 45)).toBe(true);
+    expect(body.results[0].price).toBeGreaterThan(35);
+    const keys = body.results.map((r: { price: number; overall: number }) => [Math.floor((45 - r.price) / 10 + 1e-9), -r.overall]);
+    expect(keys).toEqual([...keys].sort((a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1]));
+  });
+  it("uses the backend when it is set", async () => {
+    const fetchMock = vi.fn(async () => Response.json({ thickness: "from backend", results: [] }));
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await route("rubbers", { BACKEND_URL: "http://backend" });
+    const body = await (await GET!(url("style=speed&rubber_type=anti_spin&level=advanced&budget=40"), ctx({}))).json();
+    expect(body.thickness).toBe("from backend");
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("/equipment/rubbers?style=speed&rubber_type=anti_spin&level=advanced&budget=40");
   });
 });
 
