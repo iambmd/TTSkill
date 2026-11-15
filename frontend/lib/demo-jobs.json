@@ -4,74 +4,82 @@
     "kind": "breakdown",
     "status": "done",
     "progress": 1,
-    "message": "Cached run of the technique pipeline on a 15 s clip of Ma Long's forehand practice. Bat hand: right (found from paddle colour near each wrist).",
+    "message": "Cached run of the technique pipeline on Ma Long's forehand Short (youtube.com/shorts/g3n9jVP0fMU). Stroke type auto-detected from the swing: forehand loop vs backspin.",
     "params": {
-      "stroke": "forehand",
+      "stroke": "",
+      "stroke_type": "auto",
       "player": "Ma Long",
-      "video": "MaLongForehandPractice_Sample.mp4",
-      "analyzer": "offline-pose-template",
-      "elapsed_s": 46.3
+      "hand": "auto",
+      "video": "Malong's Forehand Loop Breakdown",
+      "url": "https://www.youtube.com/watch?v=g3n9jVP0fMU"
     },
     "resultUrl": "/demo/breakdown.mp4",
     "breakdown": {
       "player": "Ma Long",
       "stroke": "forehand",
+      "stroke_type": "forehand_loop_backspin",
       "handedness": "right",
-      "headline": "Load low. Drive through.",
-      "grip": "Shakehand grip, relaxed; index finger on the backhand rubber, thumb soft.",
-      "stance": "Wide base with deep knee bend (knees ~116 deg).",
-      "swing_path": "Low-to-high and forward, turning the waist; bat closes over the ball.",
-      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~119 deg.",
-      "follow_through": "Bat finishes near the forehead, then snaps back to neutral.",
+      "headline": "Get low. Lift the backspin.",
+      "grip": "Shakehand, loose in the backswing so the wrist can add brush.",
+      "stance": "Wide base with deep knee bend (knees ~123 deg).",
+      "swing_path": "Start below the table edge and swing steeply up, brushing up the back of the ball.",
+      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~146 deg.",
+      "follow_through": "High finish above the head; the legs push you back up.",
       "steps": [
         {
-          "title": "Load the bat side",
+          "title": "Drop low",
           "lines": [
-            "Turn the waist back.",
-            "Weight onto the back leg."
+            "Knees bend, bat below the table.",
+            "Backspin pulls the ball down."
           ],
           "highlight_words": [
-            "Turn the waist",
-            "back leg"
+            "below the table",
+            "down"
           ],
-          "key_time_s": 5.766666666666667,
+          "key_time_s": 1.1333333333333333,
           "callouts": [
-            "WAIST TURN",
-            "WEIGHT BACK"
+            "LOW START"
           ]
         },
         {
-          "title": "Drive through contact",
+          "title": "Lift steep",
           "lines": [
-            "Hit at the top of the bounce.",
-            "Brush forward and up."
+            "Swing up the back of the ball.",
+            "Let it drop after the peak."
           ],
           "highlight_words": [
-            "top of the bounce",
-            "forward and up"
+            "up the back",
+            "after the peak"
           ],
-          "key_time_s": 5.966666666666667,
+          "key_time_s": 1.4,
           "callouts": [
-            "CONTACT IN FRONT"
+            "STEEP UPWARD SWING"
           ]
         },
         {
-          "title": "Recover to ready",
+          "title": "End above",
           "lines": [
-            "Finish by the forehead.",
-            "Reset feet for the next ball."
+            "Bat finishes above your head.",
+            "Legs push you back to ready."
           ],
           "highlight_words": [
-            "forehead",
-            "Reset feet"
+            "above your head",
+            "Legs"
           ],
-          "key_time_s": 6.166666666666667,
+          "key_time_s": 1.6,
           "callouts": [
-            "BACK TO READY"
+            "FINISH HIGH"
           ]
         }
       ],
+      "recap": "Drop low, lift steep, end above.",
+      "drill": "Have a partner push long and loop 10 in a row.",
       "source": "offline-pose-template"
+    },
+    "strokeType": {
+      "key": "forehand_loop_backspin",
+      "label": "Forehand loop vs backspin",
+      "detected": true
     }
   },
   "demo-autocut": {
