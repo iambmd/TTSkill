@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Breakdown, Job, ProMatch } from "@/lib/submit";
-import { DownloadIcon, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { CheckIcon, DownloadIcon, buttonBaseClass, secondaryButtonClass } from "../../ui";
 
 type Rally = NonNullable<Job["rallies"]>[number];
 
@@ -181,6 +181,110 @@ function Matches({ matches }: { matches: ProMatch[] }) {
   );
 }
 
+function Todos({ todos, running }: { todos: NonNullable<Job["todos"]>; running: boolean }) {
+  if (!todos.length) {
+    return (
+      <div className="stripes rounded-2xl border border-line bg-panel p-4 text-sm text-muted">
+        {running ? "The coach is planning..." : "No plan was recorded."}
+      </div>
+    );
+  }
+  return (
+    <ol className="space-y-1.5 rounded-2xl border border-line bg-panel p-3" aria-live="polite">
+      {todos.map((t, i) => (
+        <li key={i} className={`flex items-center gap-3 rounded-xl px-2 py-2 ${t.status === "in_progress" ? "bg-accent/10" : ""}`}>
+          {t.status === "completed" ? (
+            <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-3.5" /></span>
+          ) : t.status === "in_progress" ? (
+            <span className="grid size-6 shrink-0 place-items-center rounded-full border-2 border-accent"><span className="size-2 animate-pulse rounded-full bg-accent" /></span>
+          ) : (
+            <span className="size-6 shrink-0 rounded-full border-2 border-white/15" />
+          )}
+          <span className={t.status === "completed" ? "text-muted line-through decoration-white/20" : t.status === "in_progress" ? "font-semibold" : ""}>
+            {t.content}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CoachView({ job }: { job: Job }) {
+  const running = job.status === "queued" || job.status === "running";
+  const pct = Math.round(job.progress * 100);
+  return (
+    <div className="mx-auto max-w-5xl space-y-8 lg:grid lg:grid-cols-[minmax(0,22rem)_1fr] lg:items-start lg:gap-10 lg:space-y-0">
+      <div className="space-y-4 lg:sticky lg:top-20">
+        <div className="space-y-3">
+          <p className="eyebrow">TT Coach{job.engine === "deepagents" ? " · deep agent" : ""}</p>
+          <h1 className="headline text-4xl">&ldquo;{str(job.params.request) ?? "Your request"}&rdquo;</h1>
+          {job.message && (
+            <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>
+              {running && <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent" />}
+              {job.message}
+            </p>
+          )}
+        </div>
+        <div>
+          <div className="mb-2 flex items-end justify-between">
+            <h2 className="eyebrow">The plan</h2>
+            <span className="headline text-2xl tabular-nums">{pct}<span className="text-base text-accent">%</span></span>
+          </div>
+          <Todos todos={job.todos ?? []} running={running} />
+        </div>
+        {job.engine === "fallback" && (
+          <p className="text-xs text-muted">Ran the same tools on a fixed plan ({job.engineNote}).</p>
+        )}
+      </div>
+      <div className="space-y-8">
+        {job.summary && (
+          <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
+            <h2 className="eyebrow">Coach says</h2>
+            <p className="mt-1 text-lg leading-snug whitespace-pre-line">{job.summary}</p>
+          </section>
+        )}
+        {(job.outputs ?? []).map((o) => (
+          <section key={o.kind} className="space-y-3">
+            <div className="flex items-end justify-between gap-3">
+              <div>
+                <h2 className="headline text-3xl">{o.title}</h2>
+                <p className="text-sm text-muted">{o.summary}</p>
+              </div>
+              <a href={o.url} download className={`${secondaryButtonClass} h-10 shrink-0`}><DownloadIcon /> Save</a>
+            </div>
+            <video
+              src={`${o.url}#t=0.001`} controls playsInline preload="metadata"
+              className={`mx-auto block w-full rounded-3xl border border-line bg-black object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
+            />
+          </section>
+        ))}
+        {running && !(job.outputs ?? []).length && <div className="stripes aspect-video rounded-3xl border border-line bg-panel" />}
+        {job.breakdown && <Steps b={job.breakdown} />}
+        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} />}
+        {(job.agentFiles ?? []).length > 0 && (
+          <details className="group rounded-2xl border border-line bg-panel">
+            <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
+              Coach&apos;s notes ({job.agentFiles!.length} files)
+              <span aria-hidden className="transition group-open:rotate-45">+</span>
+            </summary>
+            <div className="space-y-3 px-4 pb-4">
+              {job.agentFiles!.map((f) => (
+                <div key={f.name}>
+                  <p className="font-mono text-xs font-bold text-accent">{f.name}</p>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-black/40 p-2 text-xs text-muted">{f.preview}</pre>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
+        {!running && (
+          <Link href="/coach" className={secondaryButtonClass}>Ask again</Link>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function Rallies({ rallies, full }: { rallies: Rally[]; full: boolean }) {
   const most = Math.max(1, ...rallies.map((r) => r.shots));
   const total = rallies.reduce((t, r) => t + r.end - r.start, 0);
@@ -261,6 +365,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       </div>
     );
   }
+
+  if (job.kind === "coach") return <CoachView job={job} />;
 
   const vertical = job.kind !== "autocut";
   const ended = job.status === "done" || job.status === "failed";

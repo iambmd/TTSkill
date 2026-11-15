@@ -53,6 +53,8 @@ export async function getJob(id: string): Promise<Response> {
     if (!res.ok) return new Response(res.body, { status: res.status });
     const job = (await res.json()) as Job;
     if (job.resultUrl) job.resultUrl = `/api/jobs/${id}/result`;
+    // Coach outputs are served by the backend at /jobs/{id}/files/{name}; route them through us.
+    job.outputs = job.outputs?.map((o) => ({ ...o, url: `/api${o.url}` }));
     return Response.json(job);
   }
   const job = stubJobs.get(id);
@@ -68,9 +70,10 @@ export async function getJob(id: string): Promise<Response> {
 // Headers passed through from the backend so <video> can seek (Safari/iOS needs range requests).
 const RESULT_HEADERS = ["content-type", "content-length", "content-range", "accept-ranges", "content-disposition", "etag", "last-modified"];
 
-export async function getResult(id: string, range?: string | null): Promise<Response> {
+export async function getResult(id: string, range?: string | null, file?: string): Promise<Response> {
   if (!BACKEND_URL) return Response.json({ error: "No result in stub mode" }, { status: 404 });
-  const res = await fetch(`${BACKEND_URL}/jobs/${id}/result`, {
+  const path = file ? `files/${encodeURIComponent(file)}` : "result";
+  const res = await fetch(`${BACKEND_URL}/jobs/${id}/${path}`, {
     cache: "no-store",
     headers: range ? { range } : undefined,
   });

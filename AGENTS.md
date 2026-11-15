@@ -23,7 +23,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | Path | What |
 | --- | --- |
 | `frontend/` | Next.js 15 App Router, React 19, TypeScript (strict), Tailwind CSS v4. Deploys to Vercel with root directory `frontend`. |
-| `frontend/app/` | Pages: `/`, `/breakdown`, `/match`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
+| `frontend/app/` | Pages: `/`, `/coach`, `/breakdown`, `/match`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
 | `frontend/app/api/jobs/` | Route handlers. They validate the form, then call `lib/jobs.ts`. |
 | `frontend/lib/jobs.ts` | Server-only job client with three modes: **proxy** to FastAPI when `BACKEND_URL` is set; **stub** (in-memory jobs with fake progress) when it is unset; **demo** (`DEMO_MODE=1`, every submission returns the cached results in `lib/demo-jobs.json` + `public/demo/*.mp4`). |
 | `frontend/lib/submit.ts` | Client upload via XHR, which reports upload progress. Also holds the `Job` and `Breakdown` types. |
@@ -38,6 +38,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) so videos match the app's type. |
 | `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, weighted distance on height and proportions for the top 3, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
 | `backend/data/players/` | `players.json` (12 pros: height, bat hand, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. |
+| `backend/agent/` | TT Coach. `coach.py` builds the deepagents agent (Claude, `write_todos` planning, virtual file system, subagents `clip_analyst`, `player_matcher`, `coach_writer`), streams its todos and files into the job, and falls back to a fixed plan without a key. `tools.py` holds the six tools, bound to one job, wrapping the existing pipelines. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
 | `samples/` | Local test videos. Git-ignored. |
 
@@ -47,6 +48,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`); legacy `stroke` still accepted |
+| POST | `/jobs/coach` | multipart: `request`, `video` or `url` |
+| GET | `/jobs/{id}/files/{name}` | Videos the coach made (`highlights.mp4`, `breakdown.mp4`, `pro_matches.mp4`) |
 | POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
@@ -82,7 +85,8 @@ To run the services one at a time, use `make backend` or `make frontend`. To wor
 | --- | --- | --- |
 | `BACKEND_URL` | frontend | FastAPI URL. Unset means stub mode. `make frontend` sets it to `http://localhost:8000`. |
 | `DEMO_MODE` | frontend | `1` makes every submission return the cached demo jobs. |
-| `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer. Without it, the offline analyzer runs. |
+| `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer and the TT Coach deep agent. Without it, the offline analyzer and the coach's fixed plan run. |
+| `COACH_MODEL` | backend | Claude model for TT Coach (default `claude-opus-5-5`). |
 | `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer (default `claude-opus-5-5`). |
 | `POSE_MODEL_PATH` | backend | Local `pose_landmarker_full.task`. Otherwise it is downloaded once to `~/.cache/ttskill/`. |
 | `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |
