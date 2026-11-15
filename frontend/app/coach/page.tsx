@@ -6,6 +6,7 @@ import { submitJob } from "@/lib/submit";
 import { LIMITS, textProblem } from "@/lib/validate";
 import { FieldError, PageIntro, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
+import { CoachExample } from "./example";
 
 const EXAMPLES = [
   "Here's my match: show my best rallies and fix my forehand",
@@ -57,40 +58,43 @@ export default function CoachPage() {
   }
 
   return (
-    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
-      <PageIntro
-        eyebrow="TT Coach"
-        title="Ask your coach."
-        body="One request, one video. The coach plans the work, runs the tools, and shows you its to-do list as it goes."
-      />
-      <div>
-        <div className="flex items-end justify-between">
-          <label className={labelClass} htmlFor="request">What do you want?</label>
-          <span aria-hidden className={`mb-2 text-xs tabular-nums ${askError ? "font-bold text-red-200" : "text-muted"}`}>
-            {length}/{most}
-          </span>
-        </div>
-        <textarea
-          ref={askRef} id="request" name="request" rows={3} value={ask} onChange={(e) => setAsk(e.target.value)}
-          aria-invalid={!!askError} aria-describedby="request-error"
-          className={`${inputClass} ${askError ? "border-red-500/50" : ""}`}
-          placeholder="e.g. Show my best rallies and fix my forehand"
+    <>
+      <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
+        <PageIntro
+          eyebrow="TT Coach"
+          title="Ask your coach."
+          body="One request, one video. The coach plans the work, runs the tools, and shows you its to-do list as it goes."
         />
-        <FieldError id="request-error">{askError}</FieldError>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {EXAMPLES.map((x) => (
-            <button
-              key={x} type="button"
-              onClick={() => { setAsk(x); askRef.current?.focus(); }}
-              className="rounded-full border border-line px-3 py-1.5 text-left text-xs font-semibold text-muted hover:border-accent hover:text-white"
-            >
-              {x}
-            </button>
-          ))}
+        <div>
+          <div className="flex items-end justify-between">
+            <label className={labelClass} htmlFor="request">What do you want?</label>
+            <span aria-hidden className={`mb-2 text-xs tabular-nums ${askError ? "font-bold text-red-200" : "text-muted"}`}>
+              {length}/{most}
+            </span>
+          </div>
+          <textarea
+            ref={askRef} id="request" name="request" rows={3} value={ask} onChange={(e) => setAsk(e.target.value)}
+            aria-invalid={!!askError} aria-describedby="request-error"
+            className={`${inputClass} ${askError ? "border-red-500/50" : ""}`}
+            placeholder="e.g. Show my best rallies and fix my forehand"
+          />
+          <FieldError id="request-error">{askError}</FieldError>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {EXAMPLES.map((x) => (
+              <button
+                key={x} type="button"
+                onClick={() => { setAsk(x); askRef.current?.focus(); }}
+                className="rounded-full border border-line px-3 py-1.5 text-left text-xs font-semibold text-muted hover:border-accent hover:text-white"
+              >
+                {x}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-      <VideoPicker kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
-      <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
-    </form>
+        <VideoPicker kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
+        <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
+      </form>
+      <CoachExample />
+    </>
   );
 }

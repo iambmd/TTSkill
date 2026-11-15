@@ -1,8 +1,10 @@
 /** Before/after example videos and a "How it works" list, shown under each feature's form. */
 
+import type { ReactNode } from "react";
+
 // #t=0.1 makes browsers paint the first frame instead of a black box before play.
 
-type Clip = { src?: string; label: string; caption: string; vertical?: boolean };
+type Clip = { src?: string; label: string; caption: string; vertical?: boolean; message?: string };
 
 function ExampleVideo({ clip }: { clip: Clip }) {
   const frame = `mx-auto w-full overflow-hidden rounded-3xl border border-line bg-panel ${
@@ -14,6 +16,11 @@ function ExampleVideo({ clip }: { clip: Clip }) {
         <span className="headline text-2xl">{clip.label}</span>
         <span className="text-right text-xs text-muted">{clip.caption}</span>
       </figcaption>
+      {clip.message && (
+        <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm font-semibold text-black shadow-[0_0_24px_rgb(255_107_44/0.35)]">
+          {clip.message}
+        </p>
+      )}
       {clip.src ? (
         <video
           src={`${clip.src}#t=0.1`} controls muted playsInline preload="metadata"
@@ -26,7 +33,9 @@ function ExampleVideo({ clip }: { clip: Clip }) {
   );
 }
 
-export function ExampleSection({ before, after, steps }: { before: Clip; after: Clip; steps: string[] }) {
+export function ExampleSection({
+  before, after, steps, stepsTitle = "What happens to your video.",
+}: { before: Clip; after: Clip | ReactNode; steps: string[]; stepsTitle?: string }) {
   return (
     <section aria-labelledby="example-heading" className="mx-auto mt-8 max-w-xl space-y-10 border-t border-line pt-10">
       <div className="space-y-6">
@@ -36,12 +45,12 @@ export function ExampleSection({ before, after, steps }: { before: Clip; after: 
         </div>
         <ExampleVideo clip={before} />
         <div aria-hidden className="text-center text-2xl text-accent">↓</div>
-        <ExampleVideo clip={after} />
+        {isClip(after) ? <ExampleVideo clip={after} /> : after}
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
           <p className="eyebrow">How it works</p>
-          <h2 className="headline text-4xl">What happens to your video.</h2>
+          <h2 className="headline text-4xl">{stepsTitle}</h2>
         </div>
         <ol className="space-y-3">
           {steps.map((s, i) => (
@@ -54,4 +63,8 @@ export function ExampleSection({ before, after, steps }: { before: Clip; after: 
       </div>
     </section>
   );
+}
+
+function isClip(x: Clip | ReactNode): x is Clip {
+  return typeof x === "object" && x !== null && "label" in x && "caption" in x;
 }
