@@ -102,7 +102,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             )}
             <div className="flex items-center gap-3 border-t border-line bg-panel px-4 py-3">
               {fileError ? (
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-500/80 text-white"><CloseIcon className="size-4" /></span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-500/80 text-neutral-50"><CloseIcon className="size-4" /></span>
               ) : (
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-4" /></span>
               )}

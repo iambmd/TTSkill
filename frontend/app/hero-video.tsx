@@ -30,7 +30,7 @@ export function HeroVideo() {
         />
         <button
           type="button" onClick={toggle} aria-label={playing ? "Pause demo" : "Play demo"}
-          className="absolute right-3 bottom-3 grid size-11 place-items-center rounded-full bg-black/60 text-white backdrop-blur hover:bg-black/80"
+          className="absolute right-3 bottom-3 grid size-11 place-items-center rounded-full bg-black/60 text-neutral-50 backdrop-blur hover:bg-black/80"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>

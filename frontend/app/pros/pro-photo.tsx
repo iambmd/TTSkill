@@ -82,7 +82,7 @@ function Item({ part, label, name, img }: { part: "blade" | "fh" | "bh"; label: 
   const photo = img && !failed;
   return (
     <figure className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
-      <div className="grid h-24 w-full place-items-center overflow-hidden rounded-xl bg-white p-1">
+      <div className="grid h-24 w-full place-items-center overflow-hidden rounded-xl bg-neutral-50 p-1">
         {photo
           // eslint-disable-next-line @next/next/no-img-element -- hotlinked retailer image
           ? <img src={img.src} alt={name} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="max-h-full max-w-full object-contain" />
