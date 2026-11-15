@@ -62,6 +62,24 @@ def test_health(api):
     assert api.get("/health").json() == {"ok": True}
 
 
+@pytest.mark.parametrize("origin, allowed", [
+    ("https://ttskill.vercel.app", True),
+    ("https://ttskill-git-feat-x-team.vercel.app", True),
+    ("https://shy-river-1234.trycloudflare.com", True),
+    ("http://localhost:3000", True),
+    ("https://evil.example", False),
+    ("https://ttskill.vercel.app.evil.example", False),
+    ("https://evilvercel.app", False),
+    ("http://ttskill.vercel.app", False),
+])
+def test_cors_allows_vercel_tunnel_and_localhost(api, origin, allowed):
+    # Upload progress listeners make the browser send a preflight before the multipart POST.
+    pre = api.options("/jobs/autocut", headers={"Origin": origin, "Access-Control-Request-Method": "POST"})
+    got = api.get("/health", headers={"Origin": origin})
+    assert (pre.headers.get("access-control-allow-origin") == origin) is allowed
+    assert (got.headers.get("access-control-allow-origin") == origin) is allowed
+
+
 # ------------------------------------------------------------------ POST /jobs/autocut
 
 def test_autocut_needs_a_video_or_link(api, ran):

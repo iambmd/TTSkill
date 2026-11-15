@@ -45,7 +45,7 @@ export default function BreakdownPage() {
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("/api/jobs/breakdown", form, setProgress);
+      const job = await submitJob("breakdown", form, setProgress);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

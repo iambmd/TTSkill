@@ -54,22 +54,38 @@ export type Breakdown = {
 };
 
 /**
- * Posts a form to one of our API routes and returns the created job.
+ * The backend's public URL (e.g. a Cloudflare tunnel), inlined at build time. When set, the browser posts
+ * jobs and loads result videos straight from it: Vercel Functions cap request and response bodies at 4.5 MB,
+ * far below a phone video. Unset, everything goes through this app's /api routes.
+ */
+export const PUBLIC_API_URL = (process.env.NEXT_PUBLIC_API_URL ?? "").trim().replace(/\/+$/, "");
+
+/** Where a new job is posted: the public backend when there is one, else our /api/jobs route. */
+export function jobEndpoint(kind: Job["kind"]): string {
+  return PUBLIC_API_URL ? `${PUBLIC_API_URL}/jobs/${kind}` : `/api/jobs/${kind}`;
+}
+
+/**
+ * Posts a form for a new job and returns the created job.
  * Uses XHR rather than fetch because only XHR reports upload progress, which matters for big phone videos.
  */
-export function submitJob(path: string, form: FormData, onProgress?: (fraction: number) => void): Promise<Job> {
+export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fraction: number) => void): Promise<Job> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", path);
+    xhr.open("POST", jobEndpoint(kind));
     xhr.responseType = "json";
     if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
     xhr.onload = () => {
       const data = xhr.response ?? {};
       if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Job);
       if (xhr.status === 413) return reject(new Error("That video is too big to upload here. Try a shorter clip."));
-      reject(new Error(data.error ?? `Request failed (${xhr.status})`));
+      // Our routes answer {error}; FastAPI, reached directly, answers {detail}.
+      const detail = typeof data.detail === "string" ? data.detail : undefined;
+      reject(new Error(data.error ?? detail ?? `Request failed (${xhr.status})`));
     };
-    xhr.onerror = () => reject(new Error("Upload failed. Check your connection and try again."));
+    xhr.onerror = () => reject(new Error(PUBLIC_API_URL
+      ? "Can't reach the TTSkill backend. Check your connection, then try again."
+      : "Upload failed. Check your connection and try again."));
     xhr.send(form);
   });
 }

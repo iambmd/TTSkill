@@ -1,6 +1,5 @@
+import { BACKEND_URL } from "@/lib/jobs";
 import { DEFAULT_BUDGET, LEVELS, STYLES, TYPES, recommend, type Level, type RubberType, type Style } from "@/lib/rubbers";
-
-const BACKEND_URL = process.env.BACKEND_URL;
 
 /** GET /api/rubbers?style=&rubber_type=&level=&budget= : the backend's recommender, or the local port without one. */
 export async function GET(req: Request): Promise<Response> {

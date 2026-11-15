@@ -79,6 +79,17 @@ make test       # backend (pytest) and frontend (vitest) tests
 - **Coaching style:** run `python -m style.fetch_refs`, then `analyze_refs`, then `build_style` to rebuild `swift_style.json`.
 - **UI only:** `cd frontend && npm run dev` runs without Python; the API routes then return placeholder jobs.
 
+## Deploy (Vercel + your machine)
+
+The frontend runs on Vercel and the backend stays on your machine behind a Cloudflare quick tunnel:
+
+```bash
+make backend                                    # FastAPI on :8000
+cloudflared tunnel --url http://localhost:8000  # prints https://<random>.trycloudflare.com
+```
+
+In Vercel, set the root directory to `frontend` and the environment variable `NEXT_PUBLIC_API_URL` to the tunnel URL, then redeploy. The browser then uploads videos and plays results straight from the tunnel. The tunnel URL changes whenever `cloudflared` restarts, so update the variable and redeploy each time.
+
 ## Judging demo
 
 Cached results ship with the frontend, so the demo never waits on the pipeline:
@@ -121,7 +132,7 @@ See [AGENTS.md](AGENTS.md) for conventions and how to extend each part.
 
 ## Known limits
 
-- Vercel functions cap request bodies at about 4.5 MB, so large match uploads should go straight to the backend once it's hosted. Pasting a YouTube link avoids the limit.
+- Vercel functions cap request and response bodies at about 4.5 MB. With `NEXT_PUBLIC_API_URL` set, uploads and result videos go straight to the backend and skip that limit; without it, uploads through Vercel are limited to about 4.5 MB. Pasting a YouTube link avoids the limit either way.
 - YouTube sometimes shows a bot check to busy IPs. Link downloads then fail with a clear message ("upload the file instead"), and the profile builder stops until a later re-run.
 - Height from the table is an estimate (about ±10 cm). Entering your height gives better matches.
 - Pro heights and bat hands come from public sources and are listed per player in `players.json`. Seven heights are marked approximate where sources disagree (for younger players, by a few cm).

@@ -1,8 +1,9 @@
 /**
  * Every Next.js API route under app/api/jobs: form validation (422s, limits from shared/limits.json),
  * and lib/jobs.ts in its three
- * modes - stub (no BACKEND_URL), proxy to FastAPI (fetch mocked), and DEMO_MODE.
- * BACKEND_URL and DEMO_MODE are read when lib/jobs.ts loads, so each test re-imports.
+ * modes - stub (no BACKEND_URL), proxy to FastAPI (fetch mocked), and DEMO_MODE - plus a public
+ * NEXT_PUBLIC_API_URL (Vercel + tunnel), where uploads and videos skip our routes.
+ * The env is read when lib/jobs.ts and lib/submit.ts load, so each test re-imports.
  */
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
@@ -28,11 +29,18 @@ const ROUTES = {
 const SHORT = "https://youtube.com/shorts/g3n9jVP0fMU";
 const savedEnv = { ...process.env };
 
-async function route(name: keyof typeof ROUTES, env: { BACKEND_URL?: string; DEMO_MODE?: string } = {}): Promise<Route> {
+type Env = { BACKEND_URL?: string; DEMO_MODE?: string; NEXT_PUBLIC_API_URL?: string };
+
+function setEnv(env: Env) {
   vi.resetModules();
   delete process.env.BACKEND_URL;
   delete process.env.DEMO_MODE;
+  delete process.env.NEXT_PUBLIC_API_URL;
   Object.assign(process.env, env);
+}
+
+async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
+  setEnv(env);
   const imports: Record<keyof typeof ROUTES, () => Promise<Route>> = {
     breakdown: () => import("@/app/api/jobs/breakdown/route"),
     autocut: () => import("@/app/api/jobs/autocut/route"),
@@ -297,6 +305,38 @@ describe("proxy to the FastAPI backend", () => {
     const res = await GET!(get(), ctx({ id: "abc", name: "breakdown.mp4" }));
     expect(await res.text()).toBe("mp4");
     expect((fetch.mock.calls[0] as unknown as [string])[0]).toBe("http://backend/jobs/abc/files/breakdown.mp4");
+  });
+});
+
+// ------------------------------------------------------------------ public backend (Vercel + Cloudflare tunnel)
+
+describe("NEXT_PUBLIC_API_URL", () => {
+  const tunnel = { NEXT_PUBLIC_API_URL: "https://shy-river-1234.trycloudflare.com/" };
+
+  it("sends the browser's uploads straight to it, past Vercel's 4.5 MB body limit", async () => {
+    setEnv(tunnel);
+    expect((await import("@/lib/submit")).jobEndpoint("autocut")).toBe("https://shy-river-1234.trycloudflare.com/jobs/autocut");
+    setEnv({ BACKEND_URL: "http://backend" });
+    expect((await import("@/lib/submit")).jobEndpoint("autocut")).toBe("/api/jobs/autocut");
+  });
+
+  it("stands in for BACKEND_URL and serves result and coach videos straight from the backend", async () => {
+    const fetch = vi.fn(async () => Response.json({
+      id: "abc", kind: "coach", status: "done", resultUrl: "/jobs/abc/result",
+      outputs: [{ kind: "highlights", title: "Top 3", url: "/jobs/abc/files/highlights.mp4", summary: "" }],
+    }));
+    vi.stubGlobal("fetch", fetch);
+    const { GET } = await route("job", tunnel);
+    const job = await (await GET!(get(), ctx({ id: "abc" }))).json();
+    expect((fetch.mock.calls[0] as unknown as [string])[0]).toBe("https://shy-river-1234.trycloudflare.com/jobs/abc");
+    expect(job.resultUrl).toBe("https://shy-river-1234.trycloudflare.com/jobs/abc/result");
+    expect(job.outputs[0].url).toBe("https://shy-river-1234.trycloudflare.com/jobs/abc/files/highlights.mp4");
+  });
+
+  it("still serves the cached demo jobs", async () => {
+    vi.stubGlobal("fetch", vi.fn());
+    const { GET } = await route("job", tunnel);
+    expect((await (await GET!(get(), ctx({ id: "demo-breakdown" }))).json()).resultUrl).toBe("/demo/breakdown.mp4");
   });
 });
 

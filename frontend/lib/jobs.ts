@@ -1,9 +1,10 @@
 import "server-only";
 import { randomUUID } from "crypto";
-import type { Job } from "./submit";
+import { PUBLIC_API_URL, type Job } from "./submit";
 import demoJobs from "./demo-jobs.json";
 
-const BACKEND_URL = process.env.BACKEND_URL;
+// How this server reaches FastAPI. On Vercel the public tunnel URL serves for both, so one variable is enough.
+export const BACKEND_URL = process.env.BACKEND_URL || PUBLIC_API_URL || undefined;
 // DEMO_MODE=1 answers every submission with the cached sample-clip result, so a live demo never waits on the pipeline.
 const DEMO_MODE = process.env.DEMO_MODE === "1";
 const DEMO_JOBS = demoJobs as Record<string, Job>;
@@ -63,9 +64,11 @@ export async function getJob(id: string): Promise<Response> {
     const res = await backend(`/jobs/${id}`, { cache: "no-store" });
     if (!res.ok) return new Response(res.body, { status: res.status });
     const job = (await res.json()) as Job;
-    if (job.resultUrl) job.resultUrl = `/api/jobs/${id}/result`;
-    // Coach outputs are served by the backend at /jobs/{id}/files/{name}; route them through us.
-    job.outputs = job.outputs?.map((o) => ({ ...o, url: `/api${o.url}` }));
+    // Videos load straight from a public backend, since a Vercel Function can't pass a long video through;
+    // otherwise our /api routes proxy them. Coach outputs are served at /jobs/{id}/files/{name}.
+    const videos = PUBLIC_API_URL || "/api";
+    if (job.resultUrl) job.resultUrl = `${videos}/jobs/${id}/result`;
+    job.outputs = job.outputs?.map((o) => ({ ...o, url: `${videos}${o.url}` }));
     return Response.json(job);
   }
   const job = stubJobs.get(id);
