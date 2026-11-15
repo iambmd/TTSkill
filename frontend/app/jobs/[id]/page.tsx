@@ -110,7 +110,14 @@ function Steps({ b }: { b: Breakdown }) {
             </li>
           ))}
         </ol>
+        {b.recap && <p className="headline text-2xl text-muted">{b.recap}</p>}
       </section>
+      {b.drill && (
+        <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
+          <h2 className="eyebrow">Try this</h2>
+          <p className="mt-1 text-lg font-semibold">{b.drill}</p>
+        </section>
+      )}
       <section className="space-y-3">
         <h2 className="eyebrow">The details</h2>
         <dl className="divide-y divide-line rounded-2xl border border-line bg-panel">

@@ -17,6 +17,7 @@ import numpy as np
 
 from .schema import STROKES, Step, StrokeBreakdown
 from .strokes import STROKE_TYPES
+from .style import prompt_guide
 
 DEFAULT_MODEL = os.environ.get("TECHNIQUE_MODEL", "claude-opus-5-5")
 
@@ -24,7 +25,8 @@ SYSTEM = (
     "You are an elite table tennis coach who writes short, punchy coaching breakdowns for "
     "vertical social videos. Be concrete and technical (grip, stance, swing path, contact point, "
     "follow-through, recovery). Use plain words a club player understands. Never invent a player "
-    "name that was not given. Lines must be short: at most ~45 characters each."
+    "name that was not given. Lines must be short: at most ~45 characters each. Write everything "
+    "in your own words.\n\n" + prompt_guide()
 )
 
 
@@ -123,155 +125,150 @@ class ClaudeAnalyzer:
 
 # ------------------------------------------------------------------ offline fallback
 
-_TEMPLATES = {
-    "forehand": dict(
-        headline="Load low. Drive through.",
-        grip="Shakehand grip, relaxed; index finger on the backhand rubber, thumb soft.",
-        swing_path="Low-to-high and forward, turning the waist; bat closes over the ball.",
-        follow_through="Bat finishes near the forehead, then snaps back to neutral.",
-        steps=[("Load the bat side", ["Turn the waist back.", "Weight onto the back leg."],
-                ["Turn the waist", "back leg"], ["WAIST TURN", "WEIGHT BACK"]),
-               ("Drive through contact", ["Hit at the top of the bounce.", "Brush forward and up."],
-                ["top of the bounce", "forward and up"], ["CONTACT IN FRONT"]),
-               ("Recover to ready", ["Finish by the forehead.", "Reset feet for the next ball."],
-                ["forehead", "Reset feet"], ["BACK TO READY"])]),
-    "backhand": dict(
-        headline="Elbow out. Flick it forward.",
-        grip="Shakehand grip, thumb slightly up on the forehand side for backhand control.",
-        swing_path="Short backswing to the belly, forearm opens forward from the elbow pivot.",
-        follow_through="Bat finishes forward toward the target, elbow stays in front.",
-        steps=[("Set the elbow", ["Bat in front of the belly.", "Keep the elbow forward."],
-                ["in front", "elbow forward"], ["ELBOW IS THE PIVOT"]),
-               ("Hit in front", ["Meet the ball early.", "Open the forearm fast."],
-                ["early", "forearm"], ["BAT BEHIND BALL"]),
-               ("Recover for the next", ["Relax the arm after contact.", "Stay square to the table."],
-                ["Relax", "square"], ["BACK INTO POSITION"])]),
-    "serve": dict(
-        headline="Hide the spin. Keep it short.",
-        grip="Loose shakehand, fingers relaxed so the wrist can whip.",
-        swing_path="Fast brush across the bottom or side of the ball, low over the table.",
-        follow_through="Short finish, bat back in front quickly for the third ball.",
-        steps=[("Toss it straight", ["Open palm, 16 cm minimum.", "Watch the ball drop."],
-                ["Open palm", "Watch the ball"], ["LEGAL TOSS"]),
-               ("Brush, don't hit", ["Contact low, near the table.", "Accelerate the wrist."],
-                ["Contact low", "wrist"], ["THIN CONTACT"]),
-               ("Ready for ball three", ["Step back to neutral.", "Bat up in front."],
-                ["neutral", "in front"], ["THIRD BALL READY"])]),
-    "flick": dict(
-        headline="Over the table. Snap the wrist.",
-        grip="Shakehand, slightly looser so the wrist can cock back.",
-        swing_path="Step in, cock the wrist, then a short sharp forward-up flick.",
-        follow_through="Tiny finish, step back out of the table immediately.",
-        steps=[("Step in under the ball", ["Right foot under the table.", "Get close to the bounce."],
-                ["Right foot", "close"], ["STEP IN"]),
-               ("Snap at the peak", ["Cock the wrist back.", "Flick forward over the top."],
-                ["Cock the wrist", "over the top"], ["FAST FLICK"]),
-               ("Get out of the table", ["Push off the front foot.", "Be ready for the fast ball."],
-                ["Push off", "fast ball"], ["RECOVER"])]),
-    "block": dict(
-        headline="Quiet bat. Use their speed.",
-        grip="Firm but not tight; bat angle closed against topspin.",
-        swing_path="Almost no swing: bat meets the ball early and pushes slightly forward.",
-        follow_through="Short and compact; reset the bat in front.",
-        steps=[("Read the attack", ["Watch the opponent's bat.", "Set the angle early."],
-                ["opponent's bat", "angle early"], ["READ THE LOOP"]),
-               ("Meet it early", ["Contact just after the bounce.", "Keep the bat out front."],
-                ["after the bounce", "out front"], ["BAT IN FRONT"]),
-               ("Stay compact", ["Tiny follow-through.", "Bat back to neutral."],
-                ["Tiny", "neutral"], ["KEEP THE RALLY ALIVE"])]),
-    "footwork": dict(
-        headline="Small steps. Always balanced.",
-        grip="Neutral shakehand so either wing is ready.",
-        swing_path="Move first, then swing: the body arrives before the bat.",
-        follow_through="Push back to the centre after every shot.",
-        steps=[("Split-step ready", ["Bounce on the balls of feet.", "Knees bent, weight forward."],
-                ["balls of feet", "Knees bent"], ["READY STANCE"]),
-               ("Move, then hit", ["Side-step to the ball.", "Arrive before you swing."],
-                ["Side-step", "Arrive"], ["FEET FIRST"]),
-               ("Recover to centre", ["Push off the outside leg.", "Back to the middle."],
-                ["Push off", "middle"], ["BACK TO CENTRE"])]),
-}
+# One coaching template per stroke type (strokes.STROKE_TYPES) plus block and footwork.
+# Shape follows style/swift_style.json: 3 two-word cues; line 1 = what to look for,
+# line 2 = why it works or the mistake it prevents; a recap line and a practice drill.
+# Original wording.
+def _t(headline, grip, swing_path, follow_through, steps, recap, drill):
+    return dict(headline=headline, grip=grip, swing_path=swing_path, follow_through=follow_through,
+                steps=steps, recap=recap, drill=drill)
 
-# One coaching template per stroke type (strokes.STROKE_TYPES). Original wording.
-_TEMPLATES.update({
-    "forehand_topspin": dict(
-        headline="Low to high. Brush it over.",
-        grip="Shakehand, relaxed; index finger along the backhand rubber, thumb soft.",
-        swing_path="Low-to-high and forward, driven by the legs and waist; bat closes over the top.",
-        follow_through="Bat finishes near the forehead, then snaps back to ready.",
-        steps=[("Load the bat side", ["Turn the waist back.", "Weight onto the back leg."],
-                ["waist", "back leg"], ["WAIST TURN", "WEIGHT BACK"]),
-               ("Brush at the peak", ["Contact at the top of the bounce.", "Brush forward and up."],
-                ["top of the bounce", "forward and up"], ["CONTACT IN FRONT"]),
-               ("Finish and reset", ["Bat ends by the forehead.", "Feet reset for the next ball."],
-                ["forehead", "reset"], ["BACK TO READY"])]),
-    "forehand_drive": dict(
-        headline="Flat and fast. Hit through.",
-        grip="Shakehand, firm at contact; bat face slightly closed.",
-        swing_path="Short backswing to the hip, then a flatter forward swing straight through the ball.",
-        follow_through="Compact finish in front of the face; recover quickly.",
-        steps=[("Short backswing", ["Bat back to hip height.", "Elbow relaxed by your side."],
-                ["hip height", "relaxed"], ["SHORT BACKSWING"]),
-               ("Hit through the ball", ["Meet it at the peak.", "Drive forward, not up."],
-                ["peak", "forward"], ["BAT SLIGHTLY CLOSED"]),
-               ("Compact recovery", ["Stop the bat by your nose.", "Ready for the counter."],
-                ["nose", "Ready"], ["STAY COMPACT"])]),
-    "forehand_loop_backspin": dict(
-        headline="Get low. Lift the backspin.",
-        grip="Shakehand, loose in the backswing so the wrist can add brush.",
-        swing_path="Start below the table edge and swing steeply up, brushing up the back of the ball.",
-        follow_through="High finish above the head; the legs push you back up.",
-        steps=[("Drop the bat low", ["Bend the knees deeply.", "Bat below the table edge."],
-                ["knees", "below the table"], ["LOW START"]),
-               ("Lift with the legs", ["Brush up the back of the ball.", "Let it drop after the peak."],
-                ["up the back", "after the peak"], ["STEEP UPWARD SWING"]),
-               ("Finish high", ["Bat ends above the head.", "Recover for the next topspin."],
-                ["above the head", "Recover"], ["FINISH HIGH"])]),
-    "backhand_topspin": dict(
-        headline="Elbow forward. Open the forearm.",
-        grip="Shakehand with the thumb a little higher on the forehand side.",
-        swing_path="Bat back to the belly, then the forearm opens forward and up from an elbow pivot.",
-        follow_through="Bat finishes toward the target at eye level; elbow stays in front.",
-        steps=[("Set the elbow", ["Bat in front of the belly.", "Elbow forward as a pivot."],
-                ["belly", "pivot"], ["ELBOW IS THE PIVOT"]),
-               ("Snap forward and up", ["Meet the ball in front.", "Open the forearm fast."],
-                ["in front", "forearm"], ["BRUSH UP"]),
-               ("Recover square", ["Relax the arm after contact.", "Stay square to the table."],
-                ["Relax", "square"], ["BACK TO READY"])]),
-    "backhand_flick": dict(
-        headline="Step in. Flick over the top.",
-        grip="Shakehand, slightly looser so the wrist can cock back.",
-        swing_path="Step under the table, cock the wrist back, then a short sharp flick forward and up.",
-        follow_through="Tiny finish; push back out of the table straight away.",
-        steps=[("Step in under the ball", ["Foot under the table.", "Elbow up, bat tip down."],
-                ["under the table", "Elbow up"], ["STEP IN"]),
-               ("Flick at the peak", ["Cock the wrist back.", "Snap forward over the top."],
-                ["Cock the wrist", "over the top"], ["WRIST SNAP"]),
-               ("Get out of the table", ["Push off the front foot.", "Ready for a fast return."],
-                ["Push off", "fast return"], ["RECOVER"])]),
-    "backhand_push": dict(
-        headline="Open bat. Push it short.",
-        grip="Relaxed shakehand; bat face open toward the ceiling.",
-        swing_path="Short forward-and-down stroke under the ball, guided by the forearm.",
-        follow_through="Bat stops low toward the net; no big swing.",
-        steps=[("Open the bat", ["Bat face toward the ceiling.", "Step in close to the bounce."],
-                ["ceiling", "close"], ["OPEN ANGLE"]),
-               ("Push under the ball", ["Contact early, after the bounce.", "Forearm forward and down."],
-                ["early", "forward and down"], ["BRUSH UNDER"]),
-               ("Stay low, reset", ["Finish low toward the net.", "Back to a neutral bat."],
-                ["low", "neutral"], ["CONTROL, NOT POWER"])]),
-    "chop": dict(
-        headline="High to low. Cut under it.",
-        grip="Shakehand, firm wrist; bat face open.",
-        swing_path="From shoulder height down and forward, cutting under the ball as it drops.",
-        follow_through="Bat ends low by the knee; step back in for the next ball.",
-        steps=[("Bat up high", ["Step back from the table.", "Bat starts by the shoulder."],
-                ["Step back", "shoulder"], ["HIGH START"]),
-               ("Cut down and forward", ["Let the ball drop first.", "Slice under the back of it."],
-                ["drop", "under"], ["OPEN BAT FACE"]),
-               ("Finish low, reset", ["Bat ends near the knee.", "Shuffle back to position."],
-                ["knee", "Shuffle"], ["BACKSPIN CONTROL"])]),
-})
+
+_TEMPLATES = {
+    "forehand_topspin": _t(
+        "Load low. Swing up through it.",
+        "Shakehand, relaxed; index finger along the backhand rubber, thumb soft.",
+        "Low-to-high and forward, driven by the legs and waist; bat closes over the top.",
+        "Bat finishes near the forehead, then snaps back to ready.",
+        [("Load low", ["Weight sinks onto the back leg.", "That loaded leg is your power."],
+          ["back leg", "power"], ["WEIGHT BACK"]),
+         ("Lift through", ["Bat starts below the ball.", "Topspin needs an upward path."],
+          ["below the ball", "upward"], ["CONTACT IN FRONT"]),
+         ("End high", ["Bat finishes by the forehead.", "A short finish resets faster."],
+          ["forehead", "resets faster"], ["BACK TO READY"])],
+        "Load low, lift through, end high.",
+        "Shadow 20 swings in a mirror, checking each cue."),
+    "forehand_drive": _t(
+        "Stay short. Hit through it.",
+        "Shakehand, firm at contact; bat face slightly closed.",
+        "Short backswing to the hip, then a flatter forward swing straight through the ball.",
+        "Compact finish in front of the face; recover quickly.",
+        [("Stay short", ["Small backswing to the hip.", "A big swing arrives late."],
+          ["Small backswing", "late"], ["SHORT BACKSWING"]),
+         ("Hit through", ["Meet the ball at the peak.", "Drive forward, not upward."],
+          ["peak", "forward"], ["BAT SLIGHTLY CLOSED"]),
+         ("Snap back", ["Bat stops in front of your nose.", "You are ready for the counter."],
+          ["nose", "counter"], ["STAY COMPACT"])],
+        "Stay short, hit through, snap back.",
+        "Rally forehand to forehand for 2 minutes, flat and steady."),
+    "forehand_loop_backspin": _t(
+        "Get low. Lift the backspin.",
+        "Shakehand, loose in the backswing so the wrist can add brush.",
+        "Start below the table edge and swing steeply up, brushing up the back of the ball.",
+        "High finish above the head; the legs push you back up.",
+        [("Drop low", ["Knees bend, bat below the table.", "Backspin pulls the ball down."],
+          ["below the table", "down"], ["LOW START"]),
+         ("Lift steep", ["Swing up the back of the ball.", "Let it drop after the peak."],
+          ["up the back", "after the peak"], ["STEEP UPWARD SWING"]),
+         ("End above", ["Bat finishes above your head.", "Legs push you back to ready."],
+          ["above your head", "Legs"], ["FINISH HIGH"])],
+        "Drop low, lift steep, end above.",
+        "Have a partner push long and loop 10 in a row."),
+    "backhand_topspin": _t(
+        "Elbow forward. Open the forearm.",
+        "Shakehand with the thumb a little higher on the forehand side.",
+        "Bat back to the belly, then the forearm opens forward and up from an elbow pivot.",
+        "Bat finishes toward the target at eye level; elbow stays in front.",
+        [("Elbow forward", ["Bat sits in front of the belly.", "The elbow is the pivot."],
+          ["belly", "pivot"], ["ELBOW IS THE PIVOT"]),
+         ("Open out", ["Forearm opens forward and up.", "Meet the ball in front of you."],
+          ["forward and up", "in front"], ["CONTACT IN FRONT"]),
+         ("Stay square", ["Relax the arm after contact.", "Square stance covers both wings."],
+          ["Relax", "both wings"], ["BACK TO READY"])],
+        "Elbow forward, open out, stay square.",
+        "Backhand-to-backhand rally, 50 balls, elbow still."),
+    "backhand_flick": _t(
+        "Step in. Snap it over the top.",
+        "Shakehand, slightly looser so the wrist can cock back.",
+        "Step under the table, cock the wrist back, then a short sharp flick forward and up.",
+        "Tiny finish; push back out of the table straight away.",
+        [("Step in", ["Foot goes under the table.", "Too far away and the wrist can't work."],
+          ["under the table", "wrist"], ["STEP IN"]),
+         ("Wrist snap", ["Cock the wrist, then whip it.", "Contact at the top of the bounce."],
+          ["whip", "top of the bounce"], ["FAST WRIST"]),
+         ("Step out", ["Push off the front foot.", "A fast return is coming."],
+          ["Push off", "fast return"], ["RECOVER"])],
+        "Step in, wrist snap, step out.",
+        "Partner serves short; flick 10, recovering after each."),
+    "backhand_push": _t(
+        "Open bat. Keep it short.",
+        "Relaxed shakehand; bat face open toward the ceiling.",
+        "Short forward-and-down stroke under the ball, guided by the forearm.",
+        "Bat stops low toward the net; no big swing.",
+        [("Open face", ["Bat face tilts to the ceiling.", "An open bat handles the backspin."],
+          ["ceiling", "backspin"], ["OPEN ANGLE"]),
+         ("Glide under", ["Forearm moves forward and down.", "Contact early, just after the bounce."],
+          ["forward and down", "early"], ["UNDER THE BALL"]),
+         ("Stay low", ["Finish low toward the net.", "Control beats power here."],
+          ["low", "Control"], ["CONTROL, NOT POWER"])],
+        "Open face, glide under, stay low.",
+        "Push rally on the backhand diagonal, 30 balls."),
+    "chop": _t(
+        "High to low. Cut under it.",
+        "Shakehand, firm wrist; bat face open.",
+        "From shoulder height down and forward, cutting under the ball as it drops.",
+        "Bat ends low by the knee; step back in for the next ball.",
+        [("Bat high", ["Step back, bat by the shoulder.", "Height gives room to cut down."],
+          ["shoulder", "cut down"], ["HIGH START"]),
+         ("Cut down", ["Let the ball drop first.", "Slice under the back of it."],
+          ["drop", "under"], ["OPEN BAT FACE"]),
+         ("Low finish", ["Bat ends near the knee.", "Shuffle back in for the next ball."],
+          ["knee", "Shuffle"], ["BACKSPIN CONTROL"])],
+        "Bat high, cut down, low finish.",
+        "Partner loops gently; chop 10 back deep."),
+    "serve": _t(
+        "Hide the spin. Keep it short.",
+        "Loose shakehand, fingers relaxed so the wrist can whip.",
+        "Fast brush across the bottom or side of the ball, low over the table.",
+        "Short finish, bat back in front quickly for the third ball.",
+        [("Toss straight", ["Open palm, at least 16 cm up.", "A legal toss wins the first point."],
+          ["Open palm", "legal"], ["LEGAL TOSS"]),
+         ("Graze it", ["Contact low, near the table.", "A thin contact makes the spin."],
+          ["low", "thin contact"], ["THIN CONTACT"]),
+         ("Ball three", ["Step back to neutral fast.", "The return comes quickly."],
+          ["neutral", "quickly"], ["THIRD BALL READY"])],
+        "Toss straight, graze it, ready for ball three.",
+        "Serve 20 balls to one target, changing only the spin."),
+    "block": _t(
+        "Quiet bat. Use their speed.",
+        "Firm but not tight; bat angle closed against topspin.",
+        "Almost no swing: bat meets the ball early and pushes slightly forward.",
+        "Short and compact; reset the bat in front.",
+        [("Read it", ["Watch the opponent's bat.", "Its angle tells you the spin."],
+          ["opponent's bat", "spin"], ["READ THE LOOP"]),
+         ("Meet early", ["Contact just after the bounce.", "Use their speed, not yours."],
+          ["after the bounce", "their speed"], ["BAT IN FRONT"]),
+         ("Stay quiet", ["Tiny follow-through.", "A big swing sends it long."],
+          ["Tiny", "long"], ["KEEP THE RALLY ALIVE"])],
+        "Read it, meet early, stay quiet.",
+        "Partner loops; block 30 balls to one corner."),
+    "footwork": _t(
+        "Small steps. Always balanced.",
+        "Neutral shakehand so either wing is ready.",
+        "Move first, then swing: the body arrives before the bat.",
+        "Push back to the centre after every shot.",
+        [("Split step", ["Bounce on the balls of your feet.", "You start moving sooner."],
+          ["balls of your feet", "sooner"], ["READY STANCE"]),
+         ("Feet first", ["Side-step to the ball.", "Arrive before you swing."],
+          ["Side-step", "Arrive"], ["MOVE, THEN HIT"]),
+         ("Back centre", ["Push off the outside leg.", "Reset to the middle every shot."],
+          ["Push off", "middle"], ["BACK TO CENTRE"])],
+        "Split step, feet first, back to centre.",
+        "Two-point footwork drill: forehand, backhand, 2 minutes."),
+}
+# Older broad strokes reuse the matching type's template.
+_TEMPLATES.update(forehand=_TEMPLATES["forehand_topspin"], backhand=_TEMPLATES["backhand_topspin"],
+                  flick=_TEMPLATES["backhand_flick"])
 
 
 class OfflineAnalyzer:
@@ -286,7 +283,8 @@ class OfflineAnalyzer:
         tpl = self._template(stroke, stroke_type)
         return dict(player=player or "Player", stroke=stroke, stroke_type=stroke_type,
                     handedness=handed, headline=tpl["headline"], grip=tpl["grip"],
-                    swing_path=tpl["swing_path"], follow_through=tpl["follow_through"])
+                    swing_path=tpl["swing_path"], follow_through=tpl["follow_through"],
+                    recap=tpl["recap"], drill=tpl["drill"])
 
     def _steps(self, stroke: str, key_times: list[Optional[float]],
                stroke_type: Optional[str] = None) -> list[Step]:

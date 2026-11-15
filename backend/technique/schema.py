@@ -10,8 +10,9 @@ STROKES: tuple[str, ...] = ("forehand", "backhand", "serve", "flick", "block", "
 
 
 class Step(BaseModel):
-    title: str = Field(description="2-4 word step title, e.g. 'Read the attack'")
-    lines: List[str] = Field(description="Exactly two short coaching lines (max ~45 chars each)")
+    title: str = Field(description="Two-word cue: an action plus a direction or body part, e.g. 'Load low'")
+    lines: List[str] = Field(description="Exactly two short lines (max ~45 chars each): what to look "
+                                         "for, then why it works or the mistake it prevents")
     highlight_words: List[str] = Field(
         default_factory=list, description="Words/phrases from `lines` to show in the accent color"
     )
@@ -39,6 +40,8 @@ class StrokeBreakdown(BaseModel):
     contact_point: str = Field(description="Where/when the bat meets the ball relative to the body and bounce")
     follow_through: str = Field(description="Finish position and recovery")
     steps: List[Step] = Field(description="Exactly three numbered coaching steps in time order")
+    recap: Optional[str] = Field(default=None, description="One line joining the three cues, e.g. 'Load low, lift through, end high.'")
+    drill: Optional[str] = Field(default=None, description="One simple practice drill the player can do alone")
     source: str = Field(default="unknown", description="Which analyzer produced this")
 
 

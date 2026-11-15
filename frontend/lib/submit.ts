@@ -24,6 +24,8 @@ export type Breakdown = {
   contact_point: string;
   follow_through: string;
   steps: { title: string; lines: string[]; highlight_words: string[]; key_time_s: number; callouts: string[] }[];
+  recap?: string | null;
+  drill?: string | null;
 };
 
 /**

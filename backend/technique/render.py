@@ -1,9 +1,11 @@
-"""Fallback renderer: vertical 1080x1920 coaching video built from the user's own clip.
+"""Vertical 1080x1920 coaching video built from the user's own clip.
 
-Footage is dimmed and tinted, a glowing MediaPipe skeleton is drawn on the player, and the
-breakdown is shown as a title card, three numbered steps (slow-mo + freeze at each key
-moment, bat-hand marker with trail, callout labels) and a summary card. Original TTSkill
-styling; nothing is copied from third-party videos."""
+Layout and pacing follow backend/style/swift_style.json: a persistent header (stroke + hook),
+the footage in the middle with a glowing MediaPipe skeleton, and under it a two-word cue in
+that step's colour with one line on what to look for and one on why. Each step plays at
+real speed, slows into the key moment and freezes there with a ring on the bat hand; the
+video ends with a recap of the three cues and a practice drill. TTSkill's own palette and
+fonts (Barlow, OFL); nothing is copied from third-party videos."""
 from __future__ import annotations
 
 from functools import lru_cache
@@ -14,34 +16,42 @@ import cv2
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
+from . import style
 from .media import encode_frames
 from .pose import CONNECTIONS, L_WRIST, NOSE, R_WRIST, PoseTrack, _interp_nan
 from .schema import StrokeBreakdown
 from .strokes import label as stroke_label
 
 W, H, FPS = 1080, 1920, 30
-VID_Y, VID_H = 560, 1080          # video area: y range [560, 1640)
-BG = (20, 15, 11)                 # BGR near-black navy
-ACCENT = (255, 212, 0)            # RGB yellow (PIL)
-CYAN = (60, 230, 255)             # RGB
-WHITE = (240, 240, 240)
-GREY = (120, 128, 140)
+VID_Y, VID_H = 400, 1080          # video area: y range [400, 1480)
+CUE_Y = VID_Y + VID_H + 36        # cue block under the footage
+BG = (26, 16, 11)                 # BGR near-black navy
+ACCENT = style.accent()           # RGB ball orange (PIL)
+PHASE = style.phase_colours()     # RGB, one per step
+WHITE = (240, 242, 245)
+GREY = (143, 151, 170)
+INK = (12, 12, 14)
 
-_FONT_DIRS = ["/usr/share/fonts/opentype/inter", "/usr/share/fonts/truetype/dejavu",
-              "/System/Library/Fonts", "C:/Windows/Fonts"]
-_FONT_FILES = {"black": ["Inter-ExtraBold.otf", "InterDisplay-Bold.otf", "DejaVuSans-Bold.ttf", "arialbd.ttf"],
-               "bold": ["Inter-Bold.otf", "DejaVuSans-Bold.ttf", "arialbd.ttf"],
-               "medium": ["Inter-Medium.otf", "Inter-Regular.otf", "DejaVuSans.ttf", "arial.ttf"]}
+_FONT_DIRS = [Path(__file__).resolve().parent / "fonts", Path("/usr/share/fonts/truetype/dejavu"),
+              Path("/System/Library/Fonts"), Path("C:/Windows/Fonts")]
+_FONT_FILES = {"display": ["BarlowCondensed-ExtraBoldItalic.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"],
+               "bold": ["BarlowCondensed-Bold.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"],
+               "semibold": ["Barlow-SemiBold.ttf", "DejaVuSans-Bold.ttf", "arialbd.ttf"],
+               "medium": ["Barlow-Medium.ttf", "DejaVuSans.ttf", "arial.ttf"]}
 
 
 @lru_cache(None)
 def font(kind: str, size: int) -> ImageFont.FreeTypeFont:
     for d in _FONT_DIRS:
         for f in _FONT_FILES[kind]:
-            p = Path(d) / f
+            p = d / f
             if p.exists():
                 return ImageFont.truetype(str(p), size)
     return ImageFont.load_default(size)
+
+
+def phase(k: int) -> tuple[int, int, int]:
+    return PHASE[k % len(PHASE)]
 
 
 # ------------------------------------------------------------------ text layers (RGBA)
@@ -85,127 +95,163 @@ def _wrap(d, text, f, width) -> list[str]:
     return lines
 
 
-def _pills(d, steps, active: int, max_w: int = 790):
-    labels = [f"{i + 1}  {s.title.upper()}" for i, s in enumerate(steps)]
-    f = font("bold", 22)
-    if sum(d.textlength(l, font=f) + 38 for l in labels) > max_w:
-        stop = {"THE", "TO", "A", "AN", "FOR", "OF", "YOUR", "AND", "INTO", "ON"}
-        labels = [f"{i + 1}  " + " ".join([w for w in s.title.upper().split() if w not in stop][:2])
-                  for i, s in enumerate(steps)]
-    size = 22
-    while size > 14:
-        f = font("bold", size)
-        total = sum(d.textlength(l, font=f) + 28 for l in labels) + 10 * (len(labels) - 1)
-        if total <= max_w:
-            break
-        size -= 1
-    x = 48
-    for i, label in enumerate(labels):
-        tw = d.textlength(label, font=f)
-        box = (x, 60, x + tw + 28, 60 + size + 18)
-        if i == active:
-            d.rounded_rectangle(box, 18, fill=ACCENT)
-            d.text((x + 14, 68), label, font=f, fill=(15, 15, 15))
-        else:
-            d.rounded_rectangle(box, 18, outline=GREY, width=2)
-            d.text((x + 14, 68), label, font=f, fill=GREY)
-        x = box[2] + 10
+def _fit(d, text: str, kind: str, size: int, width: int, min_size: int = 30):
+    f = font(kind, size)
+    while d.textlength(text, font=f) > width and f.size > min_size:
+        f = font(kind, f.size - 4)
+    return f
 
 
 def _brand(d):
-    f = font("black", 40)
-    d.text((W - 48 - d.textlength("TTSKILL", font=f), 54), "TTSKILL", font=f, fill=WHITE)
-    f2 = font("bold", 18)
-    t = "AI TECHNIQUE BREAKDOWN"
-    d.text((W - 48 - d.textlength(t, font=f2), 100), t, font=f2, fill=GREY)
+    f = font("display", 40)
+    tw = d.textlength("TTSKILL", font=f)
+    x = W - 56 - tw
+    d.ellipse((x - 26, 66, x - 10, 82), fill=ACCENT)
+    d.text((x, 52), "TT", font=f, fill=WHITE)
+    d.text((x + d.textlength("TT", font=f), 52), "SKILL", font=f, fill=ACCENT)
 
 
-def _tag(d, text, y=470):
-    f = font("bold", 22)
-    tw = d.textlength(text, font=f)
-    d.rounded_rectangle((48, y, 48 + tw + 24, y + 38), 6, outline=WHITE, width=2)
-    d.text((60, y + 7), text, font=f, fill=WHITE)
+def _header(d, b: StrokeBreakdown):
+    """Persistent two-line title: the stroke, then the hook in the accent colour."""
+    _brand(d)
+    d.text((56, 56), stroke_label(b.stroke_type or b.stroke).upper(), font=_fit(d, stroke_label(b.stroke_type or b.stroke).upper(), "bold", 48, W - 380), fill=WHITE)
+    fh = font("display", 76)
+    lines = _wrap(d, b.headline.upper(), fh, W - 112)
+    while len(lines) > 2 and fh.size > 48:
+        fh = font("display", fh.size - 6)
+        lines = _wrap(d, b.headline.upper(), fh, W - 112)
+    y = 118
+    for ln in lines[:2]:
+        d.text((56, y), ln, font=fh, fill=ACCENT)
+        y += int(fh.size * 0.95)
 
 
-def layer_step(b: StrokeBreakdown, k: int, tag: str) -> np.ndarray:
+def _chips(d, steps, active: int):
+    """Numbered chips (01, 02, 03) just above the footage; the active one in its colour."""
+    labels = [f"{i + 1:02d}  {s.title.upper()}" for i, s in enumerate(steps)]
+    size = 30
+    while size > 18:
+        f = font("bold", size)
+        total = sum(d.textlength(l, font=f) + 36 for l in labels) + 12 * (len(labels) - 1)
+        if total <= W - 112:
+            break
+        size -= 1
+    x, y = 56, VID_Y - 30 - size
+    for i, lab in enumerate(labels):
+        tw = d.textlength(lab, font=f)
+        box = (x, y - 8, x + tw + 36, y + size + 12)
+        if i == active:
+            d.rounded_rectangle(box, 10, fill=phase(i))
+            d.text((x + 18, y - 2), lab, font=f, fill=INK)
+        else:
+            d.rounded_rectangle(box, 10, outline=(60, 66, 80), width=2)
+            d.text((x + 18, y - 2), lab, font=f, fill=GREY)
+        x = box[2] + 12
+
+
+def layer_step(b: StrokeBreakdown, k: int, paused: bool = False) -> np.ndarray:
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _pills(d, b.steps, k)
-    _brand(d)
+    _header(d, b)
+    _chips(d, b.steps, k)
     s = b.steps[k]
-    d.rounded_rectangle((48, 178, 112, 252), 8, fill=ACCENT)
-    fnum = font("black", 54)
-    num = str(k + 1)
-    d.text((80 - d.textlength(num, font=fnum) / 2, 184), num, font=fnum, fill=(15, 15, 15))
-    ft = font("black", 62)
-    title = s.title.upper()
-    while d.textlength(title, font=ft) > W - 180 and ft.size > 36:
-        ft = font("black", ft.size - 4)
-    d.text((134, 182), title, font=ft, fill=WHITE)
-    fl = font("medium", 42)
-    for j, line in enumerate(s.lines[:2]):
-        _rich_line(d, (52, 300 + j * 60), line, s.highlight_words, fl)
-    _tag(d, tag)
+    col = phase(k)
+    cue = s.title.upper()
+    fc = _fit(d, cue, "display", 132, W - 112, 72)
+    d.text((56, CUE_Y), cue, font=fc, fill=col)
+    y = CUE_Y + int(fc.size * 1.02) + 10
+    if s.lines:
+        _rich_line(d, (60, y), s.lines[0], s.highlight_words, font("semibold", 46), acc=col)
+    if len(s.lines) > 1:
+        _rich_line(d, (60, y + 64), s.lines[1], s.highlight_words, font("medium", 40), base=GREY, acc=col)
+    if paused:
+        f = font("bold", 26)
+        t = "PAUSED"
+        tw = d.textlength(t, font=f)
+        x0, y0 = W - 56 - tw - 44, VID_Y + 24
+        d.rounded_rectangle((x0, y0, x0 + tw + 44, y0 + 44), 10, fill=(10, 12, 18, 210))
+        d.rectangle((x0 + 14, y0 + 13, x0 + 18, y0 + 31), fill=col)
+        d.rectangle((x0 + 23, y0 + 13, x0 + 27, y0 + 31), fill=col)
+        d.text((x0 + 36, y0 + 8), t, font=f, fill=WHITE)
     return np.array(img)
 
 
 def layer_intro(b: StrokeBreakdown) -> np.ndarray:
+    """Hook card: the header, then what the video will show."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _brand(d)
-    f = font("bold", 34)
-    t = f"QUICK BREAKDOWN · {stroke_label(b.stroke_type or b.stroke).upper()}"
-    d.text(((W - d.textlength(t, font=f)) / 2, 190), t, font=f, fill=ACCENT)
-    fh = font("black", 84)
-    lines = _wrap(d, b.headline.upper(), fh, W - 120)
-    while len(lines) > 3 and fh.size > 48:
-        fh = font("black", fh.size - 6)
-        lines = _wrap(d, b.headline.upper(), fh, W - 120)
-    y = 260
-    for ln in lines:
-        d.text(((W - d.textlength(ln, font=fh)) / 2, y), ln, font=fh, fill=WHITE)
-        y += fh.size + 12
-    d.rectangle((W / 2 - 70, y + 16, W / 2 + 70, y + 22), fill=ACCENT)
+    _header(d, b)
+    f = font("display", 120)
+    x = 56
+    for word, col in (("3", ACCENT), (" CUES TO COPY", WHITE)):
+        d.text((x, CUE_Y), word, font=f, fill=col)
+        x += d.textlength(word, font=f)
+    sub = " · ".join(s.title.upper() for s in b.steps)
+    y = CUE_Y + 140
+    d.text((60, y), sub, font=_fit(d, sub, "bold", 40, W - 120, 24), fill=GREY)
     if b.player and b.player != "Player":
-        fp = font("medium", 32)
-        d.text(((W - d.textlength(b.player, font=fp)) / 2, y + 44), b.player, font=fp, fill=GREY)
+        d.text((60, y + 58), b.player, font=font("medium", 36), fill=GREY)
     return np.array(img)
 
 
-def layer_outro(b: StrokeBreakdown) -> np.ndarray:
+def layer_recap(b: StrokeBreakdown) -> np.ndarray:
+    """All three cues on one line joined with '+', each in its colour, plus one summary line."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _brand(d)
-    f = font("black", 64)
-    d.text((48, 170), "THE KEYS", font=f, fill=WHITE)
-    d.rectangle((48, 252, 188, 258), fill=ACCENT)
-    y = 300
-    fl, fb = font("bold", 26), font("medium", 34)
-    for label, txt in (("GRIP", b.grip), ("STANCE", b.stance), ("SWING", b.swing_path),
-                       ("CONTACT", b.contact_point), ("FINISH", b.follow_through)):
-        d.text((48, y), label, font=fl, fill=ACCENT)
-        y += 34
-        for ln in _wrap(d, txt, fb, W - 96)[:3]:
-            d.text((48, y), ln, font=fb, fill=WHITE)
-            y += 44
-        y += 18
-    # translucent panel behind the text so footage doesn't fight it
-    panel = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    ImageDraw.Draw(panel).rectangle((0, 150, W, y + 10), fill=(10, 12, 18, 200))
-    return np.array(Image.alpha_composite(panel, img))
+    _header(d, b)
+    words = [(s.title.upper(), phase(i)) for i, s in enumerate(b.steps)]
+    size = 92
+    while size > 44:
+        f = font("display", size)
+        lines, cur, cur_w = [], [], 0.0
+        for i, (w, col) in enumerate(words):
+            piece = [(w, col)] + ([(" + ", WHITE)] if i < len(words) - 1 else [])
+            pw = sum(d.textlength(t, font=f) for t, _ in piece)
+            if cur and cur_w + pw > W - 112:
+                lines.append(cur)
+                cur, cur_w = [], 0.0
+            cur += piece
+            cur_w += pw
+        lines.append(cur)
+        if len(lines) <= 2:
+            break
+        size -= 6
+    y = CUE_Y - (int(size * 0.95) if len(lines) > 1 else 0)
+    for ln in lines:
+        x = 56
+        for t, col in ln:
+            d.text((x, y), t, font=f, fill=col)
+            x += d.textlength(t, font=f)
+        y += int(size * 0.95)
+    summary = b.recap or ", ".join(s.title for s in b.steps) + "."
+    d.text((60, y + 18), summary, font=_fit(d, summary, "semibold", 42, W - 120, 26), fill=WHITE)
+    return np.array(img)
+
+
+def layer_drill(b: StrokeBreakdown) -> np.ndarray:
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    _header(d, b)
+    d.text((60, CUE_Y), "TRY THIS", font=font("bold", 40), fill=ACCENT)
+    y = CUE_Y + 62
+    for ln in _wrap(d, b.drill or "Shadow the stroke 20 times, checking each cue.", font("semibold", 52), W - 120)[:3]:
+        d.text((60, y), ln, font=font("semibold", 52), fill=WHITE)
+        y += 66
+    return np.array(img)
 
 
 def layer_callouts(callouts: list[str], color=ACCENT) -> np.ndarray:
+    """Small labels in the step colour, inside the bottom-left of the footage."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    f = font("black", 30)
-    y = VID_Y + VID_H + 30
+    f = font("bold", 32)
+    y = VID_Y + VID_H - 70 - 56 * (min(2, len(callouts)) - 1)
     for c in callouts[:2]:
         t = c.upper()
         tw = d.textlength(t, font=f)
-        d.rectangle((60, y, 60 + tw + 24, y + 46), fill=color)
-        d.text((72, y + 7), t, font=f, fill=(15, 15, 15))
-        y += 58
+        d.rounded_rectangle((56, y, 56 + tw + 28, y + 46), 8, fill=color)
+        d.text((70, y + 5), t, font=f, fill=INK)
+        y += 56
     return np.array(img)
 
 
@@ -260,6 +306,8 @@ def _add_glow(canvas: np.ndarray, glow: np.ndarray, sigma: float, gain: float):
     big = cv2.resize(small, (W, band.shape[0]), interpolation=cv2.INTER_LINEAR)
     region = canvas[VID_Y - 100:VID_Y + VID_H + 100]
     cv2.addWeighted(region, 1.0, big, gain, 0, dst=region)
+
+
 
 
 class Scene:
@@ -323,7 +371,7 @@ class Scene:
         return vid
 
     def draw(self, fi: int, ring: Optional[tuple] = None, connector: bool = False,
-             trail: bool = True) -> np.ndarray:
+             trail: bool = True, trail_color: tuple = (56, 217, 245)) -> np.ndarray:
         if not hasattr(self, "_bg"):
             self._bg = np.full((H, W, 3), BG, np.uint8)
         canvas = self._bg.copy()
@@ -334,7 +382,7 @@ class Scene:
             if self.vis[pi] or self.vis[max(0, pi - 3):pi + 3].any():
                 self._skeleton(canvas, self.to_out(self.pts[pi]))
                 if trail:
-                    self._trail(canvas, pi)
+                    self._trail(canvas, pi, trail_color)
                 if ring:
                     self._ring(canvas, self.to_out(self.pts[pi, self.wrist]), *ring)
                 # keep the overlay inside the video band so it never runs under the text
@@ -359,7 +407,7 @@ class Scene:
         head_r = int(max(14, np.linalg.norm(p[11] - p[12]) * 0.35))
         cv2.circle(canvas, tuple(pts[NOSE]), head_r, (245, 245, 245), 4, cv2.LINE_AA)
 
-    def _trail(self, canvas, pi, n=10):
+    def _trail(self, canvas, pi, color_rgb=(56, 217, 245), n=10):
         idx = [i for i in range(max(0, pi - n), pi + 1)]
         if len(idx) < 2:
             return
@@ -368,7 +416,7 @@ class Scene:
             if np.linalg.norm(pts[k] - pts[k - 1]) > 0.18 * W:
                 continue  # tracking jump: don't draw a streak across the frame
             a = k / len(pts)
-            col = (int(255 * a), int(230 * a), int(60 * a))  # BGR cyan fading
+            col = tuple(int(c * a) for c in color_rgb[::-1])  # BGR, fading toward the tail
             cv2.line(canvas, tuple(pts[k - 1]), tuple(pts[k]), col, int(2 + 6 * a), cv2.LINE_AA)
 
     def _ring(self, canvas, c, color_rgb, phase: float):
@@ -387,6 +435,8 @@ class Scene:
         x0, y_lab = 72, VID_Y + VID_H + 30
         cv2.line(canvas, (int(c[0]), int(c[1])), (x0, int(c[1])), bgr, 3, cv2.LINE_AA)
         cv2.line(canvas, (x0, int(c[1])), (x0, y_lab), bgr, 3, cv2.LINE_AA)
+
+
 
 
 # ------------------------------------------------------------------ timeline
@@ -411,6 +461,7 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
     scene = Scene(frames, track, side)
     fps_src = track.fps or 30.0
     n = len(frames)
+    pace = style.pacing()
 
     def fidx(t: float) -> int:
         return int(np.clip(round(t * fps_src), 0, n - 1))
@@ -420,66 +471,66 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
         t = s.key_time_s if s.key_time_s is not None else (i + 1) * (n / fps_src) / 4
         keys.append(fidx(t))
     keys = sorted(keys)
+    lead = max(1, int(pace["slowmo_lead_s"] * fps_src))
+    repeat = max(1, round(1 / max(pace["slowmo_factor"], 0.1)))
+    freeze_n = int(pace["freeze_s"] * FPS)
+    tail = int(0.35 * fps_src)
 
     def gen() -> Iterator[np.ndarray]:
         intro = layer_intro(b)
-        for k in range(int(2.2 * FPS)):
-            yield blend(scene.draw(max(0, keys[0] - int(2.0 * fps_src)), trail=False), intro)
-        lead, tail = int(0.5 * fps_src), int(0.35 * fps_src)
-        # start shortly before the first key moment instead of at the top of the clip
-        cur = max(0, keys[0] - lead - int(1.5 * fps_src))
+        start = max(0, keys[0] - lead - int(1.0 * fps_src))
+        for _ in range(int(pace["hook_s"] * FPS)):
+            yield blend(scene.draw(start, trail=False), intro)
+        cur = start
         for si, kf in enumerate(keys):
-            play = layer_step(b, si, "QUICK BREAKDOWN")
-            paused = layer_step(b, si, "II  PAUSED")
-            color = ACCENT if si != 0 else CYAN
-            call = layer_callouts(b.steps[si].callouts, color)
-            # normal speed up to the lead-in
-            for fi in range(cur, max(cur, kf - lead)):
-                yield blend(scene.draw(fi), play)
-            # slow motion into the key moment (x0.33)
-            for fi in range(max(cur, kf - lead), kf):
-                fr = blend(scene.draw(fi), play)
-                for _ in range(3):
+            col = phase(si)
+            play, paused = layer_step(b, si), layer_step(b, si, paused=True)
+            call = layer_callouts(b.steps[si].callouts, col)
+            for fi in range(cur, max(cur, kf - lead)):          # real speed first
+                yield blend(scene.draw(fi, trail_color=col), play)
+            for fi in range(max(cur, kf - lead), kf):           # slow into the key moment
+                fr = blend(scene.draw(fi, trail_color=col), play)
+                for _ in range(repeat):
                     yield fr
-            # freeze with marker + callouts
-            for k in range(int(1.6 * FPS)):
-                fr = scene.draw(kf, ring=(color, k / FPS), connector=bool(b.steps[si].callouts))
+            for k in range(freeze_n):                           # hold it, ring on the bat hand
+                fr = scene.draw(kf, ring=(col, k / FPS), trail_color=col)
                 yield blend(blend(fr, paused), call)
-            # slow out
-            for fi in range(kf, min(n, kf + tail)):
-                fr = blend(scene.draw(fi), play)
+            for fi in range(kf, min(n, kf + tail)):             # ease out
+                fr = blend(scene.draw(fi, trail_color=col), play)
                 for _ in range(2):
                     yield fr
             cur = min(n - 1, kf + tail)
-        outro = layer_outro(b)
-        end = min(n, cur + int(1.0 * fps_src))
-        last = layer_step(b, len(keys) - 1, "QUICK BREAKDOWN")
+        last = layer_step(b, len(keys) - 1)
+        end = min(n, cur + int(0.6 * fps_src))
         for fi in range(cur, end):
-            yield blend(scene.draw(fi), last)
-        for k in range(int(3.5 * FPS)):
-            yield blend(scene.draw(end - 1, trail=False), outro)
+            yield blend(scene.draw(fi, trail_color=phase(len(keys) - 1)), last)
+        hold = max(cur, end - 1)
+        recap, drill = layer_recap(b), layer_drill(b)
+        for _ in range(int(pace["recap_s"] * FPS)):
+            yield blend(scene.draw(hold, trail=False), recap)
+        for _ in range(int(pace["practice_s"] * FPS)):
+            yield blend(scene.draw(hold, trail=False), drill)
 
     encode_frames(gen(), out_path, W, H, FPS)
     return out_path
 
 
 def render_text_only(b: StrokeBreakdown, out_path: str) -> str:
-    """Text input with no clip: animated cards on the dark background."""
+    """Text input with no clip: the same cards over a simple table graphic."""
+    pace = style.pacing()
+
     def gen():
         base = np.full((H, W, 3), BG, np.uint8)
-        # simple table graphic in the video area
-        cv2.rectangle(base, (140, VID_Y + 620), (940, VID_Y + 660), (120, 70, 30), -1)
-        cv2.line(base, (540, VID_Y + 560), (540, VID_Y + 620), (200, 200, 200), 4)
-        intro = blend(base, layer_intro(b))
-        for _ in range(int(2.5 * FPS)):
-            yield intro
-        for si in range(len(b.steps)):
-            fr = blend(blend(base, layer_step(b, si, "QUICK BREAKDOWN")),
-                       layer_callouts(b.steps[si].callouts))
-            for _ in range(int(3.0 * FPS)):
+        cv2.rectangle(base, (140, VID_Y + 700), (940, VID_Y + 740), (120, 70, 30), -1)
+        cv2.line(base, (540, VID_Y + 640), (540, VID_Y + 700), (200, 200, 200), 4)
+        cards = [(layer_intro(b), pace["hook_s"] + 0.5)]
+        cards += [(layer_step(b, si), pace["seconds_per_step"]) for si in range(len(b.steps))]
+        cards += [(layer_recap(b), pace["recap_s"]), (layer_drill(b), pace["practice_s"])]
+        for si, (layer, secs) in enumerate(cards):
+            fr = blend(base, layer)
+            if 1 <= si <= len(b.steps):
+                fr = blend(fr, layer_callouts(b.steps[si - 1].callouts, phase(si - 1)))
+            for _ in range(int(secs * FPS)):
                 yield fr
-        out = blend(base, layer_outro(b))
-        for _ in range(int(4 * FPS)):
-            yield out
     encode_frames(gen(), out_path, W, H, FPS)
     return out_path
