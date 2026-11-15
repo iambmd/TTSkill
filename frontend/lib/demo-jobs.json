@@ -79,11 +79,11 @@
     "kind": "autocut",
     "status": "done",
     "progress": 1,
-    "message": "Cached run on the sample clip (IMG_8782.MOV, 3:35). Found 19 rallies; these are the top 5 by shot count, best first, padded 1.5 s each side.",
+    "message": "Cached run on the sample clip (IMG_8782.MOV, 3:35). Found 18 rallies after dropping one pre-serve floor-bounce routine; these are the top 4 by shot count, best first, padded 1.5 s each side.",
     "params": {
       "video": "IMG_8782.MOV",
       "mode": "highlights",
-      "top_n": 5,
+      "top_n": 4,
       "threshold": 3.0,
       "gap": 1.6,
       "min_hits": 4
@@ -112,12 +112,6 @@
         "start": 145.78,
         "end": 149.97,
         "hits": 9,
-        "shots": 4
-      },
-      {
-        "start": 14.42,
-        "end": 19.05,
-        "hits": 8,
         "shots": 4
       }
     ]
