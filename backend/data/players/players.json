@@ -49,8 +49,22 @@
       "bat_hand": "right",
       "height_source": "https://en.wikipedia.org/wiki/Fan_Zhendong",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/fan-zhendong_forehand.mp4",
+            "title": "Fan Zhendong forehand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/fan-zhendong_backhand.mp4",
+            "title": "Fan Zhendong backhand (manual clip)",
+            "start": 0.0,
+            "end": 7.9
+          }
+        ]
       }
     },
     {
@@ -88,8 +102,22 @@
       "bat_hand": "left",
       "height_source": "https://en.wikipedia.org/wiki/Wang_Chuqin",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/wang-chuqin_forehand.mp4",
+            "title": "Wang Chuqin forehand (manual clip)",
+            "start": 0.0,
+            "end": 6.02
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/wang-chuqin_backhand.mp4",
+            "title": "Wang Chuqin backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -114,8 +142,22 @@
       "bat_hand": "right",
       "height_source": "https://en.wikipedia.org/wiki/Sun_Yingsha",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/sun-yingsha_forehand.mp4",
+            "title": "Sun Yingsha forehand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/sun-yingsha_backhand.mp4",
+            "title": "Sun Yingsha backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -166,8 +208,22 @@
       "bat_hand": "left",
       "height_source": "https://en.wikipedia.org/wiki/Hina_Hayata",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "file": "manual/hina-hayata_forehand.mp4",
+            "title": "Hina Hayata forehand (manual clip)",
+            "start": 0.0,
+            "end": 6.7
+          }
+        ],
+        "backhand": [
+          {
+            "file": "manual/hina-hayata_backhand.mp4",
+            "title": "Hina Hayata backhand (manual clip)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {

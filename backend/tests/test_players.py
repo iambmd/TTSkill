@@ -125,3 +125,56 @@ def test_roster_shape():
     assert len(d) == 12 and sum(p["gender"] == "M" for p in d) == 6
     assert {p["bat_hand"] for p in d} == {"left", "right"}
     assert all(140 <= p["height_cm"] <= 200 and p["height_source"] for p in d)
+
+
+class _InlinePool:
+    """Stands in for ProcessPoolExecutor: runs each task right away in this process."""
+    def __init__(self, workers):
+        pass
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        return False
+
+    def submit(self, fn, *args):
+        from concurrent.futures import Future
+        f = Future()
+        f.set_result(fn(*args))
+        return f
+
+
+def test_build_uses_manual_clips(tmp_path, monkeypatch):
+    """A clip in manual/ is used instead of searching YouTube, and is not rebuilt on a re-run."""
+    from players import build
+
+    roster = {"players": [{"id": "p1", "name": "Pro One", "bat_hand": "left", "height_cm": 170},
+                          {"id": "p2", "name": "Pro Two", "bat_hand": "right", "height_cm": 180}]}
+    (tmp_path / "players.json").write_text(json.dumps(roster))
+    (tmp_path / "manual").mkdir()
+    (tmp_path / "manual" / "p1_forehand.mp4").write_bytes(b"clip")
+    for k, v in {"DATA": tmp_path, "MANUAL": tmp_path / "manual", "ROSTER": tmp_path / "players.json",
+                 "PROFILES": tmp_path / "profiles.json"}.items():
+        monkeypatch.setattr(build, k, v)
+    searched, processed = [], []
+    monkeypatch.setattr(build, "search", lambda name, stroke: searched.append((name, stroke)) or [])
+
+    def fake_process(raw, out_dir, name, stroke, hand):
+        processed.append((raw.rsplit("/", 1)[-1], hand))
+        return {"start": 0.0, "end": 8.0, "visible": 0.9, "swings": 3, "valid": True, "side": hand,
+                "stroke_type": "forehand_topspin", "curves": {"elbow": [90.0]},
+                "body": {"arm_span_to_height": 0.7, "units": "normalised"}}
+
+    monkeypatch.setattr(build, "process_clip", fake_process)
+    monkeypatch.setattr(build, "ProcessPoolExecutor", _InlinePool)
+    build.build(None, 1)
+    build.build(["p1"], 1)
+    assert processed == [("p1_forehand.mp4", "left")]
+    assert ("Pro One", "forehand") not in searched
+    assert ("Pro One", "backhand") in searched and ("Pro Two", "forehand") in searched
+    clip = json.loads((tmp_path / "profiles.json").read_text())["players"]["p1"]["strokes"]["forehand"]
+    assert len(clip) == 1 and clip[0]["file"] == "manual/p1_forehand.mp4" and "url" not in clip[0]
+    assert clip[0]["breakdown"] == "p1/forehand_manual/breakdown.mp4"
+    ref = json.loads((tmp_path / "players.json").read_text())["players"][0]["clips"]["forehand"][0]
+    assert ref["file"] == "manual/p1_forehand.mp4" and ref["end"] == 8.0
