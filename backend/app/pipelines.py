@@ -5,10 +5,36 @@ import json
 import shutil
 import traceback
 from pathlib import Path
+from typing import Callable
 
 from . import jobs
 from .cut import cut_and_concat, duration, padded_segments
+from .download import download
 from .rally import detect_rallies
+
+
+def fetch_then(job_id: str, url: str, run: Callable[..., None], *args) -> None:
+    """Downloads a pasted link into the job folder as the upload would be, runs the normal
+    pipeline on it, then deletes the full download (the result video stays)."""
+    seen = {"pct": -1}
+
+    def report(f: float) -> None:
+        pct = int(f * 100)
+        if pct >= seen["pct"] + 5:  # yt-dlp reports many times a second
+            seen["pct"] = pct
+            jobs.update(job_id, progress=round(0.05 * f, 3), message=f"Downloading the video... {pct}%")
+
+    try:
+        jobs.update(job_id, status="running", progress=0.0, message="Downloading the video...")
+        path = download(url, jobs.job_dir(job_id), progress=report)
+    except Exception as exc:  # LinkError messages are written for the user
+        traceback.print_exc()
+        jobs.update(job_id, status="failed", progress=1.0, message=str(exc))
+        return
+    try:
+        run(job_id, path, *args)
+    finally:
+        path.unlink(missing_ok=True)
 
 
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:

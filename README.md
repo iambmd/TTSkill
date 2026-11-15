@@ -56,8 +56,8 @@ Set `DEMO_MODE=1` for the frontend to make every submission return these results
 
 | Method | Path | Body |
 | --- | --- | --- |
-| POST | `/jobs/autocut` | multipart: `video`, `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
-| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video`, `player` |
+| POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
+| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video` or `url`, `player` |
 | GET | `/jobs/{id}` | job status, progress, params, detected rallies |
 | GET | `/jobs/{id}/result` | result MP4 |
 
