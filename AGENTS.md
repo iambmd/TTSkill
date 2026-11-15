@@ -1,15 +1,37 @@
 # TTSkill
 
-AI tools for amateur table tennis players and coaches, built for HackPrinceton Fall 2026. Users are on their phones, often courtside, uploading video they just filmed.
+AI coaching for table tennis from the video on your phone, built for HackPrinceton Fall 2026.
+
+- **Target user:** amateur players who want to learn from pros and review their own matches. They are on their phones, often courtside, uploading video they just filmed or pasting a YouTube link.
+- **Tracks:** Entertainment, Amazon Practical AI, ChatOverflow, LangChain deepagents.
 
 ## Features
 
-**Technique Breakdown** (`/breakdown`). The user uploads a clip of a player they admire, or describes the player's training in text, then picks a stroke (`forehand`, `backhand`, `serve`, `flick`, `block`, `footwork`). The result is a vertical 1080x1920 coaching video: a title card, three numbered steps with slow-mo and freeze frames, a pose-skeleton overlay, callouts and a summary card.
-- Pipeline: pick a window (the longest rally by ball-contact sound, else the most bat-hand motion) → 720p proxy → MediaPipe pose → key moments (preparation, contact, finish) → analyzer → `StrokeBreakdown` → render.
-- The analyzer uses Claude vision when `ANTHROPIC_API_KEY` is set and falls back to an offline rule-based analyzer otherwise.
-- With text only, there is no pose step, and the render is made of cards only.
+Every video input accepts an upload or a pasted YouTube link (watch, youtu.be or Shorts; up to 3 minutes; fetched at <=720p by `app/download.py` and deleted after the job).
 
-**Match Auto-Cut** (`/autocut`). The user uploads their own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits`.
+**TT Coach** (`/coach`). One plain-language request plus a video. A LangChain deepagents agent with Claude:
+- plans with `write_todos`; the todo list streams to the page live
+- delegates to the subagents `clip_analyst`, `player_matcher` and `coach_writer`
+- keeps its plan and notes in the virtual file system (`/plan.md`, `/pose_summary.json`, ...)
+- calls six tools that wrap the pipelines below
+
+Without `ANTHROPIC_API_KEY`, or if the agent fails, the same tools run on a fixed plan built from the request.
+
+**Technique Breakdown** (`/breakdown`). A clip of a player the user admires, or a text description of their training, plus an optional stroke type: forehand topspin, forehand drive, forehand loop vs backspin, backhand topspin, backhand flick, backhand push, chop or serve. Blank means auto-detect from the swing or the text.
+- The result is a vertical 1080x1920 coaching video in the measured style from `style/swift_style.json`:
+  - a persistent header
+  - 3 two-word cues, each in its own colour, with a slow-motion lead-in and a freeze frame
+  - a bat-hand ring and trail in the cue's colour
+  - a recap, then a practice drill
+- Pipeline: pick a window → 720p proxy → MediaPipe pose → stroke type → key moments (the swing direction depends on the stroke type) → analyzer → `StrokeBreakdown` → render.
+- The analyzer uses Claude vision (structured output) when `ANTHROPIC_API_KEY` is set, and the offline per-stroke templates otherwise. Text-only input renders cards only.
+
+**Find my pro match** (`/match`). The user's swing, forehand or backhand, and an optional height; otherwise height is estimated from the table (76 cm high, 274 cm long).
+- Only pros with the same bat hand are considered. A weighted distance on height and body proportions picks the top 3. DTW on the stroke's joint-angle curves says where the user's form differs from each.
+- The result: 3 pros with scores and notes, plus one video of their cached breakdowns.
+- Pro data lives in `backend/data/players/`: 12 players today, roadmap 100.
+
+**Match Auto-Cut** (`/autocut`). The user's own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits`.
 - `highlights` mode keeps the top N rallies by hit count as separate clips.
 - `full` mode keeps every rally, merges overlapping spans and drops the dead time.
 - Each segment gets 1.5 s of padding, is re-encoded to 720p/30fps H.264, and the parts are joined with the ffmpeg concat demuxer.
@@ -78,6 +100,12 @@ make dev        # frontend on :3000, backend on :8000 (Ctrl-C stops both)
 ```
 
 To run the services one at a time, use `make backend` or `make frontend`. To work on the UI without Python, run `cd frontend && npm run dev`; the API routes then run in stub mode.
+
+Data builders (all run from `backend/`):
+- `.venv/bin/python -m players.build` builds the pro profiles. It's resumable and stops when YouTube rate-limits; re-run it later. `--local PLAYER STROKE FILE URL TITLE` adds one clip from a file.
+- `.venv/bin/python -m style.fetch_refs && .venv/bin/python -m style.analyze_refs && .venv/bin/python -m style.build_style` rebuilds the coaching-style profile.
+
+Space YouTube requests out. Never work around its bot check by switching clients or using someone's cookies; wait and retry instead.
 
 ### Environment variables
 
