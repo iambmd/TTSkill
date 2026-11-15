@@ -80,6 +80,11 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
 }
 
 /** Inline error under a field. Give the field aria-invalid and aria-describedby={id}. */
+/** Claude marks headings in coach replies with **bold**; show them bold instead of as asterisks. */
+export function BoldText({ text }: { text: string }) {
+  return <>{text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part))}</>;
+}
+
 export function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
   if (!children) return null;
   return <p id={id} role="alert" className="mt-2 text-sm text-red-200">{children}</p>;

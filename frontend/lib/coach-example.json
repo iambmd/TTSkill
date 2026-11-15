@@ -1,5 +1,35 @@
 {
-  "todos": [],
-  "summary": "",
-  "outputs": []
+  "todos": [
+    {
+      "content": "Find rallies and cut highlight reel of best rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Measure forehand pose",
+      "status": "completed"
+    },
+    {
+      "content": "Write 3 forehand coaching cards and render breakdown video",
+      "status": "completed"
+    },
+    {
+      "content": "Summarize top fixes for user",
+      "status": "completed"
+    }
+  ],
+  "summary": "I made two videos: a 44-second reel of your 5 best rallies, and a coaching breakdown of your forehand.\n\n**Best rallies:** I found 15 rallies in the match. The reel has the 5 longest ones (8, 6, 5, 5 and 5 shots). Your best is the 8-shot rally at about 80–88 seconds into the video, and that's the one I measured your forehand on.\n\n**Your forehand:** you're right-handed and play a forehand topspin. Your knee bend is good (132° at contact) and your feet are well apart, about 1.7 times your shoulder width. One measurement of your stance at contact came out impossible, so I treated it as a tracking error and didn't use it.\n\n**What to work on first:**\n1. **Step in.** Your arm is quite straight when you hit the ball (124° at the elbow), which means you're reaching for it. Move your feet to the ball so your elbow stays bent at about 100–120°. A more compact arm gives you more control.\n2. **Brush up, out in front.** You hit the ball about halfway between hip and shoulder height. Try to hit it a bit further in front of you, push up from your legs and finish with your bat up by your eyebrows.\n3. **Sit low.** Keep the knee bend you already have and start the swing by turning your hips. The order is hips, then chest, then arm, then wrist.\n\n**Drill:** shadow 30 forehands without a ball. Each time, step to a mark on the floor, keep your elbow bent, swing through a contact point in front of you and finish at your eyebrows.",
+  "outputs": [
+    {
+      "kind": "highlights",
+      "title": "Top 5 rallies",
+      "url": "/examples/coach-after-highlights.mp4",
+      "summary": "44 s, most shots first"
+    },
+    {
+      "kind": "breakdown",
+      "title": "Forehand topspin breakdown",
+      "url": "/examples/coach-after-breakdown.mp4",
+      "summary": "Step In, Brush Up"
+    }
+  ]
 }
