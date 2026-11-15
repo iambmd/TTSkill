@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Breakdown, Job, ProMatch } from "@/lib/submit";
-import { CheckIcon, DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { BoldText, CheckIcon, DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
 
 type Rally = NonNullable<Job["rallies"]>[number];
 
@@ -244,7 +244,7 @@ function CoachView({ job }: { job: Job }) {
         {job.summary && (
           <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
             <h2 className="eyebrow">Coach says</h2>
-            <p className="mt-1 text-lg leading-snug whitespace-pre-line">{job.summary}</p>
+            <p className="mt-1 text-lg leading-snug whitespace-pre-line"><BoldText text={job.summary} /></p>
           </section>
         )}
         {(job.outputs ?? []).map((o) => (
