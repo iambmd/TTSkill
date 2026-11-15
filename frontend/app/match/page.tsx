@@ -157,7 +157,7 @@ export default function MatchPage() {
     </form>
       <ExampleSection
         before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player filming their forehand" }}
-        after={{ label: "After", caption: "Your 3 closest pros and their breakdowns", vertical: true }}
+        after={{ src: "/examples/match-after.mp4", label: "After", caption: "The pro matches video we made from it", vertical: true }}
         steps={[
           "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
           "If you don't give your height, we estimate it from the table in the frame, which is always 76 cm high and 274 cm long.",
