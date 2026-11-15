@@ -6,6 +6,7 @@ import { submitJob } from "@/lib/submit";
 import { STROKE_TYPES } from "@/lib/strokes";
 import { LIMITS, textProblem } from "@/lib/validate";
 import { ChevronIcon, FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
+import { ExampleSection } from "../examples";
 import { VideoPicker } from "../video-picker";
 
 const HANDS = [
@@ -53,6 +54,7 @@ export default function BreakdownPage() {
   }
 
   return (
+    <>
     <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
       <PageIntro
         eyebrow="Technique Breakdown"
@@ -109,5 +111,17 @@ export default function BreakdownPage() {
       </fieldset>
       <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
+      <ExampleSection
+        before={{ src: "/examples/breakdown-before.mp4", label: "Before", caption: "Ma Long forehand practice, 15 s", vertical: true }}
+        after={{ src: "/examples/breakdown-after.mp4", label: "After", caption: "The coaching video we made from it", vertical: true }}
+        steps={[
+          "We find the few seconds where the swing happens and track the player's body with pose detection, frame by frame.",
+          "We work out which hand holds the bat and which stroke it is, unless you picked one.",
+          "We pick the key moments of the swing: the backswing, the contact and the follow-through.",
+          "AI turns those moments into three short cues, like \"Turn waist\" or \"Brush up\", plus a practice drill.",
+          "We render a vertical coaching video: slow motion into each cue, a freeze frame, and a coloured trail on the bat hand.",
+        ]}
+      />
+    </>
   );
 }
