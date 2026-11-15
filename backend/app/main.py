@@ -10,7 +10,7 @@ from fastapi.responses import FileResponse
 from technique.strokes import STROKE_TYPES
 
 from . import download, jobs
-from .pipelines import fetch_then, run_autocut, run_breakdown
+from .pipelines import fetch_then, run_autocut, run_breakdown, run_match
 
 app = FastAPI(title="TTSkill backend")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -104,6 +104,40 @@ def create_breakdown(
     else:
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}") if video else None
         background.add_task(run_breakdown, job["id"], path, *args)
+    return job
+
+
+@app.post("/jobs/match", status_code=201)
+def create_match(
+    background: BackgroundTasks,
+    stroke: str = Form("forehand"),
+    hand: str = Form("auto"),
+    height_cm: str = Form(""),
+    video: UploadFile | None = File(None),
+    url: str = Form(""),
+) -> dict:
+    if stroke not in ("forehand", "backhand"):
+        raise HTTPException(400, "stroke must be forehand or backhand")
+    if hand not in ("auto", "left", "right"):
+        raise HTTPException(400, "hand must be auto, left or right")
+    try:
+        height = float(height_cm) if height_cm.strip() else None
+    except ValueError:
+        raise HTTPException(400, "height must be a number in cm") from None
+    if height is not None and not 100 <= height <= 230:
+        raise HTTPException(400, "height should be between 100 and 230 cm")
+    link = None if has_file(video) else check_link(url)
+    if not has_file(video) and link is None:
+        raise HTTPException(400, "Upload a clip of yourself or paste a YouTube link.")
+    params = {"video": video.filename if link is None else link["title"], "url": link and link["url"],
+              "stroke": stroke, "hand": hand, "height_cm": height}
+    job = jobs.create("match", params)
+    args = (stroke, height, hand)
+    if link:
+        background.add_task(fetch_then, job["id"], link["url"], run_match, *args)
+    else:
+        path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
+        background.add_task(run_match, job["id"], path, *args)
     return job
 
 

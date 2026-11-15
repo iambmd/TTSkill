@@ -11,6 +11,13 @@ const tools = [
     cta: "Break down a stroke",
   },
   {
+    href: "/match",
+    tag: "Find my pro match",
+    title: "Who do you play like?",
+    body: "Film your swing. We match your height, build and stroke to the closest pros and show where your form differs.",
+    cta: "Find my match",
+  },
+  {
     href: "/autocut",
     tag: "Match Auto-Cut",
     title: "Keep every rally",
@@ -34,7 +41,7 @@ export default function Home() {
         </div>
         <HeroVideo />
       </section>
-      <section className="grid gap-3 sm:grid-cols-2">
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {tools.map((t, i) => (
           <Link
             key={t.href} href={t.href}

@@ -22,7 +22,7 @@ function describeForm(form: FormData): Record<string, unknown> {
 }
 
 export async function createJob(kind: Job["kind"], form: FormData): Promise<Response> {
-  if (DEMO_MODE) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
+  if (DEMO_MODE && DEMO_JOBS[`demo-${kind}`]) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
   if (BACKEND_URL) {
     const res = await fetch(`${BACKEND_URL}/jobs/${kind}`, { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));

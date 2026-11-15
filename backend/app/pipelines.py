@@ -116,3 +116,54 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))
+
+
+def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
+              hand: str = "auto") -> None:
+    """Find my pro match: pose on the user's clip, body profile, height (entered or from the
+    table), top 3 pros with the same bat hand, form differences, one compiled video."""
+    try:
+        from players.body import angle_curves, body_ratios
+        from players.compile import compile_matches
+        from players.match import match
+        from players.table import estimate_height_cm
+        from technique import media, pose
+        from technique.pipeline import choose_window, key_moments
+
+        out = jobs.job_dir(job_id) / "match"
+        out.mkdir(parents=True, exist_ok=True)
+        jobs.update(job_id, status="running", progress=0.1, message="Finding your best swings...")
+        info = media.probe(video)
+        win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
+        clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
+        jobs.update(job_id, progress=0.3, message="Reading your body and swing with MediaPipe...")
+        track = pose.extract_pose(clip)
+        if not track.valid.any():
+            raise RuntimeError("No player found in the video. Film the whole body, side-on if you can.")
+        side, how = pose.bat_side(clip, track, hand)
+        hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
+        _, contact = key_moments(track, side, hits, direction="up")
+        body = body_ratios(track)
+        curves = angle_curves(track, side, contact)
+        if height_cm:
+            height = {"height_cm": round(height_cm), "method": "entered"}
+        else:
+            jobs.update(job_id, progress=0.55, message="Estimating your height from the table...")
+            height = estimate_height_cm(str(clip), track)
+        user = {**body, "height_cm": height["height_cm"] if height else None}
+        jobs.update(job_id, progress=0.65, message="Comparing you with the pros...")
+        matches = match(user, curves, stroke, side)
+        if not matches:
+            raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
+        jobs.update(job_id, progress=0.75, message="Putting their breakdowns together...")
+        result = compile_matches(matches, stroke, out / "parts", jobs.job_dir(job_id) / "result.mp4")
+        top = matches[0]
+        jobs.update(job_id, status="done", progress=1.0,
+                    message=f"You play most like {top['name']} ({top['score']}% body match).",
+                    resultUrl=f"/jobs/{job_id}/result" if result else None,
+                    matches=[{k: v for k, v in m.items() if k != "form"} for m in matches],
+                    you={"bat_hand": side, "bat_hand_how": how, "height": height,
+                         "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}})
+    except Exception as exc:  # surface errors on the job page
+        traceback.print_exc()
+        jobs.update(job_id, status="failed", message=str(exc))

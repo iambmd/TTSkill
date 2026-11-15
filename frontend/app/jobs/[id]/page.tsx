@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
-import type { Breakdown, Job } from "@/lib/submit";
+import type { Breakdown, Job, ProMatch } from "@/lib/submit";
 import { DownloadIcon, buttonBaseClass, secondaryButtonClass } from "../../ui";
 
 type Rally = NonNullable<Job["rallies"]>[number];
@@ -13,7 +13,7 @@ const str = (v: unknown) => (typeof v === "string" && v ? v : undefined);
 
 /** The video, or a same-shaped placeholder while the job runs. Breakdowns are vertical, match cuts landscape. */
 function Stage({ job }: { job: Job }) {
-  const vertical = job.kind === "breakdown";
+  const vertical = job.kind !== "autocut";
   const pct = Math.round(job.progress * 100);
   const failed = job.status === "failed";
   // Hold the expected shape until metadata arrives, then switch to the clip's real one (a match filmed upright is vertical).
@@ -66,7 +66,10 @@ function Stage({ job }: { job: Job }) {
 function titleFor(job: Job) {
   if (job.breakdown) return job.breakdown.headline;
   if (job.status === "failed") return "Something went wrong";
-  if (job.status !== "done") return job.kind === "breakdown" ? "Building your breakdown" : "Cutting your match";
+  if (job.kind === "match" && job.matches?.length) return `You play like ${job.matches[0].name}`;
+  if (job.status !== "done") {
+    return job.kind === "breakdown" ? "Building your breakdown" : job.kind === "match" ? "Finding your pro match" : "Cutting your match";
+  }
   if (job.kind === "autocut" && job.rallies?.length) {
     return job.params.mode === "full" ? `All ${job.rallies.length} rallies` : `Top ${job.rallies.length} rallies`;
   }
@@ -79,6 +82,11 @@ function eyebrowFor(job: Job) {
     const st = job.strokeType;
     const stroke = st ? `${st.label}${st.detected ? " (auto-detected)" : ""}` : job.breakdown?.stroke ?? str(job.params.stroke);
     return ["Technique breakdown", player, stroke].filter(Boolean).join(" · ");
+  }
+  if (job.kind === "match") {
+    const h = job.you?.height;
+    const height = h ? `${h.height_cm} cm${h.method === "entered" ? "" : " (from the table)"}` : undefined;
+    return ["Find my pro match", str(job.params.stroke), height].filter(Boolean).join(" · ");
   }
   return `Match Auto-Cut · ${job.params.mode === "full" ? "Full match" : "Highlights"}`;
 }
@@ -130,6 +138,46 @@ function Steps({ b }: { b: Breakdown }) {
         </dl>
       </section>
     </>
+  );
+}
+
+function Matches({ matches }: { matches: ProMatch[] }) {
+  return (
+    <section className="space-y-3">
+      <h2 className="eyebrow">Your closest pros</h2>
+      <ol className="space-y-2">
+        {matches.map((m, i) => (
+          <li key={m.id} className="rounded-2xl border border-line bg-panel p-4">
+            <div className="flex items-start gap-4">
+              <span className="headline text-4xl leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-bold">{m.name}</p>
+                <p className="text-sm text-muted">{[m.country, `${m.height_cm} cm`, `${m.bat_hand}-handed`].filter(Boolean).join(" · ")}</p>
+              </div>
+              <div className="text-right">
+                <p className="headline text-4xl tabular-nums text-accent">{m.score}%</p>
+                <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted">body match</p>
+              </div>
+            </div>
+            {m.form_score !== null && (
+              <div className="mt-3">
+                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted">
+                  <span>Swing match</span><span className="tabular-nums">{m.form_score}%</span>
+                </div>
+                <div className="mt-1 h-1.5 rounded-full bg-white/10">
+                  <div className="h-full rounded-full bg-accent" style={{ width: `${m.form_score}%` }} />
+                </div>
+              </div>
+            )}
+            {m.differences.length > 0 && (
+              <ul className="mt-3 space-y-1 text-sm">
+                {m.differences.map((d) => <li key={d} className="flex gap-2"><span aria-hidden className="text-accent">→</span>{d}</li>)}
+              </ul>
+            )}
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 
@@ -214,7 +262,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     );
   }
 
-  const vertical = job.kind === "breakdown";
+  const vertical = job.kind !== "autocut";
   const ended = job.status === "done" || job.status === "failed";
 
   return (
@@ -235,12 +283,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 </a>
               )}
               <Link href={`/${job.kind}`} className={secondaryButtonClass}>
-                {job.kind === "breakdown" ? "New breakdown" : "Cut another"}
+                {job.kind === "breakdown" ? "New breakdown" : job.kind === "match" ? "Match again" : "Cut another"}
               </Link>
             </div>
           )}
         </div>
         {job.breakdown && <Steps b={job.breakdown} />}
+        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} />}
         {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
         <details className="group rounded-2xl border border-line bg-panel">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">

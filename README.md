@@ -3,6 +3,7 @@
 AI tools for amateur table tennis players and coaches. HackPrinceton Fall 2026.
 
 - **Technique Breakdown**: upload a clip of a favorite player (or describe their training), pick a stroke, and get a step-by-step vertical coaching video.
+- **Find my pro match**: film your swing, pick forehand or backhand, and get the 3 pros closest to your height, build and bat hand, with a similarity score, where your form differs (DTW on joint-angle curves), and one video of their breakdowns. *Roadmap: 100 players* (the build script scales; 12 today).
 - **Match Auto-Cut**: upload your own match. TTSkill hears every ball contact, finds the rallies, and cuts either the full match (dead time removed) or highlights ranked by shots per rally.
 
 ## Status
@@ -58,6 +59,7 @@ Set `DEMO_MODE=1` for the frontend to make every submission return these results
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional), `text` and/or `video` or `url`, `player`, `hand` |
+| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
 | GET | `/jobs/{id}` | job status, progress, params, detected rallies |
 | GET | `/jobs/{id}/result` | result MP4 |
 

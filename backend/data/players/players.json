@@ -1,0 +1,168 @@
+{
+  "about": "Pro roster for 'Find my pro match'. Clips are YouTube references filled in by `python -m players.build find`; the downloaded clips and rendered breakdowns stay in backend/data/players/ (git-ignored).",
+  "players": [
+    {
+      "id": "ma-long",
+      "name": "Ma Long",
+      "gender": "M",
+      "country": "CHN",
+      "height_cm": 175,
+      "bat_hand": "right",
+      "height_source": "dimensions.com, tabletennisteacher.com",
+      "clips": {
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=g3n9jVP0fMU",
+            "title": "Malong's Forehand Loop Breakdown",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": []
+      }
+    },
+    {
+      "id": "fan-zhendong",
+      "name": "Fan Zhendong",
+      "gender": "M",
+      "country": "CHN",
+      "height_cm": 173,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Fan_Zhendong",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "tomokazu-harimoto",
+      "name": "Tomokazu Harimoto",
+      "gender": "M",
+      "country": "JPN",
+      "height_cm": 178,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Tomokazu_Harimoto",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "hugo-calderano",
+      "name": "Hugo Calderano",
+      "gender": "M",
+      "country": "BRA",
+      "height_cm": 182,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Hugo_Calderano",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "wang-chuqin",
+      "name": "Wang Chuqin",
+      "gender": "M",
+      "country": "CHN",
+      "height_cm": 182,
+      "bat_hand": "left",
+      "height_source": "https://en.wikipedia.org/wiki/Wang_Chuqin",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "timo-boll",
+      "name": "Timo Boll",
+      "gender": "M",
+      "country": "GER",
+      "height_cm": 181,
+      "bat_hand": "left",
+      "height_source": "racketrampage.com height list (approximate)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "sun-yingsha",
+      "name": "Sun Yingsha",
+      "gender": "F",
+      "country": "CHN",
+      "height_cm": 162,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Sun_Yingsha",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "wang-manyu",
+      "name": "Wang Manyu",
+      "gender": "F",
+      "country": "CHN",
+      "height_cm": 176,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Wang_Manyu + China Daily (2024)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "chen-meng",
+      "name": "Chen Meng",
+      "gender": "F",
+      "country": "CHN",
+      "height_cm": 166,
+      "bat_hand": "right",
+      "height_source": "racketrampage.com height list (approximate)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "mima-ito",
+      "name": "Mima Ito",
+      "gender": "F",
+      "country": "JPN",
+      "height_cm": 152,
+      "bat_hand": "right",
+      "height_source": "https://en.wikipedia.org/wiki/Mima_Ito (Olympedia lists 150)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "hina-hayata",
+      "name": "Hina Hayata",
+      "gender": "F",
+      "country": "JPN",
+      "height_cm": 167,
+      "bat_hand": "left",
+      "height_source": "https://en.wikipedia.org/wiki/Hina_Hayata",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "ding-ning",
+      "name": "Ding Ning",
+      "gender": "F",
+      "country": "CHN",
+      "height_cm": 170,
+      "bat_hand": "left",
+      "height_source": "dimensions.com (Wikipedia mirrors list 171)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 export type Job = {
   id: string;
-  kind: "breakdown" | "autocut";
+  kind: "breakdown" | "autocut" | "match";
   status: "queued" | "running" | "done" | "failed";
   progress: number;
   message?: string;
@@ -9,6 +9,20 @@ export type Job = {
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
   strokeType?: { key: string | null; label: string; detected: boolean } | null;
+  matches?: ProMatch[];
+  you?: { bat_hand: string; height: { height_cm: number; method: string } | null };
+};
+
+export type ProMatch = {
+  id: string;
+  name: string;
+  country?: string;
+  height_cm: number;
+  bat_hand: string;
+  score: number;
+  form_score: number | null;
+  differences: string[];
+  source_url?: string | null;
 };
 
 /** Mirrors StrokeBreakdown in backend/technique/schema.py. */
