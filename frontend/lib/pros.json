@@ -1,0 +1,35 @@
+{
+  "_note": "Blade and rubbers for 20 pros. Sources are listed per player; setups change often, so 'uncertain' marks entries from a single undated page, a retailer listing that doesn't say which side each rubber is on, or (for retired players) the last widely reported setup. Checked 2026-11-15.",
+  "sources": {
+    "ultraspin": "https://ultraspin.pages.dev/articles/world-top-30-men-s-equipment-setups-june-2026-11/",
+    "ultraspin_chen_meng": "https://ultraspin.pages.dev/articles/chen-meng-s-blade-evolution-from-a-borrowed-zlf-to-back-to-b-9/",
+    "247tt_women": "https://sites.google.com/view/247tabletennis/equipment-list/female-players-equipment-list",
+    "tabletennisteacher_ito": "https://tabletennisteacher.com/mima-ito-equipment-and-profile/",
+    "tabletennisteacher_malong": "https://tabletennisteacher.com/ma-long-equipment-and-profile/",
+    "paddlepalace_szocs": "https://www.paddlepalace.com/CHAMPION-SPECIAL-Bernadette-SzocsROM-__-Tibhar/productinfo/ZZCSTBSS",
+    "paddlepalace_winter": "https://paddlepalace.com/Sabine-Winter-GER-Champion-Pro-Special-ANDRO/productinfo/ZZCSATCI",
+    "general": "Widely reported setup, not confirmed on a current page"
+  },
+  "players": [
+    {"name": "Ma Long", "country": "CHN", "grip": "Shakehand", "blade": "DHS Hurricane Long 5", "fh": "DHS Hurricane 3 National (blue sponge)", "bh": "Butterfly Tenergy 05", "sources": ["tabletennisteacher_malong"], "uncertain": true, "note": "Not in the June 2026 lists; last widely reported setup."},
+    {"name": "Fan Zhendong", "country": "CHN", "grip": "Shakehand", "blade": "Butterfly Fan Zhendong ALC (custom)", "fh": "Butterfly Zyre 03", "bh": "Butterfly Dignics 09C", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Tomokazu Harimoto", "country": "JPN", "grip": "Shakehand", "blade": "Butterfly Harimoto Tomokazu Super ALC", "fh": "Butterfly Zyre 03", "bh": "Butterfly Zyre 03", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Hugo Calderano", "country": "BRA", "grip": "Shakehand", "blade": "JOOLA Hugo ARY-C", "fh": "JOOLA Trinity Charged", "bh": "JOOLA Trinity Charged", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Wang Chuqin", "country": "CHN", "grip": "Shakehand (left-handed)", "blade": "DHS Q968", "fh": "DHS NEO Hurricane 3 National (blue sponge)", "bh": "DHS Hurricane 8-20 Special", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Timo Boll", "country": "GER", "grip": "Shakehand (left-handed)", "blade": "Butterfly Timo Boll ALC", "fh": "Butterfly Dignics 05", "bh": "Butterfly Dignics 05", "sources": ["general"], "uncertain": true, "note": "Retired in 2025; his long-time setup."},
+    {"name": "Sun Yingsha", "country": "CHN", "grip": "Shakehand", "blade": "DHS S968 (Hurricane Sha)", "fh": "DHS Hurricane 3 (blue sponge, 41°, 2.1 mm)", "bh": "DHS Hurricane 8 (orange sponge, 37.5°, 2.1 mm)", "sources": ["247tt_women"], "uncertain": true, "note": "Single undated list."},
+    {"name": "Wang Manyu", "country": "CHN", "grip": "Shakehand", "blade": "Stiga Inspira Plus (FL)", "fh": "DHS Hurricane 3 (blue sponge, 40.5°, 2.1 mm)", "bh": "Butterfly Dignics 05", "sources": ["247tt_women"], "uncertain": true, "note": "Single undated list."},
+    {"name": "Chen Meng", "country": "CHN", "grip": "Shakehand", "blade": "Butterfly Fan Zhendong Super ALC", "fh": "DHS Hurricane 3 (blue sponge, 40°, 2.1 mm)", "bh": "DHS Hurricane 8 (orange sponge, 37°, 2.1 mm)", "sources": ["ultraspin_chen_meng", "247tt_women"], "uncertain": true, "note": "Blade from June 2026 (she won Tokyo on a Viscaria). Rubbers from an undated list."},
+    {"name": "Mima Ito", "country": "JPN", "grip": "Shakehand", "blade": "Nittaku Mima Ito Carbon", "fh": "Nittaku Fastarc G-1", "bh": "Nittaku Moristo SP (short pips)", "sources": ["tabletennisteacher_ito", "247tt_women"], "uncertain": false},
+    {"name": "Hina Hayata", "country": "JPN", "grip": "Shakehand (left-handed)", "blade": "Nittaku Hina Hayata H2 (FL, custom handle)", "fh": "DHS Hurricane 3 (blue sponge)", "bh": "Butterfly Dignics 05", "sources": ["247tt_women"], "uncertain": true, "note": "Single undated list."},
+    {"name": "Ding Ning", "country": "CHN", "grip": "Shakehand", "blade": "Yasaka Mattias Falck Carbon", "fh": "DHS Hurricane 3 (blue sponge, 40°, 2.1 mm)", "bh": "Butterfly Dignics 05", "sources": ["247tt_women"], "uncertain": true, "note": "Retired; single undated list."},
+    {"name": "Dimitrij Ovtcharov", "country": "GER", "grip": "Shakehand", "blade": "Butterfly Ovtcharov ALC", "fh": "Butterfly Dignics 09C", "bh": "Butterfly Zyre 03", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Sora Matsushima", "country": "JPN", "grip": "Shakehand (left-handed)", "blade": "Butterfly Fan Zhendong ALC (custom)", "fh": "Butterfly Dignics 09C", "bh": "Butterfly Zyre 03", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Xu Xin", "country": "CHN", "grip": "Penhold (left-handed)", "blade": "Stiga Dynasty Carbon (Xu Xin edition)", "fh": "DHS Hurricane 3 National (blue sponge)", "bh": "Butterfly Tenergy 05 (reverse backhand)", "sources": ["general"], "uncertain": true, "note": "Retired from the national team; last widely reported setup."},
+    {"name": "Felix Lebrun", "country": "FRA", "grip": "Penhold", "blade": "Tibhar Felix", "fh": "Tibhar K3 Pro Special", "bh": "Tibhar K3 Pro Special", "sources": ["ultraspin"], "uncertain": false},
+    {"name": "Ma Lin", "country": "CHN", "grip": "Penhold", "blade": "Yasaka Ma Lin Extra Offensive", "fh": "DHS Hurricane 3", "bh": "Yasaka Mark V (reverse backhand)", "sources": ["general"], "uncertain": true, "note": "Retired; setup from his playing years."},
+    {"name": "Kuai Man", "country": "CHN", "grip": "Shakehand", "blade": "Butterfly Viscaria Golden (FL)", "fh": "DHS Hurricane 3 (blue sponge, 40.5°, 2.1 mm)", "bh": "Butterfly Dignics 05", "sources": ["247tt_women"], "uncertain": true, "note": "Single undated list."},
+    {"name": "Bernadette Szőcs", "country": "ROU", "grip": "Shakehand", "blade": "Tibhar Bernadette Szocs Signature 1 (FL)", "fh": "Tibhar Quantum X Pro (max)", "bh": "Tibhar Evolution MX-P (2.1 mm)", "sources": ["paddlepalace_szocs"], "uncertain": true, "note": "Retailer replica of her racket; which rubber is on which side is our reading."},
+    {"name": "Sabine Winter", "country": "GER", "grip": "Shakehand", "blade": "Andro Treiber CI OFF (FL)", "fh": "Andro Rasanter R53 (max)", "bh": "Anti-spin", "sources": ["paddlepalace_winter"], "uncertain": true, "note": "Known for an anti-spin backhand; the exact anti rubber isn't confirmed. Her retailer replica racket lists Rasanter R53 and R48."}
+  ]
+}

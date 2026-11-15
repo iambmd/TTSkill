@@ -1,0 +1,103 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { Level, Recommendation, RubberType, Style } from "@/lib/rubbers";
+import { GearTabs } from "../gear-tabs";
+import { PageIntro, RadioTiles, labelClass } from "../ui";
+
+const STYLE_OPTIONS = [
+  { value: "spin", label: "Spin", sub: "Loops and heavy topspin" },
+  { value: "speed", label: "Speed", sub: "Drives and fast hits" },
+] as const;
+const TYPE_OPTIONS = [
+  { value: "inverted", label: "Inverted" },
+  { value: "short_pips", label: "Short pips" },
+  { value: "long_pips", label: "Long pips" },
+  { value: "anti_spin", label: "Anti-spin" },
+] as const;
+const LEVEL_OPTIONS = [
+  { value: "beginner", label: "Beginner" },
+  { value: "intermediate", label: "Intermediate" },
+  { value: "advanced", label: "Advanced" },
+] as const;
+
+const fmt = (v: number | null) => (v === null ? "TBD" : v.toFixed(1));
+
+export default function RubbersPage() {
+  const [style, setStyle] = useState<Style>("spin");
+  const [type, setType] = useState<RubberType>("inverted");
+  const [level, setLevel] = useState<Level>("intermediate");
+  const [rec, setRec] = useState<Recommendation | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/rubbers?${new URLSearchParams({ style, rubber_type: type, level })}`)
+      .then(async (r) => {
+        const body = await r.json();
+        if (!r.ok) throw new Error(body.error ?? "Couldn't load rubbers. Try again.");
+        if (live) { setRec(body); setError(null); }
+      })
+      .catch((e: Error) => live && setError(e.message));
+    return () => { live = false; };
+  }, [style, type, level]);
+
+  return (
+    <div className="mx-auto max-w-xl space-y-7">
+      <GearTabs active="rubbers" />
+      <PageIntro
+        eyebrow="Rubber finder"
+        title="Pick your rubber"
+        body="Tell us how you play. We rank 984 rubbers by price first, then by what players who use them think."
+      />
+      <fieldset>
+        <legend className={labelClass}>Style</legend>
+        <RadioTiles name="style" options={STYLE_OPTIONS} value={style} onChange={setStyle} className="grid-cols-2" />
+      </fieldset>
+      <fieldset>
+        <legend className={labelClass}>Rubber type</legend>
+        <RadioTiles name="type" options={TYPE_OPTIONS} value={type} onChange={setType} className="grid-cols-2" />
+      </fieldset>
+      <fieldset>
+        <legend className={labelClass}>Level</legend>
+        <RadioTiles name="level" options={LEVEL_OPTIONS} value={level} onChange={setLevel} className="grid-cols-3" />
+      </fieldset>
+
+      <section aria-live="polite" className="space-y-3">
+        {error && <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm">{error}</p>}
+        {rec && (
+          <>
+            <div className="flex items-baseline justify-between rounded-2xl border border-accent/40 bg-accent/10 p-4 shadow-[0_0_24px_rgb(255_107_44/0.15)]">
+              <span className="text-sm font-semibold text-muted">Sponge thickness</span>
+              <span className="headline text-2xl text-accent">{rec.thickness}</span>
+            </div>
+            {rec.note && <p className="rounded-2xl border border-line bg-panel p-4 text-sm text-muted">{rec.note}</p>}
+            {!rec.note && rec.results.length === 0 && (
+              <p className="rounded-2xl border border-line bg-panel p-4 text-sm text-muted">Nothing matches yet. Try another level.</p>
+            )}
+            <ol className="space-y-2">
+              {rec.results.map((r, i) => (
+                <li key={r.name} className="flex items-center gap-4 rounded-2xl border border-line bg-panel p-4">
+                  <span className="headline w-6 text-2xl text-accent">{i + 1}</span>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-bold">{r.name}</p>
+                    <p className="text-xs text-muted">
+                      Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="headline text-xl">${r.price?.toFixed(0)}</p>
+                    <p className="text-xs text-muted">score {fmt(r.overall)}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+            <p className="text-xs text-muted">
+              Ratings and prices: revspin.net user reviews, via PingSense. Scores are out of 10.
+            </p>
+          </>
+        )}
+      </section>
+    </div>
+  );
+}
