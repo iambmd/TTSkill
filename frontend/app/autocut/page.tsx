@@ -55,7 +55,7 @@ export default function AutoCutPage() {
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("/api/jobs/autocut", form, setProgress);
+      const job = await submitJob("autocut", form, setProgress);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

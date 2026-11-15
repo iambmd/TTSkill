@@ -49,9 +49,9 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `frontend/` | Next.js 15 App Router, React 19, TypeScript (strict), Tailwind CSS v4. Deploys to Vercel with root directory `frontend`. |
 | `frontend/app/` | Pages: `/`, `/coach`, `/breakdown`, `/match`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
 | `frontend/app/api/jobs/` | Route handlers. They validate the form, then call `lib/jobs.ts`. |
-| `frontend/lib/jobs.ts` | Server-only job client with three modes: **proxy** to FastAPI when `BACKEND_URL` is set; **stub** (in-memory jobs with fake progress) when it is unset; **demo** (`DEMO_MODE=1`, every submission returns the cached results in `lib/demo-jobs.json` + `public/demo/*.mp4`). |
-| `frontend/lib/submit.ts` | Client upload via XHR, which reports upload progress. Also holds the `Job` and `Breakdown` types. |
-| `backend/app/main.py` | FastAPI endpoints. They validate input, save the upload, create the job and start a background task. |
+| `frontend/lib/jobs.ts` | Server-only job client with three modes: **proxy** to FastAPI when `BACKEND_URL` (or, failing that, `NEXT_PUBLIC_API_URL`) is set; **stub** (in-memory jobs with fake progress) when it is unset; **demo** (`DEMO_MODE=1`, every submission returns the cached results in `lib/demo-jobs.json` + `public/demo/*.mp4`). |
+| `frontend/lib/submit.ts` | Client upload via XHR, which reports upload progress. Posts to `/api/jobs/<kind>`, or straight to the backend when `NEXT_PUBLIC_API_URL` is set (`jobEndpoint`). Also holds the `Job` and `Breakdown` types. |
+| `backend/app/main.py` | FastAPI endpoints. They validate input, save the upload, create the job and start a background task. CORS allows `https://*.vercel.app`, `https://*.trycloudflare.com` and `http://localhost`. |
 | `backend/app/pipelines.py` | `run_autocut` and `run_breakdown`. Plain functions that update the job record as they go. |
 | `backend/app/rally.py`, `cut.py` | Auto-Cut: hit and rally detection; padding, cutting and joining segments. |
 | `backend/app/download.py` | Pasted YouTube links (watch, youtu.be, Shorts) via yt-dlp: probed before the job starts (private, unavailable, over 3 min fail on the form), downloaded at <=720p into the job folder, deleted after the pipeline runs. |
@@ -121,7 +121,8 @@ Space YouTube requests out. Never work around its bot check by switching clients
 
 | Variable | Where | Purpose |
 | --- | --- | --- |
-| `BACKEND_URL` | frontend | FastAPI URL. Unset means stub mode. `make frontend` sets it to `http://localhost:8000`. |
+| `BACKEND_URL` | frontend | FastAPI URL for the Next.js routes. Unset means `NEXT_PUBLIC_API_URL`, then stub mode. `make frontend` sets it to `http://localhost:8000`. |
+| `NEXT_PUBLIC_API_URL` | frontend | The backend's public URL, e.g. a Cloudflare tunnel. When set, the browser posts jobs and loads result videos straight from it (Vercel Functions cap bodies at 4.5 MB), and the routes use it when `BACKEND_URL` is unset. Inlined at build time: redeploy after changing it. Leave it unset locally. |
 | `DEMO_MODE` | frontend | `1` makes every submission return the cached demo jobs. |
 | `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer and the TT Coach deep agent. Without it, the offline analyzer and the coach's fixed plan run. |
 | `COACH_MODEL` | backend | Claude model for TT Coach (default `claude-opus-5-5`). |
@@ -130,6 +131,18 @@ Space YouTube requests out. Never work around its bot check by switching clients
 | `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |
 
 Frontend variables go in `frontend/.env.local`; see `frontend/.env.example`. Never commit secrets: `.env*.local` is git-ignored.
+
+### Deploy: Vercel + a Cloudflare quick tunnel
+
+```bash
+make backend                                    # FastAPI on :8000
+cloudflared tunnel --url http://localhost:8000  # prints https://<random>.trycloudflare.com
+```
+
+On Vercel, set the root directory to `frontend` and `NEXT_PUBLIC_API_URL` to the tunnel URL, then redeploy.
+- The tunnel URL changes every time `cloudflared` restarts. Update the variable and redeploy, since it is baked into the build.
+- Submissions then go straight to the backend, so `DEMO_MODE` no longer answers them; the `/jobs/demo-*` pages still work.
+- `make backend` reloads on file saves, which fails running jobs. Don't edit backend code during a demo.
 
 ## Tests and checks
 
@@ -186,7 +199,7 @@ Backend (Python)
 
 Frontend (TypeScript)
 - Use strict TypeScript and the `@/` import alias. Add `"use client"` only to components that need state or browser APIs.
-- `lib/jobs.ts` is `server-only`. Client code talks only to `/api/jobs/*`, never to the backend directly.
+- `lib/jobs.ts` is `server-only`. Client code talks only to `/api/jobs/*`, never to the backend directly. The one exception is when `NEXT_PUBLIC_API_URL` is set: uploads (`submitJob`) and result videos go to the backend, because Vercel Functions cap request and response bodies at 4.5 MB. Polling stays on `/api/jobs/*`.
 - API routes validate the form first with `lib/validate.ts` and return `invalid(message)` (a 422 with `{ error }`), then delegate to `createJob` / `getJob` / `getResult`.
 - Forms show each problem inline next to its field (`FieldError`, `aria-invalid`) and pass `blocked` to `SubmitBar` so the button is disabled until it's fixed. `VideoPicker` checks the file and link itself and reports through `onProblem`. A missing video is still reported on submit.
 - Pass the `range` header through on video results; iOS Safari needs it to seek.

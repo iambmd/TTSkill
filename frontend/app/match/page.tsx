@@ -65,7 +65,7 @@ export default function MatchPage() {
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("/api/jobs/match", form, setProgress);
+      const job = await submitJob("match", form, setProgress);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

@@ -17,7 +17,10 @@ from . import download, jobs, validate
 from .pipelines import fetch_then, run_autocut, run_breakdown, run_match
 
 app = FastAPI(title="TTSkill backend")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+# Browsers call us directly from the Vercel frontend (uploads are over Vercel's 4.5 MB function limit),
+# through a Cloudflare quick tunnel; localhost is for dev. Starlette full-matches the whole origin.
+ALLOWED_ORIGINS = r"https://([a-z0-9-]+\.)+(vercel\.app|trycloudflare\.com)|http://(localhost|127\.0\.0\.1)(:\d+)?"
+app.add_middleware(CORSMiddleware, allow_origin_regex=ALLOWED_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 STROKES = {"", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"}
 # Friendly names for FastAPI's own type errors (e.g. top_n=abc), which would otherwise be a list of dicts.
