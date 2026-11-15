@@ -12,3 +12,6 @@ __pycache__/
 samples/
 backend/data/
 data/
+
+# Style references (reference only: never commit or serve)
+backend/data/style_ref/
