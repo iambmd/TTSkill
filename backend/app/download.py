@@ -19,7 +19,9 @@ _PATTERNS = [
 ]
 
 # yt-dlp needs a JavaScript runtime for YouTube; Node is already required by the frontend.
-_BASE_OPTS = {"quiet": True, "no_warnings": True, "noplaylist": True, "js_runtimes": {"node": {}}}
+# Bounded network waits: the probe runs while the user's form is waiting for an answer.
+_BASE_OPTS = {"quiet": True, "no_warnings": True, "noplaylist": True, "js_runtimes": {"node": {}},
+              "socket_timeout": 15, "retries": 2, "extractor_retries": 1}
 
 
 class LinkError(ValueError):

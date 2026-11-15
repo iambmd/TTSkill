@@ -66,10 +66,10 @@ def create_autocut(
     job = jobs.create("autocut", params)
     args = (mode, top_n, threshold, gap, min_hits)
     if link:
-        background.add_task(fetch_then, job["id"], link["url"], run_autocut, *args)
+        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_autocut, *args)
     else:
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
-        background.add_task(run_autocut, job["id"], path, *args)
+        background.add_task(jobs.run, run_autocut, job["id"], path, *args)
     return job
 
 
@@ -101,10 +101,10 @@ def create_breakdown(
     job = jobs.create("breakdown", params)
     args = (text, stroke, player, hand, stroke_type)
     if link:
-        background.add_task(fetch_then, job["id"], link["url"], run_breakdown, *args)
+        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_breakdown, *args)
     else:
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}") if video else None
-        background.add_task(run_breakdown, job["id"], path, *args)
+        background.add_task(jobs.run, run_breakdown, job["id"], path, *args)
     return job
 
 
@@ -135,10 +135,10 @@ def create_match(
     job = jobs.create("match", params)
     args = (stroke, height, hand)
     if link:
-        background.add_task(fetch_then, job["id"], link["url"], run_match, *args)
+        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_match, *args)
     else:
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
-        background.add_task(run_match, job["id"], path, *args)
+        background.add_task(jobs.run, run_match, job["id"], path, *args)
     return job
 
 
@@ -165,7 +165,7 @@ def create_coach(
     path = None
     if not link:
         path = save_upload(video, jobs.job_dir(job["id"]) / f"input{Path(video.filename or '').suffix}")
-    background.add_task(run_coach, job["id"], path, link and link["url"], request)
+    background.add_task(jobs.run, run_coach, job["id"], path, link and link["url"], request)
     return job
 
 
@@ -182,7 +182,7 @@ def get_file(job_id: str, name: str) -> FileResponse:
 
 @app.get("/jobs/{job_id}")
 def get_job(job_id: str) -> dict:
-    job = jobs.load(job_id)
+    job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "job not found")
     return job

@@ -19,6 +19,7 @@ export default function BreakdownPage() {
   const textRef = useRef<HTMLDetailsElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [starting, setStarting] = useState("Starting...");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +39,7 @@ export default function BreakdownPage() {
     }
     if (!hasVideo) form.delete("video");
     if (hasVideo || !url) form.delete("url");
+    setStarting(form.has("url") ? "Checking the link..." : "Starting...");
     setProgress(0);
     setError(null);
     try {
@@ -92,7 +94,7 @@ export default function BreakdownPage() {
         <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
         <p className="mt-2 text-xs text-muted">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
       </fieldset>
-      <SubmitBar label="Break it down" progress={progress} error={error} />
+      <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} />
     </form>
   );
 }

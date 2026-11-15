@@ -16,5 +16,7 @@ frontend:
 dev:
 	$(MAKE) -j2 backend frontend
 
+# Backend (pytest) then frontend API routes (vitest).
 test:
 	cd backend && .venv/bin/python -m pytest -q
+	cd frontend && npm test

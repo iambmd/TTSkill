@@ -53,7 +53,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/app/pipelines.py` | `run_autocut` and `run_breakdown`. Plain functions that update the job record as they go. |
 | `backend/app/rally.py`, `cut.py` | Auto-Cut: hit and rally detection; padding, cutting and joining segments. |
 | `backend/app/download.py` | Pasted YouTube links (watch, youtu.be, Shorts) via yt-dlp: probed before the job starts (private, unavailable, over 3 min fail on the form), downloaded at <=720p into the job folder, deleted after the pipeline runs. |
-| `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json`. Results go to `result.mp4` in the same folder. |
+| `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json` (written atomically). Results go to `result.mp4` in the same folder. `run()` wraps every background pipeline; `get()` fails jobs orphaned by a restart. |
 | `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
 | `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
@@ -124,11 +124,16 @@ Frontend variables go in `frontend/.env.local`; see `frontend/.env.example`. Nev
 ## Tests and checks
 
 ```bash
-make test                                              # all backend tests (backend/tests + backend/technique/tests)
-cd backend && .venv/bin/python -m pytest tests/test_cut.py -q   # a single file
+make test                                              # backend (pytest) + frontend API routes (vitest)
+cd backend && .venv/bin/python -m pytest tests/test_api.py -q   # a single file
+cd frontend && npm test                                # Next.js API routes only
 cd frontend && npx tsc --noEmit                        # type check
-cd frontend && npm run build                           # production build
+cd frontend && npm run build                           # production build (stop `next dev` first: they share .next)
 ```
+
+- `backend/tests/test_api.py` covers every FastAPI endpoint: validation, what each one schedules, job reads, result and file serving, and the end-to-end text and video breakdowns. `frontend/test/api.test.ts` covers every Next.js route in stub, proxy (fetch mocked) and demo modes. It fails if a new `route.ts` isn't added to its table.
+- Background jobs go through `jobs.run(...)`, so a job always ends `done` or `failed`. A job left `running` by a server restart (`uvicorn --reload` on a file save, a crash) is reported as failed with a "server restarted" message, because `jobs.ACTIVE` only holds jobs this process is working on. This assumes one worker process.
+- Run only one `make dev` per checkout. Two `next dev` servers share `frontend/.next` and break each other's routes.
 
 - Tests that need a real match skip unless `samples/IMG_8782.MOV` exists, or `TTSKILL_SAMPLE` is set for the technique test.
 - Render and cut tests need ffmpeg. Pose tests need `libegl1`/`libgles2`.
@@ -146,6 +151,7 @@ Backend (Python)
 - Pipelines are plain functions: `run_<kind>(job_id, ...)`.
   - Report progress with `jobs.update(job_id, status=..., progress=..., message=...)`.
   - Wrap the whole body in `try/except Exception`, print the traceback, and mark the job `failed` with a readable `message`. The job page shows it.
+  - Schedule it with `background.add_task(jobs.run, run_<kind>, job["id"], ...)`, never bare, so a crash or a missing final status can't leave the job running.
 - Import heavy modules (MediaPipe, OpenCV) inside the pipeline function, so the API starts fast.
 - Endpoints validate input and return `HTTPException(400, "...")` with a message a user can act on. The Next.js layer turns FastAPI's `{detail}` into `{error}`.
 - `StrokeBreakdown` in `technique/schema.py` is the contract between analysis, prompting and rendering. If you change it, update the `Breakdown` type in `frontend/lib/submit.ts` to match.

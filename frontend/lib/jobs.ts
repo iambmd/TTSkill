@@ -12,6 +12,17 @@ const DEMO_JOBS = demoJobs as Record<string, Job>;
 const g = globalThis as unknown as { __ttskillJobs?: Map<string, Job> };
 const stubJobs = (g.__ttskillJobs ??= new Map());
 
+export const UNREACHABLE = "Can't reach the TTSkill backend. Check that it is running (make dev), then try again.";
+
+/** fetch() to the backend that answers 502 with a readable error when it is down, instead of throwing. */
+async function backend(path: string, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(`${BACKEND_URL}${path}`, init);
+  } catch {
+    return Response.json({ error: UNREACHABLE }, { status: 502 });
+  }
+}
+
 /** Summarizes a form for the job record, replacing files with their name and size. */
 function describeForm(form: FormData): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -24,11 +35,11 @@ function describeForm(form: FormData): Record<string, unknown> {
 export async function createJob(kind: Job["kind"], form: FormData): Promise<Response> {
   if (DEMO_MODE && DEMO_JOBS[`demo-${kind}`]) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
   if (BACKEND_URL) {
-    const res = await fetch(`${BACKEND_URL}/jobs/${kind}`, { method: "POST", body: form });
+    const res = await backend(`/jobs/${kind}`, { method: "POST", body: form });
     const data = await res.json().catch(() => ({}));
     // FastAPI reports errors as {detail}; the client reads {error}.
     if (!res.ok) {
-      const detail = typeof data.detail === "string" ? data.detail : "Backend rejected the request";
+      const detail = typeof data.detail === "string" ? data.detail : data.error ?? "Backend rejected the request";
       return Response.json({ error: detail }, { status: res.status });
     }
     return Response.json(data, { status: res.status });
@@ -49,7 +60,7 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
 export async function getJob(id: string): Promise<Response> {
   if (DEMO_JOBS[id]) return Response.json(DEMO_JOBS[id]);
   if (BACKEND_URL) {
-    const res = await fetch(`${BACKEND_URL}/jobs/${id}`, { cache: "no-store" });
+    const res = await backend(`/jobs/${id}`, { cache: "no-store" });
     if (!res.ok) return new Response(res.body, { status: res.status });
     const job = (await res.json()) as Job;
     if (job.resultUrl) job.resultUrl = `/api/jobs/${id}/result`;
@@ -73,7 +84,7 @@ const RESULT_HEADERS = ["content-type", "content-length", "content-range", "acce
 export async function getResult(id: string, range?: string | null, file?: string): Promise<Response> {
   if (!BACKEND_URL) return Response.json({ error: "No result in stub mode" }, { status: 404 });
   const path = file ? `files/${encodeURIComponent(file)}` : "result";
-  const res = await fetch(`${BACKEND_URL}/jobs/${id}/${path}`, {
+  const res = await backend(`/jobs/${id}/${path}`, {
     cache: "no-store",
     headers: range ? { range } : undefined,
   });
