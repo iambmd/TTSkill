@@ -1,0 +1,91 @@
+"use client";
+
+import { useState } from "react";
+import data from "@/lib/pros.json";
+import { GearTabs } from "../gear-tabs";
+import { PageIntro, inputClass, labelClass } from "../ui";
+import { ProPhoto, SetupStrip } from "./pro-photo";
+
+type Pro = {
+  name: string; country: string; grip: string; blade: string; fh: string; bh: string;
+  sources: string[]; uncertain: boolean; note?: string; wiki: string[];
+};
+const PROS = data.players as Pro[];
+const SOURCES = data.sources as Record<string, string>;
+
+// Accent-free lowercase so "szocs" finds Szőcs.
+const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+
+function ProCard({ p }: { p: Pro }) {
+  return (
+    <article className="space-y-4 rounded-3xl border border-line bg-panel p-5">
+      <header className="flex items-start gap-4">
+        <ProPhoto name={p.name} wiki={p.wiki} />
+        <div className="min-w-0 flex-1">
+          <h2 className="headline text-3xl">{p.name}</h2>
+          <p className="text-sm text-muted">{p.country} · {p.grip}</p>
+          {p.uncertain && (
+            <span className="mt-2 inline-block rounded-full border border-accent/50 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-accent">
+              Unconfirmed
+            </span>
+          )}
+        </div>
+      </header>
+      <SetupStrip fh={p.fh} bh={p.bh} />
+      <dl className="grid gap-2 text-sm">
+        {([["Blade", p.blade], ["Forehand", p.fh], ["Backhand", p.bh]] as const).map(([k, v]) => (
+          <div key={k} className="flex gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
+            <dt className="w-20 shrink-0 text-xs font-bold uppercase tracking-wide text-muted">{k}</dt>
+            <dd className="font-semibold">{v}</dd>
+          </div>
+        ))}
+      </dl>
+      {p.note && <p className="text-xs text-muted">{p.note}</p>}
+      <p className="text-xs text-muted">
+        Source:{" "}
+        {p.sources.map((s, i) => (
+          <span key={s}>
+            {i > 0 && ", "}
+            {SOURCES[s].startsWith("http")
+              ? <a href={SOURCES[s]} target="_blank" rel="noreferrer" className="underline hover:text-fg">{new URL(SOURCES[s]).hostname}</a>
+              : SOURCES[s]}
+          </span>
+        ))}
+      </p>
+    </article>
+  );
+}
+
+export default function ProsPage() {
+  const [q, setQ] = useState("");
+  const query = norm(q);
+  const hits = query ? PROS.filter((p) => norm(p.name).includes(query)) : PROS;
+
+  return (
+    <div className="mx-auto max-w-xl space-y-7">
+      <GearTabs active="pros" />
+      <PageIntro
+        eyebrow="Pro setups"
+        title="What the pros use"
+        body="Blade and rubbers for 20 of the best. Search for your favourite player."
+      />
+      <div>
+        <label htmlFor="pro-search" className={labelClass}>Player</label>
+        <input
+          id="pro-search" type="search" value={q} onChange={(e) => setQ(e.target.value)}
+          placeholder="e.g. Ma Long" autoComplete="off" className={`${inputClass} h-12`}
+        />
+      </div>
+      <section aria-live="polite" className="space-y-4">
+        {hits.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-line p-8 text-center">
+            <p className="headline text-3xl">Not here yet</p>
+            <p className="mt-2 text-sm text-muted">We have 20 players so far. More are coming.</p>
+          </div>
+        ) : (
+          hits.map((p) => <ProCard key={p.name} p={p} />)
+        )}
+      </section>
+    </div>
+  );
+}
