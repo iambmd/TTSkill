@@ -1,0 +1,89 @@
+{
+  "_note": "Product photos hotlinked from the manufacturer or retailer page in `page` (non-commercial hackathon demo). Each image links back to that page. Cards fall back to a drawing when a key is missing or the image fails to load.",
+  "products": {
+    "szocs_sig": {
+      "src": "https://tibhar.info/wp-content/uploads/2022/11/Szocs_Signature1_RD24.jpg",
+      "page": "https://tibhar.info/shop/szoecs-signature-1/"
+    },
+    "felix_blade": {
+      "src": "https://tibhar.info/wp-content/uploads/2023/07/Lebrun_Felix_HyperCarbon_Inner_CPN.jpg",
+      "page": "https://tibhar.info/shop/felix-lebrun-hyper-carbon/"
+    },
+    "quantum_x_pro": {
+      "src": "https://tibhar.info/wp-content/uploads/2022/09/QUANTUM_X_PRO_pink.jpg",
+      "page": "https://tibhar.info/shop/quantum-x-pro-pink/"
+    },
+    "fzd_alc": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/1260.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/Fan-Zhendong-ALC-1260"
+    },
+    "fzd_super_alc": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/1261.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/Fan-Zhendong-Super-ALC-1261"
+    },
+    "harimoto_salc": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/1268.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/harimoto-innerforce-super-alc-1268"
+    },
+    "ovtcharov_alc": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/1256.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/Ovtcharov-Innerforce-ALC-Blade-1256"
+    },
+    "viscaria": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/1200.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/viscaria-blade-7669p"
+    },
+    "dignics05": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/DIG05.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/dignics-05-dig05p"
+    },
+    "dignics09c": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/DIG09C.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/dignics-09C-dig09Cp"
+    },
+    "zyre03": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/ZY03.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/zyre-03-zy03"
+    },
+    "tenergy05": {
+      "src": "https://shop.butterflyonline.com/Item%20Images/TN05.main.jpg?resizeid=2&resizeh=400&resizew=400",
+      "page": "https://shop.butterflyonline.com/tenergy-05"
+    },
+    "novacell": {
+      "src": "https://www.andro.de/sites/default/files/media_image/Thumbnail_Novacell_off_s_383x383.jpg",
+      "page": "https://www.andro.de/en/novacell-offs"
+    },
+    "nuzn55": {
+      "src": "https://www.andro.de/sites/default/files/media_image/NUZN55-Thumbnail-383x383.jpg",
+      "page": "https://www.andro.de/en/nuzn-55"
+    },
+    "rasanter_r53": {
+      "src": "https://www.andro.de/sites/default/files/media_image/Thumbnails_R53_383x383.jpg",
+      "page": "https://www.andro.de/en/node/44"
+    },
+    "hugo_aryc": {
+      "src": "https://joola.com/cdn/shop/files/HC_ARY-c_Front_c0428f96-3ae8-4502-ab26-c590c4ad60ab.png?v=1788380975&width=400",
+      "page": "https://joola.com/collections/table-tennis-blades/products/joola-hugo-calderano-ary-c"
+    },
+    "trinity_charged": {
+      "src": "https://joola.com/cdn/shop/files/600639_JOOLA_Trinity_Hugo_Calderano_Charged_05_517cb801-6f48-42cf-a8a7-bc8452415778.png?v=1788376463&width=400",
+      "page": "https://joola.com/collections/table-tennis-rubbers/products/trinity-charged-hugo-calderano-rubber"
+    },
+    "fastarc_g1": {
+      "src": "https://www.nittaku.com/wp-content/uploads/2019/10/product_big_3813.jpg",
+      "page": "https://www.nittaku.com/products/rubbers/post-3"
+    },
+    "moristo_sp": {
+      "src": "https://www.nittaku.com/wp-content/uploads/2019/10/NR_8670_dl_1280.jpg",
+      "page": "https://www.nittaku.com/products/rubbers/post-30"
+    },
+    "mima_ito_carbon": {
+      "src": "https://www.nittaku.com/wp-content/uploads/2020/07/14b6915ca47e2b61c8fac2a827dc523e.jpg",
+      "page": "https://www.nittaku.com/products/rackets/post-145-2"
+    },
+    "hayata_h2": {
+      "src": "https://www.nittaku.com/wp-content/uploads/2021/05/H2_ST.jpg",
+      "page": "https://www.nittaku.com/products/rackets/post-154"
+    }
+  }
+}
