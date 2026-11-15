@@ -51,36 +51,61 @@ export function ProPhoto({ name, wiki }: { name: string; wiki: string[] }) {
   );
 }
 
-/** Drawn blade and rubber sheets, in the order blade, forehand, backhand. Illustrations, not product photos. */
-export function SetupStrip({ fh, bh }: { fh: string; bh: string }) {
-  const sheet = (label: string, color: string, kind: string) => (
-    <figure className="flex flex-1 flex-col items-center gap-1.5">
-      <svg viewBox="0 0 60 80" className="h-16" aria-hidden>
-        <ellipse cx="30" cy="30" rx="26" ry="28" fill={color} stroke="rgb(255 255 255 / .25)" strokeWidth="1.5" />
-        {kind === "pips" && Array.from({ length: 30 }, (_, i) => (
-          <circle key={i} cx={10 + (i % 6) * 8} cy={10 + Math.floor(i / 6) * 9} r="1.6" fill="rgb(255 255 255 / .35)" />
-        ))}
-        {kind === "anti" && <ellipse cx="30" cy="30" rx="26" ry="28" fill="url(#gloss)" opacity=".5" />}
-        <defs><linearGradient id="gloss" x1="0" x2="1"><stop offset="0" stopColor="#fff" stopOpacity=".5" /><stop offset="1" stopColor="#fff" stopOpacity="0" /></linearGradient></defs>
+export type ProductImage = { src: string; page: string };
+
+const kindOf = (r: string) => (/pips/i.test(r) ? "pips" : /anti/i.test(r) ? "anti" : "inverted");
+
+/** Drawn fallback for when there is no product photo or it fails to load. */
+function Drawn({ part, name }: { part: "blade" | "fh" | "bh"; name: string }) {
+  if (part === "blade") {
+    return (
+      <svg viewBox="0 0 60 80" className="h-20" aria-hidden>
+        <ellipse cx="30" cy="30" rx="26" ry="28" fill="#c9965b" />
+        <ellipse cx="30" cy="30" rx="20" ry="22" fill="none" stroke="#a87943" strokeWidth="1.5" />
+        <rect x="24" y="54" width="12" height="24" rx="4" fill="#8a5a2b" />
       </svg>
-      <figcaption className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">{label}</figcaption>
+    );
+  }
+  const kind = kindOf(name);
+  return (
+    <svg viewBox="0 0 60 80" className="h-20" aria-hidden>
+      <ellipse cx="30" cy="30" rx="26" ry="28" fill={part === "fh" ? "#d6322f" : "#16181d"} stroke="rgb(255 255 255 / .25)" strokeWidth="1.5" />
+      {kind === "pips" && Array.from({ length: 30 }, (_, i) => (
+        <circle key={i} cx={10 + (i % 6) * 8} cy={10 + Math.floor(i / 6) * 9} r="1.6" fill="rgb(255 255 255 / .35)" />
+      ))}
+    </svg>
+  );
+}
+
+function Item({ part, label, name, img }: { part: "blade" | "fh" | "bh"; label: string; name: string; img?: ProductImage }) {
+  const [failed, setFailed] = useState(false);
+  const photo = img && !failed;
+  return (
+    <figure className="flex min-w-0 flex-1 flex-col items-center gap-1.5">
+      <div className="grid h-24 w-full place-items-center overflow-hidden rounded-xl bg-white p-1">
+        {photo
+          // eslint-disable-next-line @next/next/no-img-element -- hotlinked retailer image
+          ? <img src={img.src} alt={name} loading="lazy" referrerPolicy="no-referrer" onError={() => setFailed(true)} className="max-h-full max-w-full object-contain" />
+          : <div className="grid size-full place-items-center rounded-lg bg-ink"><Drawn part={part} name={name} /></div>}
+      </div>
+      <figcaption className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">
+        {photo ? <a href={img.page} target="_blank" rel="noreferrer" className="underline decoration-white/30 hover:text-fg">{label}</a> : label}
+      </figcaption>
     </figure>
   );
-  const kind = (r: string) => (/pips/i.test(r) ? "pips" : /anti/i.test(r) ? "anti" : "inverted");
+}
+
+/** Blade, forehand, backhand in that order: the product photo, linked to its page, or a drawing. */
+export function SetupStrip({ blade, fh, bh, images }: {
+  blade: string; fh: string; bh: string; images: { blade?: ProductImage; fh?: ProductImage; bh?: ProductImage };
+}) {
   return (
-    <div className="flex items-end gap-2 rounded-2xl bg-white/[0.03] px-3 pt-3 pb-2" role="img" aria-label="Blade, forehand rubber, backhand rubber">
-      <figure className="flex flex-1 flex-col items-center gap-1.5">
-        <svg viewBox="0 0 60 80" className="h-16" aria-hidden>
-          <ellipse cx="30" cy="30" rx="26" ry="28" fill="#c9965b" />
-          <ellipse cx="30" cy="30" rx="20" ry="22" fill="none" stroke="#a87943" strokeWidth="1.5" />
-          <rect x="24" y="54" width="12" height="24" rx="4" fill="#8a5a2b" />
-        </svg>
-        <figcaption className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">Blade</figcaption>
-      </figure>
-      <span className="pb-6 text-muted">→</span>
-      {sheet("Forehand", "#d6322f", kind(fh))}
-      <span className="pb-6 text-muted">→</span>
-      {sheet("Backhand", "#16181d", kind(bh))}
+    <div className="flex items-center gap-1.5 rounded-2xl bg-white/[0.03] p-3">
+      <Item part="blade" label="Blade" name={blade} img={images.blade} />
+      <span aria-hidden className="text-muted">→</span>
+      <Item part="fh" label="Forehand" name={fh} img={images.fh} />
+      <span aria-hidden className="text-muted">→</span>
+      <Item part="bh" label="Backhand" name={bh} img={images.bh} />
     </div>
   );
 }
