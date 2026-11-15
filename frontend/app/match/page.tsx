@@ -5,6 +5,7 @@ import { useState } from "react";
 import { submitJob } from "@/lib/submit";
 import { feetInches, heightProblem, LIMITS } from "@/lib/validate";
 import { FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
+import { ExampleSection } from "../examples";
 import { VideoPicker } from "../video-picker";
 
 const STROKES = [
@@ -73,6 +74,7 @@ export default function MatchPage() {
   }
 
   return (
+    <>
     <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
       <PageIntro
         eyebrow="Find my pro match"
@@ -153,5 +155,17 @@ export default function MatchPage() {
         blocked={!!videoProblem || !!heightError}
       />
     </form>
+      <ExampleSection
+        before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player filming their forehand" }}
+        after={{ label: "After", caption: "Your 3 closest pros and their breakdowns", vertical: true }}
+        steps={[
+          "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
+          "If you don't give your height, we estimate it from the table in the frame, which is always 76 cm high and 274 cm long.",
+          "We compare you only with pros who play with the same hand, and pros with your grip come first.",
+          "The 3 pros closest to your height and build are your matches. We then line up your swing against each of theirs to show where your form differs.",
+          "You get a score and notes for each pro, plus one video of their technique breakdowns to learn from.",
+        ]}
+      />
+    </>
   );
 }

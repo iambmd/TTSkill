@@ -5,6 +5,7 @@ import { useState } from "react";
 import { submitJob } from "@/lib/submit";
 import { LIMITS, rangeProblem } from "@/lib/validate";
 import { FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass, labelTextClass } from "../ui";
+import { ExampleSection } from "../examples";
 import { VideoPicker } from "../video-picker";
 
 const MODES = [
@@ -63,6 +64,7 @@ export default function AutoCutPage() {
   }
 
   return (
+    <>
     <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
       <PageIntro
         eyebrow="Match Auto-Cut"
@@ -119,5 +121,17 @@ export default function AutoCutPage() {
       </details>
       <SubmitBar label="Cut my match" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
+      <ExampleSection
+        before={{ src: "/examples/autocut-before.mp4", label: "Before", caption: "A 3.5-minute phone recording of a match" }}
+        after={{ src: "/examples/autocut-after.mp4", label: "After", caption: "Highlights: the top rallies, 42 s" }}
+        steps={[
+          "We listen to the match. Ball contact makes a short, sharp click in the 2–6 kHz range, so we filter the sound to that band.",
+          "Every spike well above the background noise counts as a hit. Long sounds like shoe squeaks are ignored.",
+          "Hits close together are grouped into rallies. A rally needs at least 4 hits, so a single bounce doesn't count.",
+          "Highlights keeps the rallies with the most hits. Full match keeps every rally and drops the time in between.",
+          "Each rally gets 1.5 s of padding so you see the serve and the finish, then the clips are joined into one video.",
+        ]}
+      />
+    </>
   );
 }
