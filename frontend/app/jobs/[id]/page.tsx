@@ -275,7 +275,7 @@ function CoachView({ job }: { job: Job }) {
               {job.agentFiles!.map((f) => (
                 <div key={f.name}>
                   <p className="font-mono text-xs font-bold text-accent">{f.name}</p>
-                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-black/40 p-2 text-xs text-muted">{f.preview}</pre>
+                  <pre className="mt-1 max-h-48 overflow-auto rounded-lg bg-black/40 p-2 light:bg-white/5 text-xs text-muted">{f.preview}</pre>
                 </div>
               ))}
             </div>

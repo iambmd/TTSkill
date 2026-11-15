@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* `light:` for the rare spot that needs its own light-mode style. */
+@custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
+
 @theme {
   /* Ball orange on near-black. */
   --color-accent: #ff6b2c;
@@ -55,6 +58,20 @@
   }
 }
 
+/* Light mode: same tokens on a light red page. White is remapped to dark ink so the
+   white-alpha hovers, borders and faint text used across pages flip with the theme. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-accent: #d9400b;
+  --color-accent-hot: #c03608;
+  --color-ink: #ffd6d0;
+  --color-panel: #fff4f2;
+  --color-line: rgb(60 8 8 / 0.16);
+  --color-muted: #6b3a36;
+  --color-fg: #1f0a09;
+  --color-white: #1f0a09;
+}
+
 html {
   color-scheme: dark;
   -webkit-tap-highlight-color: transparent;
@@ -65,6 +82,12 @@ body {
     radial-gradient(70rem 28rem at 50% -10rem, rgb(255 107 44 / 0.16), transparent 70%) no-repeat,
     var(--color-ink);
   color: var(--color-fg);
+}
+
+:root[data-theme="light"] body {
+  background:
+    radial-gradient(70rem 28rem at 50% -10rem, rgb(220 38 38 / 0.22), transparent 70%) no-repeat,
+    var(--color-ink);
 }
 
 :focus-visible {
