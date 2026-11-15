@@ -1,8 +1,9 @@
-"""Rubber recommender: style, rubber type and level in; PingSense rubbers ranked by price, then user score."""
+"""Rubber recommender: style, rubber type, level and budget in; PingSense rubbers ranked by budget band, then user score."""
 from __future__ import annotations
 
 import csv
 import json
+import math
 import sys
 from functools import lru_cache
 from pathlib import Path
@@ -30,7 +31,8 @@ LEVEL_RULES = {
     "advanced": {"lo": 9.0, "hi": 10.0, "min_control": 0.0},
 }
 MIN_OVERALL = 8.0  # skip rubbers reviewers rate poorly, however cheap
-PRICE_BAND = 5.0   # prices within the same $5 band count as equal, so the user score decides
+BAND = 10.0  # $10 bands counted down from the budget
+DEFAULT_BUDGET = 60.0
 
 
 def _num(v: str) -> float | None:
@@ -58,14 +60,22 @@ def load() -> tuple[dict, ...]:
     )
 
 
-def recommend(style: str, rtype: str, level: str, limit: int = 8) -> dict:
-    """Rank matching rubbers: cheapest price band first, then the highest user score (Overall)."""
+def band(price: float, budget: float) -> int:
+    """0 for (budget-10, budget], 1 for (budget-20, budget-10], ... Pricier rubbers are usually
+    better, so the band closest to the budget ranks first."""
+    return math.floor((budget - price) / BAND + 1e-9)
+
+
+def recommend(style: str, rtype: str, level: str, budget: float = DEFAULT_BUDGET, limit: int = 8) -> dict:
+    """Drop rubbers over budget, then rank by budget band (closest first) and the highest user score (Overall)."""
     if style not in STYLES or rtype not in TYPES or level not in LEVELS:
         raise ValueError("style, rubber type or level not recognised")
+    if budget <= 0:
+        raise ValueError("budget must be above 0")
     rule = LEVEL_RULES[level]
     picks = []
     for r in load():
-        if r["type"] != rtype or r["price"] is None or (r["overall"] or 0) < MIN_OVERALL:
+        if r["type"] != rtype or r["price"] is None or r["price"] > budget or (r["overall"] or 0) < MIN_OVERALL:
             continue
         if r["control"] is not None and r["control"] < rule["min_control"]:
             continue
@@ -73,11 +83,11 @@ def recommend(style: str, rtype: str, level: str, limit: int = 8) -> dict:
         if rtype != "anti_spin" and not rule["lo"] <= (r[style] or 0) <= rule["hi"]:
             continue
         picks.append(r)
-    picks.sort(key=lambda r: (r["price"] // PRICE_BAND, -(r["overall"] or 0), -(r[style] or 0)))
+    picks.sort(key=lambda r: (band(r["price"], budget), -(r["overall"] or 0), -(r[style] or 0)))
     note = None
     if rtype in ("short_pips", "long_pips"):
         note = "PingSense has no pips rubbers yet, so there is nothing to rank. They're on the list."
-    return {"style": style, "type": rtype, "level": level, "thickness": THICKNESS[rtype][level],
+    return {"style": style, "type": rtype, "level": level, "budget": budget, "thickness": THICKNESS[rtype][level],
             "results": picks[:limit], "note": note}
 
 

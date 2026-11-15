@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Level, Recommendation, RubberType, Style } from "@/lib/rubbers";
 import { GearTabs } from "../gear-tabs";
-import { PageIntro, RadioTiles, labelClass } from "../ui";
+import { PageIntro, RadioTiles, inputClass, labelClass } from "../ui";
 
 const STYLE_OPTIONS = [
   { value: "spin", label: "Spin", sub: "Loops and heavy topspin" },
@@ -27,12 +27,18 @@ export default function RubbersPage() {
   const [style, setStyle] = useState<Style>("spin");
   const [type, setType] = useState<RubberType>("inverted");
   const [level, setLevel] = useState<Level>("intermediate");
+  const [budget, setBudget] = useState("60");
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
-    fetch(`/api/rubbers?${new URLSearchParams({ style, rubber_type: type, level })}`)
+    const n = Number(budget);
+    if (!(n > 0 && n <= 500)) {
+      setError("Enter a budget between $1 and $500.");
+      return;
+    }
+    fetch(`/api/rubbers?${new URLSearchParams({ style, rubber_type: type, level, budget: String(n) })}`)
       .then(async (r) => {
         const body = await r.json();
         if (!r.ok) throw new Error(body.error ?? "Couldn't load rubbers. Try again.");
@@ -40,7 +46,7 @@ export default function RubbersPage() {
       })
       .catch((e: Error) => live && setError(e.message));
     return () => { live = false; };
-  }, [style, type, level]);
+  }, [style, type, level, budget]);
 
   return (
     <div className="mx-auto max-w-xl space-y-7">
@@ -48,7 +54,7 @@ export default function RubbersPage() {
       <PageIntro
         eyebrow="Rubber finder"
         title="Pick your rubber"
-        body="Tell us how you play. We rank 984 rubbers by price first, then by what players who use them think."
+        body="Tell us how you play and what you can spend. Pricier rubbers are usually better, so we start near your budget and rank by what players who use them think."
       />
       <fieldset>
         <legend className={labelClass}>Style</legend>
@@ -63,9 +69,21 @@ export default function RubbersPage() {
         <RadioTiles name="level" options={LEVEL_OPTIONS} value={level} onChange={setLevel} className="grid-cols-3" />
       </fieldset>
 
+      <div>
+        <label className={labelClass} htmlFor="budget">Budget per sheet</label>
+        <div className="relative">
+          <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm font-semibold text-muted">$</span>
+          <input
+            id="budget" type="number" inputMode="numeric" min={1} max={500} step={1} value={budget}
+            onChange={(e) => setBudget(e.target.value)} className={`${inputClass} h-12 pl-8`}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted">Nothing over budget. We rank in $10 steps down from it, best rated first in each step.</p>
+      </div>
+
       <section aria-live="polite" className="space-y-3">
         {error && <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm">{error}</p>}
-        {rec && (
+        {rec && !error && (
           <>
             <div className="flex items-baseline justify-between rounded-2xl border border-accent/40 bg-accent/10 p-4 shadow-[0_0_24px_rgb(255_107_44/0.15)]">
               <span className="text-sm font-semibold text-muted">Sponge thickness</span>

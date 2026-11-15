@@ -13,11 +13,16 @@ def test_data_loads_from_pingsense_copy():
     assert {r["type"] for r in rows} == {"inverted", "anti_spin"}
 
 
-def test_ranked_by_price_band_then_user_score():
-    out = rec.recommend("spin", "inverted", "intermediate", limit=20)["results"]
-    keys = [(r["price"] // rec.PRICE_BAND, -r["overall"]) for r in out]
+def test_budget_bands():
+    assert [rec.band(p, 50) for p in (50, 45, 40.01, 40, 30.5, 30, 1)] == [0, 0, 0, 1, 1, 2, 4]
+
+
+def test_within_budget_ranked_by_band_then_user_score():
+    out = rec.recommend("spin", "inverted", "intermediate", budget=55, limit=30)["results"]
+    assert all(r["price"] <= 55 and r["overall"] >= rec.MIN_OVERALL for r in out)
+    keys = [(rec.band(r["price"], 55), -r["overall"]) for r in out]
     assert keys == sorted(keys)
-    assert all(r["overall"] >= rec.MIN_OVERALL for r in out)
+    assert 45 < out[0]["price"] <= 55  # the band closest to the budget leads
 
 
 def test_level_sets_style_range_and_control():
@@ -40,8 +45,9 @@ def test_anti_spin_and_pips():
 
 
 def test_endpoint():
-    res = client.get("/equipment/rubbers", params={"style": "speed", "rubber_type": "inverted", "level": "advanced", "limit": 3})
+    res = client.get("/equipment/rubbers", params={"style": "speed", "rubber_type": "inverted", "level": "advanced", "budget": 80, "limit": 3})
     assert res.status_code == 200 and len(res.json()["results"]) == 3
-    for bad, msg in [({"style": "loop"}, "style"), ({"rubber_type": "pimples"}, "rubber type"), ({"level": "pro"}, "level")]:
+    assert all(r["price"] <= 80 for r in res.json()["results"])
+    for bad, msg in [({"style": "loop"}, "style"), ({"rubber_type": "pimples"}, "rubber type"), ({"level": "pro"}, "level"), ({"budget": 0}, "budget")]:
         res = client.get("/equipment/rubbers", params=bad)
         assert res.status_code == 400 and msg in res.json()["detail"]

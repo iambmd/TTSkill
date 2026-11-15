@@ -47,15 +47,18 @@ def health() -> dict:
 
 
 @app.get("/equipment/rubbers")
-def get_rubbers(style: str = "spin", rubber_type: str = "inverted", level: str = "intermediate", limit: int = 8) -> dict:
-    """Rubber picks from the PingSense data, cheapest first, then by user score."""
+def get_rubbers(style: str = "spin", rubber_type: str = "inverted", level: str = "intermediate",
+                budget: float = rubbers.DEFAULT_BUDGET, limit: int = 8) -> dict:
+    """Rubber picks from the PingSense data within budget: $10 bands down from the budget, then user score."""
     if style not in rubbers.STYLES:
         raise HTTPException(400, "style must be spin or speed")
     if rubber_type not in rubbers.TYPES:
         raise HTTPException(400, "rubber type must be inverted, short_pips, long_pips or anti_spin")
     if level not in rubbers.LEVELS:
         raise HTTPException(400, "level must be beginner, intermediate or advanced")
-    return rubbers.recommend(style, rubber_type, level, max(1, min(limit, 20)))
+    if not 0 < budget <= 500:
+        raise HTTPException(400, "budget should be between $1 and $500")
+    return rubbers.recommend(style, rubber_type, level, budget, max(1, min(limit, 20)))
 
 
 @app.post("/jobs/autocut", status_code=201)

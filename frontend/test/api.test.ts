@@ -275,22 +275,25 @@ describe("GET /api/rubbers", () => {
     await expectError(await GET!(url("style=loop"), ctx({})), 400, "spin or speed");
     await expectError(await GET!(url("rubber_type=x"), ctx({})), 400, "rubber type");
     await expectError(await GET!(url("level=pro"), ctx({})), 400, "level");
+    await expectError(await GET!(url("budget=0"), ctx({})), 400, "budget");
   });
-  it("ranks locally without a backend: cheapest band first, then user score", async () => {
+  it("ranks locally without a backend: within budget, $10 bands down from it, then user score", async () => {
     const { GET } = await route("rubbers");
-    const body = await (await GET!(url("style=spin&rubber_type=inverted&level=beginner"), ctx({}))).json();
+    const body = await (await GET!(url("style=spin&rubber_type=inverted&level=beginner&budget=45"), ctx({}))).json();
     expect(body.thickness).toBe("1.5-1.8 mm");
     expect(body.results.length).toBe(8);
-    const keys = body.results.map((r: { price: number; overall: number }) => [Math.floor(r.price / 5), -r.overall]);
+    expect(body.results.every((r: { price: number }) => r.price <= 45)).toBe(true);
+    expect(body.results[0].price).toBeGreaterThan(35);
+    const keys = body.results.map((r: { price: number; overall: number }) => [Math.floor((45 - r.price) / 10 + 1e-9), -r.overall]);
     expect(keys).toEqual([...keys].sort((a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1]));
   });
   it("uses the backend when it is set", async () => {
     const fetchMock = vi.fn(async () => Response.json({ thickness: "from backend", results: [] }));
     vi.stubGlobal("fetch", fetchMock);
     const { GET } = await route("rubbers", { BACKEND_URL: "http://backend" });
-    const body = await (await GET!(url("style=speed&rubber_type=anti_spin&level=advanced"), ctx({}))).json();
+    const body = await (await GET!(url("style=speed&rubber_type=anti_spin&level=advanced&budget=40"), ctx({}))).json();
     expect(body.thickness).toBe("from backend");
-    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("/equipment/rubbers?style=speed&rubber_type=anti_spin&level=advanced");
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("/equipment/rubbers?style=speed&rubber_type=anti_spin&level=advanced&budget=40");
   });
 });
 
