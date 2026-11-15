@@ -25,7 +25,13 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
   if (DEMO_MODE) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
   if (BACKEND_URL) {
     const res = await fetch(`${BACKEND_URL}/jobs/${kind}`, { method: "POST", body: form });
-    return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
+    const data = await res.json().catch(() => ({}));
+    // FastAPI reports errors as {detail}; the client reads {error}.
+    if (!res.ok) {
+      const detail = typeof data.detail === "string" ? data.detail : "Backend rejected the request";
+      return Response.json({ error: detail }, { status: res.status });
+    }
+    return Response.json(data, { status: res.status });
   }
   const job: Job = {
     id: randomUUID(),
@@ -59,8 +65,19 @@ export async function getJob(id: string): Promise<Response> {
   return Response.json(job);
 }
 
-export async function getResult(id: string): Promise<Response> {
+// Headers passed through from the backend so <video> can seek (Safari/iOS needs range requests).
+const RESULT_HEADERS = ["content-type", "content-length", "content-range", "accept-ranges", "content-disposition", "etag", "last-modified"];
+
+export async function getResult(id: string, range?: string | null): Promise<Response> {
   if (!BACKEND_URL) return Response.json({ error: "No result in stub mode" }, { status: 404 });
-  const res = await fetch(`${BACKEND_URL}/jobs/${id}/result`);
-  return new Response(res.body, { status: res.status, headers: res.headers });
+  const res = await fetch(`${BACKEND_URL}/jobs/${id}/result`, {
+    cache: "no-store",
+    headers: range ? { range } : undefined,
+  });
+  const headers = new Headers();
+  for (const h of RESULT_HEADERS) {
+    const v = res.headers.get(h);
+    if (v) headers.set(h, v);
+  }
+  return new Response(res.body, { status: res.status, headers });
 }

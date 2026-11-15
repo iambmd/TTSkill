@@ -1,0 +1,166 @@
+# TTSkill
+
+AI tools for amateur table tennis players and coaches, built for HackPrinceton Fall 2026. Users are on their phones, often courtside, uploading video they just filmed.
+
+## Features
+
+**Technique Breakdown** (`/breakdown`). The user uploads a clip of a player they admire, or describes the player's training in text, then picks a stroke (`forehand`, `backhand`, `serve`, `flick`, `block`, `footwork`). The result is a vertical 1080x1920 coaching video: a title card, three numbered steps with slow-mo and freeze frames, a pose-skeleton overlay, callouts and a summary card.
+- Pipeline: pick a window (the longest rally by ball-contact sound, else the most bat-hand motion) → 720p proxy → MediaPipe pose → key moments (preparation, contact, finish) → analyzer → `StrokeBreakdown` → render.
+- The analyzer uses Claude vision when `ANTHROPIC_API_KEY` is set and falls back to an offline rule-based analyzer otherwise.
+- With text only, there is no pose step, and the render is made of cards only.
+
+**Match Auto-Cut** (`/autocut`). The user uploads their own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits`.
+- `highlights` mode keeps the top N rallies by hit count as separate clips.
+- `full` mode keeps every rally, merges overlapping spans and drops the dead time.
+- Each segment gets 1.5 s of padding, is re-encoded to 720p/30fps H.264, and the parts are joined with the ffmpeg concat demuxer.
+
+## Stack and layout
+
+```
+Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background pipeline ──> backend/data/jobs/<id>/
+```
+
+| Path | What |
+| --- | --- |
+| `frontend/` | Next.js 15 App Router, React 19, TypeScript (strict), Tailwind CSS v4. Deploys to Vercel with root directory `frontend`. |
+| `frontend/app/` | Pages: `/`, `/breakdown`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
+| `frontend/app/api/jobs/` | Route handlers. They validate the form, then call `lib/jobs.ts`. |
+| `frontend/lib/jobs.ts` | Server-only job client with three modes: **proxy** to FastAPI when `BACKEND_URL` is set; **stub** (in-memory jobs with fake progress) when it is unset; **demo** (`DEMO_MODE=1`, every submission returns the cached results in `lib/demo-jobs.json` + `public/demo/*.mp4`). |
+| `frontend/lib/submit.ts` | Client upload via XHR, which reports upload progress. Also holds the `Job` and `Breakdown` types. |
+| `backend/app/main.py` | FastAPI endpoints. They validate input, save the upload, create the job and start a background task. |
+| `backend/app/pipelines.py` | `run_autocut` and `run_breakdown`. Plain functions that update the job record as they go. |
+| `backend/app/rally.py`, `cut.py` | Auto-Cut: hit and rally detection; padding, cutting and joining segments. |
+| `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json`. Results go to `result.mp4` in the same folder. |
+| `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
+| `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
+| `samples/` | Local test videos. Git-ignored. |
+
+### API
+
+| Method | Path | Body |
+| --- | --- | --- |
+| POST | `/jobs/autocut` | multipart: `video`, `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
+| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video`, `player`, `hand` (`auto`/`left`/`right`) |
+| GET | `/jobs/{id}` | Job record |
+| GET | `/jobs/{id}/result` | Result MP4 |
+| GET | `/health` | `{"ok": true}` |
+
+The frontend exposes the same paths under `/api/jobs/...`. FastAPI's interactive docs are at http://localhost:8000/docs.
+
+The job record has these fields:
+- Always: `id`, `kind`, `status` (`queued`/`running`/`done`/`failed`), `progress` (0–1), `message`, `params`, `resultUrl`.
+- Auto-Cut adds `rallies`.
+- Breakdown adds `breakdown`, `videoPrompt`, `analyzer`, `batHand` and `window`.
+
+The job page polls `GET /jobs/{id}`.
+
+## Install and run
+
+Requirements:
+- Node 20+, Python 3.11+ and ffmpeg/ffprobe on `PATH`.
+- On Linux and WSL, MediaPipe also needs the OpenGL ES/EGL libraries. Without them, a breakdown fails with `OSError: libGLESv2.so.2`.
+
+```bash
+sudo apt install -y ffmpeg libegl1 libgles2   # Linux / WSL, one time
+
+make install    # creates backend/.venv, pip installs, npm installs
+make dev        # frontend on :3000, backend on :8000 (Ctrl-C stops both)
+```
+
+To run the services one at a time, use `make backend` or `make frontend`. To work on the UI without Python, run `cd frontend && npm run dev`; the API routes then run in stub mode.
+
+### Environment variables
+
+| Variable | Where | Purpose |
+| --- | --- | --- |
+| `BACKEND_URL` | frontend | FastAPI URL. Unset means stub mode. `make frontend` sets it to `http://localhost:8000`. |
+| `DEMO_MODE` | frontend | `1` makes every submission return the cached demo jobs. |
+| `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer. Without it, the offline analyzer runs. |
+| `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer. |
+| `POSE_MODEL_PATH` | backend | Local `pose_landmarker_full.task`. Otherwise it is downloaded once to `~/.cache/ttskill/`. |
+| `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |
+
+Frontend variables go in `frontend/.env.local`; see `frontend/.env.example`. Never commit secrets: `.env*.local` is git-ignored.
+
+## Tests and checks
+
+```bash
+make test                                              # all backend tests (backend/tests + backend/technique/tests)
+cd backend && .venv/bin/python -m pytest tests/test_cut.py -q   # a single file
+cd frontend && npx tsc --noEmit                        # type check
+cd frontend && npm run build                           # production build
+```
+
+- Tests that need a real match skip unless `samples/IMG_8782.MOV` exists, or `TTSKILL_SAMPLE` is set for the technique test.
+- Render and cut tests need ffmpeg. Pose tests need `libegl1`/`libgles2`.
+- Add a test with each backend change. Pure functions such as `padded_segments` and `group_rallies` should be tested without video files.
+
+## Code conventions
+
+General
+- Keep changes small and in the style of the surrounding code. Don't add abstractions, dependencies or config that the change doesn't need.
+- Write short comments that explain *why*, not what. Each module starts with a one-line docstring saying what it is for.
+
+Backend (Python)
+- Start every module with `from __future__ import annotations`. Type-hint function signatures; use `Path` for file paths.
+- Call ffmpeg/ffprobe through `subprocess.run([...], check=True)` with a list of arguments, never a shell string.
+- Pipelines are plain functions: `run_<kind>(job_id, ...)`.
+  - Report progress with `jobs.update(job_id, status=..., progress=..., message=...)`.
+  - Wrap the whole body in `try/except Exception`, print the traceback, and mark the job `failed` with a readable `message`. The job page shows it.
+- Import heavy modules (MediaPipe, OpenCV) inside the pipeline function, so the API starts fast.
+- Endpoints validate input and return `HTTPException(400, "...")` with a message a user can act on. The Next.js layer turns FastAPI's `{detail}` into `{error}`.
+- `StrokeBreakdown` in `technique/schema.py` is the contract between analysis, prompting and rendering. If you change it, update the `Breakdown` type in `frontend/lib/submit.ts` to match.
+- Hit detection exists in both `app/rally.py` and `technique/audio.py`. Keep the two in step.
+
+Frontend (TypeScript)
+- Use strict TypeScript and the `@/` import alias. Add `"use client"` only to components that need state or browser APIs.
+- `lib/jobs.ts` is `server-only`. Client code talks only to `/api/jobs/*`, never to the backend directly.
+- API routes validate the form first and return `{ error }` with a 400, then delegate to `createJob` / `getJob` / `getResult`.
+- Pass the `range` header through on video results; iOS Safari needs it to seek.
+
+Adding things
+- **A new job kind:**
+  - backend: an endpoint in `main.py` and `run_<kind>` in `pipelines.py`
+  - frontend: a route at `frontend/app/api/jobs/<kind>/route.ts`, the kind added to the `Job["kind"]` union, a form page, and handling on `jobs/[id]/page.tsx`
+  - a demo entry in `demo-jobs.json` if it should work in `DEMO_MODE`
+- **A new stroke:** the list appears in `backend/app/main.py`, `technique/schema.py`, `technique/__main__.py`, `technique/analyze.py` (offline rules), `frontend/app/api/jobs/breakdown/route.ts` and `frontend/app/breakdown/page.tsx`.
+- **A new pipeline step for agents:** expose it as a plain function in `technique/tools.py` and add it to `TOOLS`.
+
+## UI style
+
+The app is mobile-first and dark-only, with a sporty look: ball orange on near-black.
+
+Tokens (`frontend/app/globals.css`, Tailwind v4 `@theme`):
+- Colors: `ink` #07090d (page background), `panel` #0e1218 (cards and inputs), `line` (white 9%, borders), `fg` #eef0f5, `muted` #8f97aa, `accent` #ff6b2c (ball orange), `accent-hot` #ff8547 (hover).
+- Use token classes (`bg-panel`, `border-line`, `text-muted`, `bg-accent`). Don't use raw hex values.
+- Fonts: Barlow for body text and Barlow Condensed for display, both loaded with `next/font` in `layout.tsx`.
+- Utilities:
+  - `headline`: condensed 800 italic uppercase. Use it for headings, primary buttons and big numbers.
+  - `eyebrow`: small, tracked, uppercase orange label above a title.
+  - `hatch`: static diagonal hatch on the upload button.
+  - `stripes`: animated stripes on video placeholders while a job runs. Turned off under `prefers-reduced-motion`.
+
+Components (`frontend/app/ui.tsx`):
+- Reuse `inputClass`, `labelClass`, `buttonClass` / `buttonBaseClass`, `secondaryButtonClass`, `PageIntro`, `RadioTiles`, `SubmitBar`, and the inline SVG icons (stroke 2.2, `currentColor`).
+- Don't add a component or icon library.
+
+Layout and shape:
+- Content width is `max-w-5xl` with `px-4`; forms are `max-w-xl`. The header is sticky and blurred, and the active nav link is an orange pill.
+- Corner radius grows with element size: `rounded-xl` for inputs and tiles, `rounded-2xl` for buttons and small panels, `rounded-3xl` for cards and video frames.
+- Accent elements get a soft orange glow shadow.
+
+Mobile:
+- Tap targets are at least `h-12`; the primary button is `h-14`.
+- On long forms, the submit button sits in a sticky `SubmitBar` at the bottom, which fills as the upload progresses.
+- Respect safe-area insets (`env(safe-area-inset-*)`) and use `svh`/`dvh` units for heights.
+
+Video:
+- Breakdown results are vertical (9:16); Auto-Cut results are landscape until the clip's own aspect ratio loads.
+- Always use `playsInline`.
+
+Accessibility:
+- Keep the orange `:focus-visible` outline. Use `aria-live` for upload and job status, `role="progressbar"` on progress bars, and `role="alert"` on errors.
+
+Copy:
+- Short and direct, in second person, and plain about what happens: "Cut the dead time.", "Keep the sound on, that's how we find the rallies."
+- Errors say what to do next.

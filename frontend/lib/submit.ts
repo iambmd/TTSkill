@@ -24,10 +24,23 @@ export type Breakdown = {
   steps: { title: string; lines: string[]; highlight_words: string[]; key_time_s: number; callouts: string[] }[];
 };
 
-/** Posts a form to one of our API routes and returns the created job. */
-export async function submitJob(path: string, form: FormData): Promise<Job> {
-  const res = await fetch(path, { method: "POST", body: form });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
-  return data as Job;
+/**
+ * Posts a form to one of our API routes and returns the created job.
+ * Uses XHR rather than fetch because only XHR reports upload progress, which matters for big phone videos.
+ */
+export function submitJob(path: string, form: FormData, onProgress?: (fraction: number) => void): Promise<Job> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", path);
+    xhr.responseType = "json";
+    if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.onload = () => {
+      const data = xhr.response ?? {};
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Job);
+      if (xhr.status === 413) return reject(new Error("That video is too big to upload here. Try a shorter clip."));
+      reject(new Error(data.error ?? `Request failed (${xhr.status})`));
+    };
+    xhr.onerror = () => reject(new Error("Upload failed. Check your connection and try again."));
+    xhr.send(form);
+  });
 }

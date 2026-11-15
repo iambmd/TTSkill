@@ -1,17 +1,23 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
-import { buttonClass, inputClass, labelClass } from "../ui";
+import { PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
+import { VideoPicker } from "../video-picker";
 
-const STROKES = ["forehand", "backhand", "serve", "flick", "block", "footwork"] as const;
-const HANDS = [["auto", "Auto-detect"], ["right", "Right-handed"], ["left", "Left-handed"]] as const;
+const STROKES = ["forehand", "backhand", "serve", "flick", "block", "footwork"].map((s) => ({ value: s, label: s }));
+const HANDS = [
+  { value: "auto", label: "Auto" },
+  { value: "right", label: "Right" },
+  { value: "left", label: "Left" },
+];
 
 export default function BreakdownPage() {
   const router = useRouter();
+  const textRef = useRef<HTMLDetailsElement>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<number | null>(null);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -19,71 +25,57 @@ export default function BreakdownPage() {
     const video = form.get("video") as File | null;
     const text = String(form.get("text") ?? "").trim();
     if ((!video || video.size === 0) && !text) {
-      setError("Upload a video or describe the player's training.");
+      setError("Upload a clip, or describe the player's training instead.");
+      if (textRef.current) textRef.current.open = true;
       return;
     }
     if (video && video.size === 0) form.delete("video");
-    setBusy(true);
+    setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("/api/jobs/breakdown", form);
+      const job = await submitJob("/api/jobs/breakdown", form, setProgress);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);
-      setBusy(false);
+      setProgress(null);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Technique Breakdown</h1>
-        <p className="text-sm text-white/70">Give us a clip or a description, and we will build a coaching video.</p>
-      </div>
+    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-7">
+      <PageIntro
+        eyebrow="Technique Breakdown"
+        title="Swing like the pros."
+        body="Drop in a clip of a player you admire, pick the stroke, and get a step-by-step coaching video."
+      />
+      <VideoPicker title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best." />
+      <details ref={textRef} className="group rounded-2xl border border-line bg-panel">
+        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          No clip? Describe the training instead
+          <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
+        </summary>
+        <div className="px-4 pb-4">
+          <label className="sr-only" htmlFor="text">Training description</label>
+          <textarea
+            id="text" name="text" rows={4} className={inputClass}
+            placeholder="Paste notes, a transcript, or a description of how the player trains this stroke."
+          />
+        </div>
+      </details>
       <div>
         <label className={labelClass} htmlFor="player">Player</label>
-        <input id="player" name="player" placeholder="e.g. Fan Zhendong" className={inputClass} />
-      </div>
-      <div>
-        <label className={labelClass} htmlFor="video">Training video</label>
-        <input id="video" name="video" type="file" accept="video/*" className={inputClass} />
-      </div>
-      <div>
-        <label className={labelClass} htmlFor="text">Or describe the training</label>
-        <textarea id="text" name="text" rows={4} className={inputClass}
-          placeholder="Paste notes, a transcript, or a description of how the player trains this stroke." />
+        <input id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass} />
       </div>
       <fieldset>
         <legend className={labelClass}>Stroke</legend>
-        <div className="flex flex-wrap gap-2">
-          {STROKES.map((s, i) => (
-            <label key={s} className="cursor-pointer">
-              <input type="radio" name="stroke" value={s} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block rounded-full border border-white/15 px-4 py-1.5 text-sm capitalize peer-checked:border-accent peer-checked:text-accent">
-                {s}
-              </span>
-            </label>
-          ))}
-        </div>
+        <RadioTiles name="stroke" options={STROKES} defaultValue="forehand" className="grid-cols-3" />
       </fieldset>
       <fieldset>
         <legend className={labelClass}>Bat hand</legend>
-        <div className="flex flex-wrap gap-2">
-          {HANDS.map(([value, label], i) => (
-            <label key={value} className="cursor-pointer">
-              <input type="radio" name="hand" value={value} defaultChecked={i === 0} className="peer sr-only" />
-              <span className="block rounded-full border border-white/15 px-4 py-1.5 text-sm peer-checked:border-accent peer-checked:text-accent">
-                {label}
-              </span>
-            </label>
-          ))}
-        </div>
-        <p className="mt-1 text-xs text-white/50">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
+        <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
+        <p className="mt-2 text-xs text-muted">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
       </fieldset>
-      {error && <p className="text-sm text-red-400">{error}</p>}
-      <button type="submit" disabled={busy} className={buttonClass}>
-        {busy ? "Submitting..." : "Generate breakdown"}
-      </button>
+      <SubmitBar label="Break it down" progress={progress} error={error} />
     </form>
   );
 }
