@@ -6,6 +6,7 @@ later via `generate_video()`; until then the pose-overlay render is the video ou
 from __future__ import annotations
 
 from .schema import StrokeBreakdown
+from .strokes import STROKE_TYPES
 
 STYLE = (
     "stylized grey wireframe 3D athlete on a dark studio background, blue table tennis table, "
@@ -22,8 +23,10 @@ def _clip(s: str, n: int) -> str:
 def build_prompts(b: StrokeBreakdown, max_chars: int = 512) -> dict:
     hand = f"{b.handedness}-handed " if b.handedness in ("left", "right") else ""
     who = f"a {hand}table tennis player" if b.player in ("", "Player") else f"{b.player}, a {hand}table tennis player"
+    st = STROKE_TYPES.get(b.stroke_type or "")
+    stroke = st.label.lower() if st else b.stroke
     main = (
-        f"{who} performs a {b.stroke}. Grip: {b.grip} Stance: {b.stance} "
+        f"{who} performs a {stroke}. Grip: {b.grip} Stance: {b.stance} "
         f"Swing: {b.swing_path} Contact: {b.contact_point} Finish: {b.follow_through} "
         f"Style: {STYLE}."
     )
@@ -33,7 +36,7 @@ def build_prompts(b: StrokeBreakdown, max_chars: int = 512) -> dict:
             "step": i,
             "title": s.title,
             "prompt": _clip(
-                f"{who}, {b.stroke}, moment: {s.title.lower()} - {' '.join(s.lines)} {STYLE}.",
+                f"{who}, {stroke}, moment: {s.title.lower()} - {' '.join(s.lines)} {STYLE}.",
                 max_chars,
             ),
             "duration_s": 3,

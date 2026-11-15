@@ -74,7 +74,7 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
 
 # Rough progress for each pipeline log line, so the job page bar moves.
 _STAGES = [("input", 0.1), ("longest rally", 0.2), ("no rallies", 0.2), ("window", 0.25),
-           ("running MediaPipe", 0.35), ("bat hand", 0.5), ("analysing", 0.6),
+           ("running MediaPipe", 0.35), ("bat hand", 0.5), ("stroke type", 0.55), ("analysing", 0.6),
            ("rendering", 0.8), ("done", 0.95)]
 
 
@@ -91,18 +91,21 @@ def _progress(job_id: str):
 
 
 def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, player: str,
-                  hand: str = "auto") -> None:
+                  hand: str = "auto", stroke_type: str = "") -> None:
     """Runs backend/technique and copies its breakdown.mp4 to result.mp4 for the job page."""
     try:
         from technique.pipeline import run_text, run_video  # heavy imports (MediaPipe, OpenCV)
+        from technique.strokes import label
 
         out = jobs.job_dir(job_id) / "technique"
         report = _progress(job_id)
         report("starting technique pipeline")
         if video is not None:
-            res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand)
+            res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand,
+                            stroke_type=stroke_type or None)
         else:
-            res = run_text(text, str(out), stroke, player or None, progress=report)
+            res = run_text(text, str(out), stroke, player or None, progress=report,
+                           stroke_type=stroke_type or None)
         overlay = Path(res["outputs"]["overlay_video"])
         shutil.copyfile(overlay, jobs.job_dir(job_id) / "result.mp4")
         breakdown = json.loads((out / "breakdown.json").read_text())
@@ -112,7 +115,10 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
                     message=f"{breakdown.get('headline') or 'Breakdown ready'} ({res['analyzer']} analyzer)",
                     resultUrl=f"/jobs/{job_id}/result", breakdown=breakdown,
                     videoPrompt=video_prompt, analyzer=res["analyzer"],
-                    batHand=res.get("bat_hand"), window=res.get("window"))
+                    batHand=res.get("bat_hand"), window=res.get("window"),
+                    strokeType={"key": res.get("stroke_type"), "label": label(res.get("stroke_type") or res["stroke"]),
+                                "detected": res.get("stroke_type_detected") is not None,
+                                "features": res.get("stroke_type_detected")})
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

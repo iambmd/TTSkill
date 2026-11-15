@@ -33,6 +33,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/app/download.py` | Pasted YouTube links (watch, youtu.be, Shorts) via yt-dlp: probed before the job starts (private, unavailable, over 3 min fail on the form), downloaded at <=720p into the job folder, deleted after the pipeline runs. |
 | `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json`. Results go to `result.mp4` in the same folder. |
 | `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
+| `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
 | `samples/` | Local test videos. Git-ignored. |
 
@@ -41,7 +42,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | Method | Path | Body |
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
-| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`) |
+| POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`); legacy `stroke` still accepted |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |
@@ -77,7 +78,7 @@ To run the services one at a time, use `make backend` or `make frontend`. To wor
 | `BACKEND_URL` | frontend | FastAPI URL. Unset means stub mode. `make frontend` sets it to `http://localhost:8000`. |
 | `DEMO_MODE` | frontend | `1` makes every submission return the cached demo jobs. |
 | `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer. Without it, the offline analyzer runs. |
-| `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer. |
+| `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer (default `claude-opus-5-5`). |
 | `POSE_MODEL_PATH` | backend | Local `pose_landmarker_full.task`. Otherwise it is downloaded once to `~/.cache/ttskill/`. |
 | `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |
 
@@ -124,7 +125,7 @@ Adding things
   - backend: an endpoint in `main.py` and `run_<kind>` in `pipelines.py`
   - frontend: a route at `frontend/app/api/jobs/<kind>/route.ts`, the kind added to the `Job["kind"]` union, a form page, and handling on `jobs/[id]/page.tsx`
   - a demo entry in `demo-jobs.json` if it should work in `DEMO_MODE`
-- **A new stroke:** the list appears in `backend/app/main.py`, `technique/schema.py`, `technique/__main__.py`, `technique/analyze.py` (offline rules), `frontend/app/api/jobs/breakdown/route.ts` and `frontend/app/breakdown/page.tsx`.
+- **A new stroke type:** add it to `STROKE_TYPES` in `backend/technique/strokes.py` (label, swing direction, phases, coaching focus), give it an offline template in `technique/analyze.py`, extend `classify()`/`from_text()` if it can be auto-detected, and add it to `frontend/lib/strokes.ts`.
 - **A new pipeline step for agents:** expose it as a plain function in `technique/tools.py` and add it to `TOOLS`.
 
 ## UI style

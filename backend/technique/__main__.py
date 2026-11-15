@@ -14,8 +14,9 @@ def main():
     src = ap.add_mutually_exclusive_group(required=True)
     src.add_argument("--video")
     src.add_argument("--text")
-    ap.add_argument("--stroke", default="forehand",
-                    choices=["forehand", "backhand", "serve", "flick", "block", "footwork"])
+    ap.add_argument("--stroke", default="auto",
+                    choices=["auto", "forehand", "backhand", "serve", "flick", "block", "footwork"])
+    ap.add_argument("--stroke-type", default=None, help="e.g. forehand_topspin; default: auto-detect")
     ap.add_argument("--player")
     ap.add_argument("--out", required=True)
     ap.add_argument("--analyzer", default="auto", choices=["auto", "claude", "offline"])
@@ -31,9 +32,11 @@ def main():
     if args.video:
         win = (args.start, args.end) if args.start is not None and args.end is not None else None
         res = run_video(args.video, args.out, args.stroke, args.player, args.analyzer,
-                        window=win, window_s=args.window, hand=args.hand)
+                        window=win, window_s=args.window, hand=args.hand,
+                        stroke_type=args.stroke_type)
     else:
-        res = run_text(args.text, args.out, args.stroke, args.player, args.analyzer)
+        res = run_text(args.text, args.out, args.stroke, args.player, args.analyzer,
+                       stroke_type=args.stroke_type)
     print(json.dumps(res, indent=2))
 
 

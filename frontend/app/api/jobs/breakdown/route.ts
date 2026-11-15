@@ -1,7 +1,10 @@
 import { createJob } from "@/lib/jobs";
 import { LINK_HINT, youtubeId } from "@/lib/youtube";
 
-const STROKES = new Set(["forehand", "backhand", "serve", "flick", "block", "footwork"]);
+import { STROKE_TYPE_VALUES } from "@/lib/strokes";
+
+// "" means auto-detect; the named strokes are kept for API callers that still send them.
+const STROKES = new Set(["", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"]);
 
 export async function POST(req: Request) {
   const form = await req.formData();
@@ -16,8 +19,12 @@ export async function POST(req: Request) {
   if (!hasVideo && url && !youtubeId(url)) {
     return Response.json({ error: LINK_HINT }, { status: 400 });
   }
+  const strokeType = String(form.get("stroke_type") ?? "");
   if (!STROKES.has(stroke)) {
     return Response.json({ error: `Unknown stroke: ${stroke}` }, { status: 400 });
+  }
+  if (strokeType && !STROKE_TYPE_VALUES.has(strokeType)) {
+    return Response.json({ error: `Unknown stroke type: ${strokeType}` }, { status: 400 });
   }
   return createJob("breakdown", form);
 }

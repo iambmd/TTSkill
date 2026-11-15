@@ -4,10 +4,10 @@ import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
 import { LINK_HINT, youtubeId } from "@/lib/youtube";
-import { PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
+import { STROKE_TYPES } from "@/lib/strokes";
+import { ChevronIcon, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
 
-const STROKES = ["forehand", "backhand", "serve", "flick", "block", "footwork"].map((s) => ({ value: s, label: s }));
 const HANDS = [
   { value: "auto", label: "Auto" },
   { value: "right", label: "Right" },
@@ -54,7 +54,7 @@ export default function BreakdownPage() {
       <PageIntro
         eyebrow="Technique Breakdown"
         title="Swing like the pros."
-        body="Drop in a clip of a player you admire, pick the stroke, and get a step-by-step coaching video."
+        body="Drop in a clip of a player you admire and get a step-by-step coaching video of their stroke."
       />
       <VideoPicker title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best." />
       <details ref={textRef} className="group rounded-2xl border border-line bg-panel">
@@ -74,10 +74,19 @@ export default function BreakdownPage() {
         <label className={labelClass} htmlFor="player">Player</label>
         <input id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass} />
       </div>
-      <fieldset>
-        <legend className={labelClass}>Stroke</legend>
-        <RadioTiles name="stroke" options={STROKES} defaultValue="forehand" className="grid-cols-3" />
-      </fieldset>
+      <div>
+        <label className={labelClass} htmlFor="stroke_type">
+          Stroke <span className="font-medium tracking-normal normal-case text-white/40">optional</span>
+        </label>
+        <div className="relative">
+          <select id="stroke_type" name="stroke_type" defaultValue="" className={`${inputClass} appearance-none pr-12`}>
+            <option value="">Auto-detect from the swing</option>
+            {STROKE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          <ChevronIcon className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-muted" />
+        </div>
+        <p className="mt-2 text-xs text-muted">Pick one to get that stroke&apos;s coaching steps, or leave it and we read it from the video.</p>
+      </div>
       <fieldset>
         <legend className={labelClass}>Bat hand</legend>
         <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
