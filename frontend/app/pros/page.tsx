@@ -4,10 +4,11 @@ import { useState } from "react";
 import data from "@/lib/pros.json";
 import { GearTabs } from "../gear-tabs";
 import { PageIntro, inputClass, labelClass } from "../ui";
+import { ProPhoto, SetupStrip } from "./pro-photo";
 
 type Pro = {
   name: string; country: string; grip: string; blade: string; fh: string; bh: string;
-  sources: string[]; uncertain: boolean; note?: string;
+  sources: string[]; uncertain: boolean; note?: string; wiki: string[];
 };
 const PROS = data.players as Pro[];
 const SOURCES = data.sources as Record<string, string>;
@@ -18,17 +19,19 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 function ProCard({ p }: { p: Pro }) {
   return (
     <article className="space-y-4 rounded-3xl border border-line bg-panel p-5">
-      <header className="flex items-start justify-between gap-3">
-        <div>
+      <header className="flex items-start gap-4">
+        <ProPhoto name={p.name} wiki={p.wiki} />
+        <div className="min-w-0 flex-1">
           <h2 className="headline text-3xl">{p.name}</h2>
           <p className="text-sm text-muted">{p.country} · {p.grip}</p>
+          {p.uncertain && (
+            <span className="mt-2 inline-block rounded-full border border-accent/50 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-accent">
+              Unconfirmed
+            </span>
+          )}
         </div>
-        {p.uncertain && (
-          <span className="shrink-0 rounded-full border border-accent/50 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-accent">
-            Unconfirmed
-          </span>
-        )}
       </header>
+      <SetupStrip fh={p.fh} bh={p.bh} />
       <dl className="grid gap-2 text-sm">
         {([["Blade", p.blade], ["Forehand", p.fh], ["Backhand", p.bh]] as const).map(([k, v]) => (
           <div key={k} className="flex gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
