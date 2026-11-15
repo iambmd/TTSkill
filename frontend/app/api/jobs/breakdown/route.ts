@@ -1,30 +1,28 @@
 import { createJob } from "@/lib/jobs";
-import { LINK_HINT, youtubeId } from "@/lib/youtube";
-
 import { STROKE_TYPE_VALUES } from "@/lib/strokes";
+import { choiceProblem, invalid, textProblem, videoInputProblem } from "@/lib/validate";
 
 // "" means auto-detect; the named strokes are kept for API callers that still send them.
 const STROKES = new Set(["", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"]);
 
 export async function POST(req: Request) {
   const form = await req.formData();
+  // A missing field takes the backend's default; a blank one is checked as sent.
+  const field = (k: string, missing = "") => String(form.get(k) ?? missing);
   const video = form.get("video");
-  const text = String(form.get("text") ?? "").trim();
-  const stroke = String(form.get("stroke") ?? "");
-  const url = String(form.get("url") ?? "").trim();
-  const hasVideo = video instanceof File && video.size > 0;
-  if (!hasVideo && !url && !text) {
-    return Response.json({ error: "Upload a clip, paste a YouTube link, or describe the training." }, { status: 400 });
-  }
-  if (!hasVideo && url && !youtubeId(url)) {
-    return Response.json({ error: LINK_HINT }, { status: 400 });
-  }
-  const strokeType = String(form.get("stroke_type") ?? "");
-  if (!STROKES.has(stroke)) {
-    return Response.json({ error: `Unknown stroke: ${stroke}` }, { status: 400 });
-  }
-  if (strokeType && !STROKE_TYPE_VALUES.has(strokeType)) {
-    return Response.json({ error: `Unknown stroke type: ${strokeType}` }, { status: 400 });
-  }
-  return createJob("breakdown", form);
+  const hasInput = (video instanceof File && video.size > 0) || !!field("url").trim();
+  const text = field("text").trim();
+  const stroke = field("stroke");
+  const strokeType = field("stroke_type");
+  // A description alone is enough; a clip or link, when given, must be usable.
+  const problem =
+    (!hasInput && !text ? "Upload a clip, paste a YouTube link, or describe the training." : null) ??
+    (hasInput ? videoInputProblem(form, "") : null) ??
+    (STROKES.has(stroke) ? null : `Unknown stroke: ${stroke}. Leave it blank to auto-detect.`) ??
+    (!strokeType || STROKE_TYPE_VALUES.has(strokeType)
+      ? null : `Unknown stroke type: ${strokeType}. Pick one from the list, or leave it blank to auto-detect.`) ??
+    choiceProblem(field("hand", "auto"), "hand", "Bat hand") ??
+    textProblem(field("player"), "player", "The player's name") ??
+    textProblem(text, "training_text", "The training description");
+  return problem ? invalid(problem) : createJob("breakdown", form);
 }

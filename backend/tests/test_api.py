@@ -1,6 +1,7 @@
-"""Every API endpoint: input validation, what gets scheduled, job records, result and file
-serving, and that a job can never stay queued/running forever (the "breakdown just sits
-there" bug). Pipelines are replaced by recorders except in the end-to-end tests at the end."""
+"""Every API endpoint: input validation (422s with a message the user can act on), what gets
+scheduled, job records, result and file serving, and that a job can never stay
+queued/running forever (the "breakdown just sits there" bug). Pipelines are replaced by
+recorders except in the end-to-end tests at the end."""
 import os
 import threading
 
@@ -9,9 +10,8 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
-from app import download, jobs, main
+from app import download, jobs, main, validate
 
-VIDEO = {"video": ("clip.mp4", b"fake video bytes", "video/mp4")}
 SHORT = "https://youtube.com/shorts/g3n9jVP0fMU"
 CANONICAL = "https://www.youtube.com/watch?v=g3n9jVP0fMU"
 
@@ -43,8 +43,13 @@ def ran(monkeypatch):
 
 @pytest.fixture
 def link_ok(monkeypatch):
-    monkeypatch.setattr(download, "probe", lambda url: {"id": "g3n9jVP0fMU", "title": "Ma Long forehand",
-                                                        "duration": 32, "url": download.canonical(url)})
+    kinds = []
+
+    def probe(url, kind):
+        kinds.append(kind)
+        return {"id": "g3n9jVP0fMU", "title": "Ma Long forehand", "duration": 32, "url": download.canonical(url)}
+    monkeypatch.setattr(download, "probe", probe)
+    return kinds
 
 
 def _error(r) -> str:
@@ -61,36 +66,48 @@ def test_health(api):
 
 def test_autocut_needs_a_video_or_link(api, ran):
     r = api.post("/jobs/autocut", data={"mode": "highlights"})
-    assert r.status_code == 400 and "Upload a match video or paste a YouTube link" in _error(r)
+    assert r.status_code == 422 and "Upload a match video or paste a YouTube link" in _error(r)
     assert not ran
 
 
-def test_autocut_rejects_unknown_mode(api, ran):
-    r = api.post("/jobs/autocut", data={"mode": "best"}, files=VIDEO)
-    assert r.status_code == 400 and "mode" in _error(r)
+@pytest.mark.parametrize("data,expect", [
+    ({"mode": "best"}, "Mode must be highlights or full"),
+    ({"top_n": "0"}, "Rallies in the reel must be between 1 and 20"),
+    ({"top_n": "abc"}, "Rallies in the reel must be a whole number"),
+    ({"threshold": "0.5"}, "Hit threshold must be between 1.5 and 10"),
+    ({"threshold": "nan"}, "Hit threshold must be between"),
+    ({"gap": "-1"}, "Max gap must be between 0.5 and 5"),
+    ({"min_hits": "1"}, "Min hits must be between 2 and 20"),
+    ({"min_hits": "2.5"}, "Min hits must be a whole number"),
+])
+def test_autocut_settings_must_be_in_range(api, ran, upload, data, expect):
+    r = api.post("/jobs/autocut", data=data, files=upload())
+    assert r.status_code == 422 and expect in _error(r)
+    assert not ran
 
 
 def test_autocut_rejects_links_that_are_not_youtube(api, ran):
     r = api.post("/jobs/autocut", data={"url": "https://vimeo.com/123"})
-    assert r.status_code == 400 and "isn't a YouTube link" in _error(r)
+    assert r.status_code == 422 and "Only YouTube links work here" in _error(r)
 
 
 def test_autocut_private_video_fails_on_the_form(api, ran, monkeypatch):
-    def private(url):
+    def private(url, kind):
         raise download.LinkError("That video is private. Use a public or unlisted video.")
     monkeypatch.setattr(download, "probe", private)
     r = api.post("/jobs/autocut", data={"url": SHORT})
-    assert r.status_code == 400 and "private" in _error(r)
+    assert r.status_code == 422 and "private" in _error(r)
     assert not ran
 
 
-def test_autocut_upload_saves_the_file_and_runs_the_pipeline(api, ran, tmp_path):
-    r = api.post("/jobs/autocut", data={"mode": "full", "top_n": "3", "threshold": "2.5"}, files=VIDEO)
+def test_autocut_upload_saves_the_file_and_runs_the_pipeline(api, ran, tmp_path, media, upload):
+    r = api.post("/jobs/autocut", data={"mode": "full", "top_n": "3", "threshold": "2.5"}, files=upload())
     assert r.status_code == 201
     job = r.json()
     assert job["kind"] == "autocut" and job["status"] == "queued" and job["params"]["mode"] == "full"
     path, *rest = ran["run_autocut"][0]
-    assert path == tmp_path / job["id"] / "input.mp4" and path.read_bytes() == b"fake video bytes"
+    assert path == tmp_path / job["id"] / "input.mp4" and path.read_bytes() == media["ok"].read_bytes()
+    assert not list((tmp_path / ".uploads").iterdir())  # moved into the job, not copied
     assert rest == ["full", 3, 2.5, 1.6, 4]
     assert api.get(f"/jobs/{job['id']}").json()["status"] == "done"
 
@@ -100,20 +117,25 @@ def test_autocut_link_is_downloaded_first(api, ran, link_ok):
     assert r.status_code == 201 and r.json()["params"]["url"] == CANONICAL
     url, pipeline, *rest = ran["fetch_then"][0]
     assert url == CANONICAL and pipeline is main.run_autocut and rest[0] == "highlights"
+    assert link_ok == ["autocut"]  # probed against Auto-Cut's 60-minute limit
 
 
 # ------------------------------------------------------------------ POST /jobs/breakdown
 
 @pytest.mark.parametrize("data,expect", [
-    ({"text": "loops", "stroke": "smash"}, "unknown stroke"),
-    ({"text": "loops", "stroke_type": "tomahawk"}, "unknown stroke type"),
-    ({"text": "loops", "hand": "both"}, "hand must be"),
+    ({"text": "loops", "stroke": "smash"}, "Unknown stroke: smash"),
+    ({"text": "loops", "stroke_type": "tomahawk"}, "Unknown stroke type: tomahawk"),
+    ({"text": "loops", "hand": "both"}, "Bat hand must be auto, left or right"),
     ({}, "Upload a clip, paste a YouTube link, or describe the training"),
     ({"text": "   "}, "Upload a clip"),
+    ({"text": "x" * 5001}, "The training description can be up to 5000 characters (it has 5001)"),
+    ({"text": "loops", "player": "M" * 81}, "The player's name can be up to 80 characters"),
+    ({"url": "https://www.youtube.com/playlist?list=PL123"}, "That's a playlist"),
+    ({"url": "https://www.youtube.com/@pingskills"}, "That's a channel link"),
 ])
 def test_breakdown_validation(api, ran, data, expect):
     r = api.post("/jobs/breakdown", data=data)
-    assert r.status_code == 400 and expect in _error(r)
+    assert r.status_code == 422 and expect in _error(r)
     assert not ran
 
 
@@ -123,23 +145,32 @@ def test_breakdown_from_text(api, ran):
     assert ran["run_breakdown"][0] == (None, "Fan flicks early", "", "Fan Zhendong", "auto", "")
 
 
-def test_breakdown_from_upload_with_stroke_type(api, ran, tmp_path):
-    r = api.post("/jobs/breakdown", data={"stroke_type": "backhand_push", "hand": "left"}, files=VIDEO)
+def test_breakdown_from_upload_with_stroke_type(api, ran, media, upload):
+    r = api.post("/jobs/breakdown", data={"stroke_type": "backhand_push", "hand": "left"}, files=upload())
     assert r.status_code == 201
     path, text, stroke, player, hand, stroke_type = ran["run_breakdown"][0]
-    assert path.read_bytes() == b"fake video bytes" and (hand, stroke_type) == ("left", "backhand_push")
+    assert path.read_bytes() == media["ok"].read_bytes() and (hand, stroke_type) == ("left", "backhand_push")
 
 
 def test_breakdown_from_link(api, ran, link_ok):
     r = api.post("/jobs/breakdown", data={"url": SHORT})
     assert r.status_code == 201 and r.json()["params"]["video"] == "Ma Long forehand"
     url, pipeline, *_ = ran["fetch_then"][0]
-    assert url == CANONICAL and pipeline is main.run_breakdown
+    assert url == CANONICAL and pipeline is main.run_breakdown and link_ok == ["breakdown"]
 
 
-def test_breakdown_upload_wins_over_link(api, ran, monkeypatch):
-    monkeypatch.setattr(download, "probe", lambda url: pytest.fail("the link should not be probed"))
-    r = api.post("/jobs/breakdown", data={"url": SHORT}, files=VIDEO)
+def test_breakdown_link_over_3_minutes_fails_on_the_form(api, ran, monkeypatch):
+    def long_video(url, kind):
+        download.check_info({"duration": 200}, kind)
+    monkeypatch.setattr(download, "probe", long_video)
+    r = api.post("/jobs/breakdown", data={"url": SHORT})
+    assert r.status_code == 422 and "3:20 long. Use one under 3 minutes" in _error(r)
+    assert not ran
+
+
+def test_breakdown_upload_wins_over_link(api, ran, monkeypatch, upload):
+    monkeypatch.setattr(download, "probe", lambda url, kind: pytest.fail("the link should not be probed"))
+    r = api.post("/jobs/breakdown", data={"url": SHORT}, files=upload())
     assert r.status_code == 201 and "run_breakdown" in ran
 
 
@@ -155,48 +186,71 @@ def test_breakdown_ignores_empty_file_part(api, ran):
 # ------------------------------------------------------------------ POST /jobs/match
 
 @pytest.mark.parametrize("data,expect", [
-    ({"stroke": "serve"}, "forehand or backhand"),
-    ({"hand": "both"}, "hand must be"),
-    ({"height_cm": "tall"}, "number in cm"),
+    ({"stroke": "serve"}, "Stroke must be forehand or backhand"),
+    ({"hand": "both"}, "Bat hand must be auto, left or right"),
+    ({"grip": "seemiller"}, "Grip must be shakehand or penhold"),
+    ({"height_cm": "tall"}, "as a number in cm"),
+    ({"height_cm": "-170"}, "as a number in cm"),
+    ({"height_cm": "0"}, "between 100 and 230"),
     ({"height_cm": "50"}, "between 100 and 230"),
+    ({"height_cm": "250"}, "between 100 and 230"),
+    ({"height_cm": "230.5"}, "between 100 and 230"),
+    ({"height_cm": "nan"}, "as a number in cm"),
+    ({"height_cm": "1e2"}, "as a number in cm"),
 ])
-def test_match_validation(api, ran, data, expect):
-    r = api.post("/jobs/match", data=data, files=VIDEO)
-    assert r.status_code == 400 and expect in _error(r)
+def test_match_validation(api, ran, upload, data, expect):
+    r = api.post("/jobs/match", data=data, files=upload())
+    assert r.status_code == 422 and expect in _error(r)
+    assert not ran
 
 
 def test_match_needs_a_video(api, ran):
     r = api.post("/jobs/match", data={"stroke": "forehand"})
-    assert r.status_code == 400 and "Upload a clip of yourself" in _error(r)
+    assert r.status_code == 422 and "Upload a clip of yourself" in _error(r)
 
 
-def test_match_upload(api, ran):
-    r = api.post("/jobs/match", data={"stroke": "backhand", "height_cm": "175"}, files=VIDEO)
-    assert r.status_code == 201 and r.json()["params"]["height_cm"] == 175.0
-    path, stroke, height, hand = ran["run_match"][0]
-    assert (stroke, height, hand) == ("backhand", 175.0, "auto") and path.exists()
+@pytest.mark.parametrize("height", ["100", "175", "230", " 182.5 "])
+def test_match_upload(api, ran, upload, height):
+    r = api.post("/jobs/match", data={"stroke": "backhand", "height_cm": height, "grip": "penhold"}, files=upload())
+    assert r.status_code == 201 and r.json()["params"]["height_cm"] == float(height)
+    path, stroke, h, hand, grip = ran["run_match"][0]
+    assert (stroke, h, hand, grip) == ("backhand", float(height), "auto", "penhold") and path.exists()
+
+
+def test_match_grip_defaults_to_shakehand(api, ran, upload):
+    assert api.post("/jobs/match", files=upload()).json()["params"]["grip"] == "shakehand"
+    assert ran["run_match"][0][-1] == "shakehand"
 
 
 def test_match_link(api, ran, link_ok):
     r = api.post("/jobs/match", data={"url": SHORT, "stroke": "forehand"})
     assert r.status_code == 201
-    assert ran["fetch_then"][0][:2] == (CANONICAL, main.run_match)
+    assert ran["fetch_then"][0][:2] == (CANONICAL, main.run_match) and link_ok == ["match"]
 
 
 # ------------------------------------------------------------------ POST /jobs/coach
 
-def test_coach_needs_a_request(api, ran):
-    r = api.post("/jobs/coach", data={"request": "  "}, files=VIDEO)
-    assert r.status_code == 400 and "Tell the coach" in _error(r)
+@pytest.mark.parametrize("data", [{"request": "  "}, {"request": "\n\t"}, {}])
+def test_coach_needs_a_request(api, ran, upload, data):
+    r = api.post("/jobs/coach", data=data, files=upload())
+    assert r.status_code == 422 and "Tell the coach" in _error(r)
+    assert not ran
+
+
+def test_coach_request_is_at_most_1000_characters(api, ran, upload):
+    r = api.post("/jobs/coach", data={"request": "a" * 1001}, files=upload())
+    assert r.status_code == 422 and "up to 1000 characters (it has 1001)" in _error(r)
+    r = api.post("/jobs/coach", data={"request": "  " + "a" * 1000 + "  "}, files=upload())
+    assert r.status_code == 201 and len(ran["run_coach"][0][2]) == 1000  # counted after trimming
 
 
 def test_coach_needs_a_video(api, ran):
     r = api.post("/jobs/coach", data={"request": "fix my forehand"})
-    assert r.status_code == 400 and "Add a video" in _error(r)
+    assert r.status_code == 422 and "Add a video" in _error(r)
 
 
-def test_coach_upload(api, ran):
-    r = api.post("/jobs/coach", data={"request": "show my best rallies"}, files=VIDEO)
+def test_coach_upload(api, ran, upload):
+    r = api.post("/jobs/coach", data={"request": "show my best rallies"}, files=upload())
     assert r.status_code == 201 and r.json()["kind"] == "coach"
     path, url, request = ran["run_coach"][0]
     assert path.exists() and url is None and request == "show my best rallies"
@@ -205,7 +259,42 @@ def test_coach_upload(api, ran):
 def test_coach_link_is_passed_to_the_agent(api, ran, link_ok):
     r = api.post("/jobs/coach", data={"request": "fix my forehand", "url": SHORT})
     assert r.status_code == 201
-    assert ran["run_coach"][0] == (None, CANONICAL, "fix my forehand")
+    assert ran["run_coach"][0] == (None, CANONICAL, "fix my forehand") and link_ok == ["coach"]
+
+
+# ------------------------------------------------------------------ uploads: checked before any job exists
+
+@pytest.mark.parametrize("name,filename,expect", [
+    ("ok", "clip.avi", "Upload a video file: MP4, MOV, WebM or MKV"),
+    ("ok", "notes.txt", "Upload a video file"),
+    ("ok", "clip", "Upload a video file"),
+    ("short", "clip.mp4", "only 1.0 s long. Upload at least 2 seconds"),
+    ("tiny", "clip.mp4", "only 320x180, too small to see the stroke. Re-record it"),
+    ("sound_only", "clip.mp4", "no video track, only sound"),
+])
+@pytest.mark.parametrize("endpoint,data", [
+    ("/jobs/autocut", {}), ("/jobs/breakdown", {}), ("/jobs/match", {}), ("/jobs/coach", {"request": "cut it"}),
+])
+def test_bad_uploads_are_rejected_everywhere(api, ran, tmp_path, upload, name, filename, expect, endpoint, data):
+    r = api.post(endpoint, data=data, files=upload(name, filename))
+    assert r.status_code == 422 and expect in _error(r)
+    assert not ran and not [d for d in tmp_path.iterdir() if d.name != ".uploads"]  # no job was created
+    staged = tmp_path / ".uploads"
+    assert not (staged.exists() and any(staged.iterdir()))  # and the rejected file is deleted
+
+
+def test_unreadable_upload(api, ran):
+    r = api.post("/jobs/match", files={"video": ("clip.mov", b"not really a video", "video/quicktime")})
+    assert r.status_code == 422 and "couldn't read that file as a video" in _error(r)
+
+
+def test_upload_limits_come_from_the_shared_file(api, ran, upload, monkeypatch):
+    monkeypatch.setitem(validate.LIMITS["upload"], "max_seconds", 2)
+    r = api.post("/jobs/match", files=upload())
+    assert r.status_code == 422 and "0:03 long. Uploads can be up to" in _error(r)
+    monkeypatch.setitem(validate.LIMITS["upload"], "max_mb", 0.001)
+    r = api.post("/jobs/match", files=upload())
+    assert r.status_code == 422 and "Upload one under 0.001 MB" in _error(r)
 
 
 # ------------------------------------------------------------------ GET /jobs/{id}
@@ -322,7 +411,7 @@ def test_video_breakdown_always_finishes(api, tmp_path, monkeypatch):
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     clip = tmp_path / "empty.mp4"
     wr = cv2.VideoWriter(str(clip), cv2.VideoWriter_fourcc(*"mp4v"), 30, (640, 360))
-    for i in range(60):
+    for i in range(90):
         frame = np.full((360, 640, 3), 40, np.uint8)
         cv2.circle(frame, (50 + i * 9, 180), 20, (255, 255, 255), -1)
         wr.write(frame)
@@ -330,7 +419,7 @@ def test_video_breakdown_always_finishes(api, tmp_path, monkeypatch):
     with clip.open("rb") as f:
         r = api.post("/jobs/breakdown", files={"video": ("empty.mp4", f, "video/mp4")})
     job = api.get(f"/jobs/{r.json()['id']}").json()
-    assert job["status"] in ("done", "failed") and job["message"]
+    assert job["status"] == "failed" and "couldn't find a player in this clip" in job["message"]
     assert job["id"] not in jobs.ACTIVE
 
 
@@ -342,3 +431,26 @@ def test_link_breakdown_end_to_end(api, monkeypatch):
     job = api.get(f"/jobs/{r.json()['id']}").json()
     assert job["status"] == "done", job["message"]
     assert not list((jobs.job_dir(job["id"])).glob("input.*"))  # the download is deleted
+
+
+# ------------------------------------------------------------------ Auto-Cut: too few rallies is advice, not an error
+
+def test_autocut_with_no_rallies_warns_instead_of_failing(api, monkeypatch, media):
+    from app import pipelines
+    monkeypatch.setattr(pipelines, "detect_rallies", lambda *a: [])
+    job = jobs.create("autocut", {})
+    jobs.run(pipelines.run_autocut, job["id"], media["ok"], "highlights", 5, 3.0, 1.6, 4)
+    got = api.get(f"/jobs/{job['id']}").json()
+    assert got["status"] == "done" and got["resultUrl"] is None and got["rallies"] == []
+    assert "didn't hear any rallies" in got["warning"] and "closer to the table" in got["warning"]
+
+
+def test_autocut_with_one_rally_cuts_it_and_warns(api, monkeypatch, media):
+    from app import pipelines
+    from app.rally import Rally
+    monkeypatch.setattr(pipelines, "detect_rallies", lambda *a: [Rally(0.5, 2.0, 6)])
+    job = jobs.create("autocut", {})
+    jobs.run(pipelines.run_autocut, job["id"], media["ok"], "full", 5, 3.0, 1.6, 4)
+    got = api.get(f"/jobs/{job['id']}").json()
+    assert got["status"] == "done" and got["resultUrl"] and "only heard 1 rally" in got["warning"]
+    assert api.get(f"/jobs/{job['id']}/result").status_code == 200

@@ -1,24 +1,15 @@
 import { createJob } from "@/lib/jobs";
-import { LINK_HINT, youtubeId } from "@/lib/youtube";
+import { choiceProblem, heightProblem, invalid, videoInputProblem } from "@/lib/validate";
 
 export async function POST(req: Request) {
   const form = await req.formData();
-  const video = form.get("video");
-  const url = String(form.get("url") ?? "").trim();
-  const stroke = String(form.get("stroke") ?? "");
-  const height = String(form.get("height_cm") ?? "").trim();
-  const hasVideo = video instanceof File && video.size > 0;
-  if (!hasVideo && !url) {
-    return Response.json({ error: "Upload a clip of yourself or paste a YouTube link." }, { status: 400 });
-  }
-  if (!hasVideo && !youtubeId(url)) {
-    return Response.json({ error: LINK_HINT }, { status: 400 });
-  }
-  if (stroke !== "forehand" && stroke !== "backhand") {
-    return Response.json({ error: "Pick forehand or backhand." }, { status: 400 });
-  }
-  if (height && !(Number(height) >= 100 && Number(height) <= 230)) {
-    return Response.json({ error: "Height should be between 100 and 230 cm." }, { status: 400 });
-  }
-  return createJob("match", form);
+  // A missing field takes the backend's default; a blank one is checked as sent.
+  const field = (k: string, missing = "") => String(form.get(k) ?? missing);
+  const problem =
+    videoInputProblem(form, "Upload a clip of yourself or paste a YouTube link.") ??
+    choiceProblem(field("stroke", "forehand"), "match_stroke", "Stroke") ??
+    choiceProblem(field("hand", "auto"), "hand", "Bat hand") ??
+    choiceProblem(field("grip", "shakehand"), "grip", "Grip") ??
+    heightProblem(field("height_cm"));
+  return problem ? invalid(problem) : createJob("match", form);
 }

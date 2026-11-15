@@ -7,7 +7,7 @@ AI coaching for table tennis from the video on your phone, built for HackPrincet
 
 ## Features
 
-Every video input accepts an upload or a pasted YouTube link (watch, youtu.be or Shorts; up to 3 minutes; fetched at <=720p by `app/download.py` and deleted after the job).
+Every video input accepts an upload or a pasted YouTube link (watch, youtu.be, Shorts or /live/; fetched at <=720p by `app/download.py` and deleted after the job). Bad input is stopped on the form and again by the API, never in the pipeline; the limits are in `shared/limits.json` (see [Input validation](#input-validation)).
 
 **TT Coach** (`/coach`). One plain-language request plus a video. A LangChain deepagents agent with Claude:
 - plans with `write_todos`; the todo list streams to the page live
@@ -26,10 +26,12 @@ Without `ANTHROPIC_API_KEY`, or if the agent fails, the same tools run on a fixe
 - Pipeline: pick a window → 720p proxy → MediaPipe pose → stroke type → key moments (the swing direction depends on the stroke type) → analyzer → `StrokeBreakdown` → render.
 - The analyzer uses Claude vision (structured output) when `ANTHROPIC_API_KEY` is set, and the offline per-stroke templates otherwise. Text-only input renders cards only.
 
-**Find my pro match** (`/match`). The user's swing, forehand or backhand, and an optional height; otherwise height is estimated from the table (76 cm high, 274 cm long).
+**Find my pro match** (`/match`). The user's swing, forehand or backhand, their grip (shakehand by default, or penhold), and an optional height in cm or ft/in; otherwise height is estimated from the table (76 cm high, 274 cm long).
 - Only pros with the same bat hand are considered. A weighted distance on height and body proportions picks the top 3. DTW on the stroke's joint-angle curves says where the user's form differs from each.
 - The result: 3 pros with scores and notes, plus one video of their cached breakdowns.
-- Pro data lives in `backend/data/players/`: 12 players today, roadmap 100.
+- Pros with the user's grip rank first; others only fill the top 3.
+- A pro card can carry warnings: the pro's `equipment_notes` (Sabine Winter's anti-spin backhand), and for penhold pros, when the user isn't penhold, that their backhand differs from shakehand.
+- Pro data lives in `backend/data/players/`: 20 players today (3 penhold), roadmap 100.
 
 **Match Auto-Cut** (`/autocut`). The user's own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits`.
 - `highlights` mode keeps the top N rallies by hit count as separate clips.
@@ -58,8 +60,11 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
 | `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) so videos match the app's type. |
-| `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, weighted distance on height and proportions for the top 3, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
-| `backend/data/players/` | `players.json` (12 pros: height, bat hand, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. |
+| `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, the user's grip first, weighted distance on height and proportions for the top 3, warnings for anti-spin and penhold backhands, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
+| `backend/data/players/` | `players.json` (20 pros: `height_cm` + `height_source`, `bat_hand`, `grip`, optional `bat_hand_source`, `equipment_notes` and `aliases`, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. A height whose sources disagree says "(approximate)" in `height_source`. `aliases` replaces the builder's title-matching guesses when a family name alone is ambiguous (Lebrun, Winter). |
+| `shared/limits.json` | Every input limit: height, upload type/size/length/resolution, link length per page, text lengths, Auto-Cut settings, the allowed choices, and the pose visibility floor. Read by `frontend/lib/validate.ts` and `backend/limits.py`. |
+| `backend/app/validate.py` | The API's input checks against those limits, including ffprobe on uploads (video track, length, resolution). |
+| `frontend/lib/validate.ts` | The same checks for the forms' inline errors and the Next.js routes' 422s. Link-shape checks are in `lib/youtube.ts`. |
 | `backend/agent/` | TT Coach. `coach.py` builds the deepagents agent (Claude, `write_todos` planning, virtual file system, subagents `clip_analyst`, `player_matcher`, `coach_writer`), streams its todos and files into the job, and falls back to a fixed plan without a key. `tools.py` holds the six tools, bound to one job, wrapping the existing pipelines. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
 | `samples/` | Local test videos. Git-ignored. |
@@ -72,7 +77,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`); legacy `stroke` still accepted |
 | POST | `/jobs/coach` | multipart: `request`, `video` or `url` |
 | GET | `/jobs/{id}/files/{name}` | Videos the coach made (`highlights.mp4`, `breakdown.mp4`, `pro_matches.mp4`) |
-| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
+| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`, default shakehand), `height_cm` (optional), `hand` |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |
@@ -81,8 +86,11 @@ The frontend exposes the same paths under `/api/jobs/...`. FastAPI's interactive
 
 The job record has these fields:
 - Always: `id`, `kind`, `status` (`queued`/`running`/`done`/`failed`), `progress` (0–1), `message`, `params`, `resultUrl`.
-- Auto-Cut adds `rallies`.
+- Auto-Cut adds `rallies`, and `warning` when fewer than 2 rallies were heard (the job is still `done`).
 - Breakdown adds `breakdown`, `videoPrompt`, `analyzer`, `batHand` and `window`.
+- Match adds `matches` (each with `grip` and `warnings`) and `you`.
+
+Invalid input is answered with a 422 and a message the user can act on, as `{detail}` from FastAPI and `{error}` from the Next.js routes.
 
 The job page polls `GET /jobs/{id}`.
 
@@ -102,7 +110,9 @@ make dev        # frontend on :3000, backend on :8000 (Ctrl-C stops both)
 To run the services one at a time, use `make backend` or `make frontend`. To work on the UI without Python, run `cd frontend && npm run dev`; the API routes then run in stub mode.
 
 Data builders (all run from `backend/`):
-- `.venv/bin/python -m players.build` builds the pro profiles. It's resumable and stops when YouTube rate-limits; re-run it later. `--local PLAYER STROKE FILE URL TITLE` adds one clip from a file.
+- `.venv/bin/python -m players.build` builds the pro profiles. It's resumable and stops when YouTube rate-limits; re-run it later. `--only ID ...` builds some players, `--local PLAYER STROKE FILE URL TITLE` adds one clip from a file.
+  - Run one build at a time. Each run rewrites `players.json` and `profiles.json` whole from what it loaded at start, so two runs (or editing the roster during a run) lose each other's changes.
+  - Each worker takes about 3 GB of RAM (MediaPipe plus rendering). On an 8 GB machine use `--workers 1`, and don't run the test suite at the same time.
 - `.venv/bin/python -m style.fetch_refs && .venv/bin/python -m style.analyze_refs && .venv/bin/python -m style.build_style` rebuilds the coaching-style profile.
 
 Space YouTube requests out. Never work around its bot check by switching clients or using someone's cookies; wait and retry instead.
@@ -131,13 +141,29 @@ cd frontend && npx tsc --noEmit                        # type check
 cd frontend && npm run build                           # production build (stop `next dev` first: they share .next)
 ```
 
-- `backend/tests/test_api.py` covers every FastAPI endpoint: validation, what each one schedules, job reads, result and file serving, and the end-to-end text and video breakdowns. `frontend/test/api.test.ts` covers every Next.js route in stub, proxy (fetch mocked) and demo modes. It fails if a new `route.ts` isn't added to its table.
+- `backend/tests/test_api.py` covers every FastAPI endpoint: validation (422s, bad uploads on every endpoint), what each one schedules, job reads, result and file serving, the Auto-Cut warning, and the end-to-end text and video breakdowns. `backend/tests/test_validate.py` covers the checks themselves: height, choices, ranges, text, upload names, ffprobe, link shapes and metadata, the pose visibility check. `backend/tests/conftest.py` makes small real clips with ffmpeg (`media`, `upload` fixtures). `frontend/test/validate.test.ts` and `youtube.test.ts` cover the same checks on the frontend. `frontend/test/api.test.ts` covers every Next.js route in stub, proxy (fetch mocked) and demo modes. It fails if a new `route.ts` isn't added to its table.
 - Background jobs go through `jobs.run(...)`, so a job always ends `done` or `failed`. A job left `running` by a server restart (`uvicorn --reload` on a file save, a crash) is reported as failed with a "server restarted" message, because `jobs.ACTIVE` only holds jobs this process is working on. This assumes one worker process.
 - Run only one `make dev` per checkout. Two `next dev` servers share `frontend/.next` and break each other's routes.
 
 - Tests that need a real match skip unless `samples/IMG_8782.MOV` exists, or `TTSKILL_SAMPLE` is set for the technique test.
 - Render and cut tests need ffmpeg. Pose tests need `libegl1`/`libgles2`.
 - Add a test with each backend change. Pure functions such as `padded_segments` and `group_rallies` should be tested without video files.
+
+## Input validation
+
+The limits live in `shared/limits.json`; change them there and both sides follow.
+
+| Input | Rule | Where it's checked |
+| --- | --- | --- |
+| Height | 100–230 cm, or the same range in ft/in (3 ft 4 in to 7 ft 6 in). Digits only: text, negatives, `1e2`, `nan` are rejected. | form, route, API |
+| Upload | MP4, MOV, WebM or MKV; at most 500 MB; 2 s to 10 min; a real video track (cover art doesn't count); at least 240 px on the short side (else "re-record") | type and size: form and route; length and resolution: form when the browser can read the preview; everything: API (ffprobe) |
+| Link | YouTube watch, youtu.be, Shorts or /live/. Playlists and channel links get their own message. Private, members-only, age-restricted and live videos are refused. Length: 3 min on Breakdown, Match and Coach; 60 min on Auto-Cut. | shape: form and route; the rest: API (`download.probe`) |
+| Stroke type, bat hand, grip, mode | One of the form's options | route, API |
+| Coach request | 1–1000 characters after trimming. Blank requests are ignored: the submit button stays disabled. | form, route, API |
+| Player name, training text | 80 and 5000 characters | form, route, API |
+| Auto-Cut settings | Rallies in the reel 1–20, hit threshold 1.5–10, max gap 0.5–5 s, min hits 2–20 | form, route, API |
+| Rallies found | Fewer than 2 is a warning on a `done` job (film closer, less background noise, lower the threshold), not an error | pipeline |
+| Player visible | At least 40% of the analysed frames, else the job fails asking for a clearer clip | pipeline, after pose |
 
 ## Code conventions
 
@@ -153,14 +179,16 @@ Backend (Python)
   - Wrap the whole body in `try/except Exception`, print the traceback, and mark the job `failed` with a readable `message`. The job page shows it.
   - Schedule it with `background.add_task(jobs.run, run_<kind>, job["id"], ...)`, never bare, so a crash or a missing final status can't leave the job running.
 - Import heavy modules (MediaPipe, OpenCV) inside the pipeline function, so the API starts fast.
-- Endpoints validate input and return `HTTPException(400, "...")` with a message a user can act on. The Next.js layer turns FastAPI's `{detail}` into `{error}`.
+- Endpoints validate input with `app/validate.py` (or raise `validate.Invalid("...")`), which main.py answers with a 422 and a message a user can act on. Uploads go through `stage_upload()`, so a bad file never creates a job. FastAPI's own type errors (`top_n=abc`) are turned into the same kind of message. The Next.js layer turns FastAPI's `{detail}` into `{error}`.
+- After pose extraction, call `pose.require_player(track)`: under 40% of frames with a player, the job asks for a clearer clip instead of rendering a bad video.
 - `StrokeBreakdown` in `technique/schema.py` is the contract between analysis, prompting and rendering. If you change it, update the `Breakdown` type in `frontend/lib/submit.ts` to match.
 - Hit detection exists in both `app/rally.py` and `technique/audio.py`. Keep the two in step.
 
 Frontend (TypeScript)
 - Use strict TypeScript and the `@/` import alias. Add `"use client"` only to components that need state or browser APIs.
 - `lib/jobs.ts` is `server-only`. Client code talks only to `/api/jobs/*`, never to the backend directly.
-- API routes validate the form first and return `{ error }` with a 400, then delegate to `createJob` / `getJob` / `getResult`.
+- API routes validate the form first with `lib/validate.ts` and return `invalid(message)` (a 422 with `{ error }`), then delegate to `createJob` / `getJob` / `getResult`.
+- Forms show each problem inline next to its field (`FieldError`, `aria-invalid`) and pass `blocked` to `SubmitBar` so the button is disabled until it's fixed. `VideoPicker` checks the file and link itself and reports through `onProblem`. A missing video is still reported on submit.
 - Pass the `range` header through on video results; iOS Safari needs it to seek.
 
 Adding things
@@ -168,6 +196,7 @@ Adding things
   - backend: an endpoint in `main.py` and `run_<kind>` in `pipelines.py`
   - frontend: a route at `frontend/app/api/jobs/<kind>/route.ts`, the kind added to the `Job["kind"]` union, a form page, and handling on `jobs/[id]/page.tsx`
   - a demo entry in `demo-jobs.json` if it should work in `DEMO_MODE`
+- **A new limit:** add it to `shared/limits.json`, check it in `backend/app/validate.py` and `frontend/lib/validate.ts` with the same message, and test both sides.
 - **A new stroke type:** add it to `STROKE_TYPES` in `backend/technique/strokes.py` (label, swing direction, phases, coaching focus), give it an offline template in `technique/analyze.py`, extend `classify()`/`from_text()` if it can be auto-detected, and add it to `frontend/lib/strokes.ts`.
 - **A new pipeline step for agents:** expose it as a plain function in `technique/tools.py` and add it to `TOOLS`.
 

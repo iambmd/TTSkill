@@ -1,5 +1,6 @@
 /**
- * Every Next.js API route under app/api/jobs: form validation, and lib/jobs.ts in its three
+ * Every Next.js API route under app/api/jobs: form validation (422s, limits from shared/limits.json),
+ * and lib/jobs.ts in its three
  * modes - stub (no BACKEND_URL), proxy to FastAPI (fetch mocked), and DEMO_MODE.
  * BACKEND_URL and DEMO_MODE are read when lib/jobs.ts loads, so each test re-imports.
  */
@@ -43,7 +44,7 @@ async function route(name: keyof typeof ROUTES, env: { BACKEND_URL?: string; DEM
   return imports[name]();
 }
 
-const video = () => new File([new Uint8Array([1, 2, 3])], "clip.mp4", { type: "video/mp4" });
+const video = (name = "clip.mp4") => new File([new Uint8Array([1, 2, 3])], name, { type: "video/mp4" });
 
 function post(fields: Record<string, string | File>): Request {
   const form = new FormData();
@@ -68,21 +69,34 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// ------------------------------------------------------------------ validation (stub mode)
+// ------------------------------------------------------------------ validation (stub mode): 422 before the backend
 
 describe("POST /api/jobs/breakdown", () => {
   it("needs a clip, a link or a description", async () => {
     const { POST } = await route("breakdown");
-    await expectError(await POST!(post({})), 400, "Upload a clip, paste a YouTube link, or describe the training");
+    await expectError(await POST!(post({})), 422, "Upload a clip, paste a YouTube link, or describe the training");
+    await expectError(await POST!(post({ text: "  \n " })), 422, "Upload a clip");
   });
-  it("rejects links that are not YouTube", async () => {
+  it("rejects links that are not YouTube videos", async () => {
     const { POST } = await route("breakdown");
-    await expectError(await POST!(post({ url: "https://vimeo.com/1" })), 400, "youtube.com/watch, youtu.be or Shorts");
+    await expectError(await POST!(post({ url: "https://vimeo.com/1" })), 422, "Only YouTube links work here");
+    await expectError(await POST!(post({ url: "https://www.youtube.com/playlist?list=PL1" })), 422, "That's a playlist");
+    await expectError(await POST!(post({ url: "https://www.youtube.com/@pingskills" })), 422, "That's a channel link");
+    // a bad link fails even when there's a description too
+    await expectError(await POST!(post({ url: "https://vimeo.com/1", text: "loops" })), 422, "Only YouTube links");
   });
-  it("rejects unknown strokes and stroke types", async () => {
+  it("rejects unknown strokes, stroke types and hands", async () => {
     const { POST } = await route("breakdown");
-    await expectError(await POST!(post({ text: "x", stroke: "smash" })), 400, "Unknown stroke: smash");
-    await expectError(await POST!(post({ text: "x", stroke_type: "tomahawk" })), 400, "Unknown stroke type");
+    await expectError(await POST!(post({ text: "x", stroke: "smash" })), 422, "Unknown stroke: smash");
+    await expectError(await POST!(post({ text: "x", stroke_type: "tomahawk" })), 422, "Unknown stroke type");
+    await expectError(await POST!(post({ text: "x", hand: "both" })), 422, "Bat hand must be auto, left or right");
+    await expectError(await POST!(post({ text: "x", hand: "" })), 422, "Bat hand must be");
+  });
+  it("rejects files that aren't MP4, MOV, WebM or MKV, and text over the limits", async () => {
+    const { POST } = await route("breakdown");
+    await expectError(await POST!(post({ video: video("clip.avi") })), 422, "Upload a video file: MP4, MOV, WebM or MKV");
+    await expectError(await POST!(post({ text: "x".repeat(5001) })), 422, "up to 5000 characters (it has 5001)");
+    await expectError(await POST!(post({ text: "x", player: "M".repeat(81) })), 422, "The player's name can be up to 80");
   });
   it.each([
     ["text", { text: "Fan flicks early" }],
@@ -100,9 +114,20 @@ describe("POST /api/jobs/breakdown", () => {
 describe("POST /api/jobs/autocut", () => {
   it("validates the input", async () => {
     const { POST } = await route("autocut");
-    await expectError(await POST!(post({ mode: "highlights" })), 400, "Upload a match video or paste a YouTube link");
-    await expectError(await POST!(post({ video: video(), mode: "best" })), 400, "mode must be");
-    await expectError(await POST!(post({ url: "not a link", mode: "full" })), 400, "youtube.com/watch");
+    await expectError(await POST!(post({ mode: "highlights" })), 422, "Upload a match video or paste a YouTube link");
+    await expectError(await POST!(post({ video: video(), mode: "best" })), 422, "Mode must be highlights or full");
+    await expectError(await POST!(post({ url: "not a link", mode: "full" })), 422, "youtube.com/watch");
+  });
+  it.each([
+    [{ top_n: "0" }, "Rallies in the reel must be between 1 and 20"],
+    [{ top_n: "2.5" }, "Rallies in the reel must be a whole number"],
+    [{ threshold: "abc" }, "Hit threshold must be a number"],
+    [{ threshold: "11" }, "Hit threshold must be between 1.5 and 10"],
+    [{ gap: "-1" }, "Max gap must be between 0.5 and 5"],
+    [{ min_hits: "1" }, "Min hits must be between 2 and 20"],
+  ])("rejects detection settings out of range: %o", async (fields, text) => {
+    const { POST } = await route("autocut");
+    await expectError(await POST!(post({ video: video(), mode: "highlights", ...fields })), 422, text);
   });
   it("creates a job from a video or a link", async () => {
     const { POST } = await route("autocut");
@@ -114,13 +139,20 @@ describe("POST /api/jobs/autocut", () => {
 describe("POST /api/jobs/match", () => {
   it("validates the input", async () => {
     const { POST } = await route("match");
-    await expectError(await POST!(post({ stroke: "forehand" })), 400, "Upload a clip of yourself");
-    await expectError(await POST!(post({ video: video(), stroke: "serve" })), 400, "Pick forehand or backhand");
-    await expectError(await POST!(post({ video: video(), stroke: "forehand", height_cm: "40" })), 400, "between 100 and 230");
+    await expectError(await POST!(post({ stroke: "forehand" })), 422, "Upload a clip of yourself");
+    await expectError(await POST!(post({ video: video(), stroke: "serve" })), 422, "Stroke must be forehand or backhand");
+    await expectError(await POST!(post({ video: video(), grip: "seemiller" })), 422, "Grip must be shakehand or penhold");
+    await expectError(await POST!(post({ video: video(), hand: "both" })), 422, "Bat hand must be auto, left or right");
+  });
+  it.each(["40", "0", "250", "230.5", "-170", "abc", "1e2", "0x64", "NaN"])("rejects height %s", async (h) => {
+    const { POST } = await route("match");
+    const res = await POST!(post({ video: video(), stroke: "forehand", height_cm: h }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toMatch(/between 100 and 230|as a number in cm/);
   });
   it("creates a job", async () => {
     const { POST } = await route("match");
-    const res = await POST!(post({ video: video(), stroke: "backhand", height_cm: "172" }));
+    const res = await POST!(post({ video: video(), stroke: "backhand", height_cm: "172", grip: "penhold" }));
     expect(res.status).toBe(201);
     expect((await res.json()).kind).toBe("match");
   });
@@ -129,9 +161,17 @@ describe("POST /api/jobs/match", () => {
 describe("POST /api/jobs/coach", () => {
   it("validates the input", async () => {
     const { POST } = await route("coach");
-    await expectError(await POST!(post({ video: video() })), 400, "Tell the coach");
-    await expectError(await POST!(post({ request: "fix my forehand" })), 400, "Add a video");
-    await expectError(await POST!(post({ request: "fix it", url: "https://example.com" })), 400, "youtube.com/watch");
+    await expectError(await POST!(post({ video: video() })), 422, "Tell the coach");
+    await expectError(await POST!(post({ video: video(), request: " \t\n " })), 422, "Tell the coach");
+    await expectError(await POST!(post({ request: "fix my forehand" })), 422, "Add a video");
+    await expectError(await POST!(post({ request: "fix it", url: "https://example.com" })), 422, "youtube.com/watch");
+  });
+  it("takes 1 to 1000 characters, counted after trimming", async () => {
+    const { POST } = await route("coach");
+    await expectError(await POST!(post({ video: video(), request: "a".repeat(1001) })), 422, "up to 1000 characters (it has 1001)");
+    const res = await POST!(post({ video: video(), request: `  ${"a".repeat(1000)}  ` }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).params.request).toBe("a".repeat(1000));
   });
   it("creates a job", async () => {
     const { POST } = await route("coach");
@@ -180,6 +220,14 @@ describe("GET /api/jobs/[id] and result in stub mode", () => {
 describe("proxy to the FastAPI backend", () => {
   const backend = { BACKEND_URL: "http://backend" };
 
+  it("never calls the backend for invalid input", async () => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { POST } = await route("match", backend);
+    await expectError(await POST!(post({ video: video(), height_cm: "250" })), 422, "between 100 and 230");
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("forwards the form and returns the backend's job", async () => {
     const fetch = vi.fn(async () => Response.json({ id: "abc", kind: "breakdown", status: "queued" }, { status: 201 }));
     vi.stubGlobal("fetch", fetch);
@@ -194,9 +242,9 @@ describe("proxy to the FastAPI backend", () => {
   });
 
   it("turns FastAPI's {detail} into {error}", async () => {
-    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ detail: "That video is private." }, { status: 400 })));
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ detail: "That video is private." }, { status: 422 })));
     const { POST } = await route("breakdown", backend);
-    await expectError(await POST!(post({ url: SHORT })), 400, "That video is private.");
+    await expectError(await POST!(post({ url: SHORT })), 422, "That video is private.");
   });
 
   it("answers 502 with a readable error when the backend is down", async () => {

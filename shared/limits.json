@@ -1,0 +1,27 @@
+{
+  "about": "Input limits, read by the forms and Next.js API routes (frontend/lib/validate.ts) and by the FastAPI backend (backend/limits.py). Change a limit here and both sides follow.",
+  "height_cm": { "min": 100, "max": 230 },
+  "upload": {
+    "extensions": ["mp4", "mov", "webm", "mkv"],
+    "max_mb": 500,
+    "min_seconds": 2,
+    "max_seconds": 600,
+    "min_short_side": 240
+  },
+  "link_max_seconds": { "breakdown": 180, "match": 180, "coach": 180, "autocut": 3600 },
+  "text_chars": { "coach_request": 1000, "player": 80, "training_text": 5000 },
+  "autocut": {
+    "top_n": { "min": 1, "max": 20 },
+    "threshold": { "min": 1.5, "max": 10 },
+    "gap": { "min": 0.5, "max": 5 },
+    "min_hits": { "min": 2, "max": 20 },
+    "min_rallies": 2
+  },
+  "choices": {
+    "hand": ["auto", "left", "right"],
+    "grip": ["shakehand", "penhold"],
+    "match_stroke": ["forehand", "backhand"],
+    "autocut_mode": ["highlights", "full"]
+  },
+  "pose": { "min_visible_ratio": 0.4 }
+}

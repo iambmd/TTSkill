@@ -11,6 +11,8 @@ import numpy as np
 from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 
+from limits import LIMITS
+
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
     "pose_landmarker_full/float16/latest/pose_landmarker_full.task"
@@ -60,6 +62,27 @@ class PoseTrack:
     def px(self, i: int) -> np.ndarray:
         """(33,2) pixel coords for frame i."""
         return self.lm[i, :, :2] * np.array([self.width, self.height])
+
+
+class NoPlayer(ValueError):
+    """Too few frames show a player to measure the stroke. The message is written for the user."""
+
+
+# Below this share of frames with a player, the cues and overlay would track noise.
+MIN_VISIBLE = LIMITS["pose"]["min_visible_ratio"]
+_CLEARER = "Film a clearer clip: the whole body in frame, side-on if you can, in good light."
+
+
+def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
+    """The share of frames with a player; NoPlayer if it is under `min_ratio`, so a job asks
+    for a clearer clip instead of rendering a bad video."""
+    ratio = float(track.valid.mean()) if len(track.valid) else 0.0
+    if ratio == 0:
+        raise NoPlayer(f"We couldn't find a player in this clip. {_CLEARER}")
+    if ratio < min_ratio:
+        # Rounded down, so 39.6% doesn't read as "40%" next to a 40% minimum.
+        raise NoPlayer(f"We could only see the player in {int(ratio * 100)}% of the clip. {_CLEARER}")
+    return ratio
 
 
 def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,

@@ -12,10 +12,21 @@ AI coaching for table tennis, from the video on your phone. HackPrinceton Fall 2
 | --- | --- | --- |
 | **TT Coach** (`/coach`) | Type one request, such as "here's my match, show my best rallies and fix my forehand", and add a video or YouTube link. | A deepagents agent (Claude) plans the work and shows its todo list updating live. It runs the tools below and returns the videos plus a short "what to work on". |
 | **Technique Breakdown** (`/breakdown`) | Upload or paste a clip of a player you admire, or describe their training. You can pick the stroke type (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve); left blank, it's auto-detected. | A vertical coaching video with a pose skeleton. Each of 3 two-word cues gets its own colour and freeze-frame, followed by a recap and a practice drill. Written by Claude when a key is set, from templates otherwise. |
-| **Find my pro match** (`/match`) | Film your swing, pick forehand or backhand, and optionally enter your height. Otherwise it's estimated from the table (76 cm high, 274 cm long). | The 3 pros with the same bat hand who are closest to your height and build, each with a similarity score, where your form differs (DTW on joint-angle curves), and one video of their breakdowns. 12 pros today; *roadmap: 100 players*. |
+| **Find my pro match** (`/match`) | Film your swing, pick forehand or backhand and your grip (shakehand or penhold), and optionally enter your height in cm or ft/in. Otherwise it's estimated from the table (76 cm high, 274 cm long). | The 3 pros with the same bat hand who are closest to your height and build (your grip first), each with a similarity score, where your form differs (DTW on joint-angle curves), and one video of their breakdowns. Cards warn when a pro's backhand isn't one to copy: Sabine Winter's anti-spin, and penhold backhands for shakehand players. 20 pros today; *roadmap: 100 players*. |
 | **Match Auto-Cut** (`/autocut`) | Upload your match or paste a link. | Every ball contact is heard, rallies are found, and you get the full match with the dead time cut, or highlights ranked by shots per rally. |
 
-Every video input takes an upload **or a pasted YouTube link** (watch, youtu.be or Shorts; up to 3 minutes, fetched at ≤720p).
+Every video input takes an upload **or a pasted YouTube link** (watch, youtu.be or Shorts, fetched at ≤720p).
+
+### Input limits
+
+Checked on the form (inline, with the button disabled), again by the API (a 422 with a message that says what to do), and never left to the pipeline. They're all in [`shared/limits.json`](shared/limits.json).
+
+- **Uploads:** MP4, MOV, WebM or MKV, up to 500 MB, 2 seconds to 10 minutes, with a video track, at least 240p (smaller asks you to re-record).
+- **YouTube links:** a single video, not a playlist or channel; public, not age-restricted, not live. Up to 3 minutes for a stroke (Breakdown, Match, Coach) and 60 minutes for a match on Auto-Cut.
+- **Height:** 100–230 cm, or 3 ft 4 in to 7 ft 6 in.
+- **TT Coach request:** 1 to 1000 characters; a blank request isn't sent.
+- **Auto-Cut:** fewer than 2 rallies heard gives a warning with tips (film closer, less background noise), not an error.
+- **Pose:** if the player is in less than 40% of the frames, you're asked for a clearer clip instead of getting a bad video.
 
 ### How each track is covered
 
@@ -60,11 +71,11 @@ sudo apt install -y ffmpeg libegl1 libgles2   # Linux / WSL, one time
 
 make install    # backend venv + npm install
 make dev        # frontend on :3000, backend on :8000 (Ctrl-C stops both)
-make test       # backend tests
+make test       # backend (pytest) and frontend (vitest) tests
 ```
 
 - **Claude:** set `ANTHROPIC_API_KEY` in the backend's shell to turn on the Claude analyzer and the TT Coach agent. Without it, everything still runs: the templates write the breakdowns and the coach follows a fixed plan.
-- **Pro profiles:** run `cd backend && .venv/bin/python -m players.build`. It searches YouTube, cuts ~8 s clips, renders and caches each breakdown, and deletes the raw downloads. It's resumable, and it stops politely if YouTube rate-limits. `--local PLAYER STROKE FILE URL TITLE` adds a clip you already have.
+- **Pro profiles:** run `cd backend && .venv/bin/python -m players.build`. It searches YouTube, cuts ~8 s clips, renders and caches each breakdown, and deletes the raw downloads. It's resumable, and it stops politely if YouTube rate-limits. `--only ID ...` builds some players, `--local PLAYER STROKE FILE URL TITLE` adds a clip you already have. Run one build at a time, and use `--workers 1` on an 8 GB machine (each worker needs about 3 GB).
 - **Coaching style:** run `python -m style.fetch_refs`, then `analyze_refs`, then `build_style` to rebuild `swift_style.json`.
 - **UI only:** `cd frontend && npm run dev` runs without Python; the API routes then return placeholder jobs.
 
@@ -83,13 +94,13 @@ Set `DEMO_MODE=1` for the frontend to make every submission return these results
 | --- | --- | --- |
 | POST | `/jobs/coach` | multipart: `request` (text), `video` or `url` |
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional), `text` and/or `video` or `url`, `player`, `hand` |
-| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
+| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`), `height_cm` (optional), `hand` |
 | POST | `/jobs/autocut` | multipart: `video` or `url`, `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
 | GET | `/jobs/{id}` | job status, progress, plan, results |
 | GET | `/jobs/{id}/result` | result MP4 |
 | GET | `/jobs/{id}/files/{name}` | videos made by the coach |
 
-The frontend exposes the same paths under `/api/jobs/...`.
+The frontend exposes the same paths under `/api/jobs/...`. Invalid input gets a 422 with a readable message.
 
 ## Layout
 
@@ -100,6 +111,7 @@ backend/technique/ Technique pipeline: pose, stroke types, analyzer (Claude/offl
 backend/style/     Coaching-style profile (swift_style.json) and the scripts that measure it.
 backend/players/   Find my pro match: body profile, table height, matching, profile builder.
 backend/agent/     TT Coach deep agent and its tools.
+shared/limits.json Input limits, read by both the frontend and the backend.
 backend/data/      Local data (git-ignored), except players/players.json and players/profiles.json.
 ```
 
@@ -110,4 +122,5 @@ See [AGENTS.md](AGENTS.md) for conventions and how to extend each part.
 - Vercel functions cap request bodies at about 4.5 MB, so large match uploads should go straight to the backend once it's hosted. Pasting a YouTube link avoids the limit.
 - YouTube sometimes shows a bot check to busy IPs. Link downloads then fail with a clear message ("upload the file instead"), and the profile builder stops until a later re-run.
 - Height from the table is an estimate (about ±10 cm). Entering your height gives better matches.
-- Pro heights come from public sources and are listed per player in `players.json`; two are marked approximate.
+- Pro heights and bat hands come from public sources and are listed per player in `players.json`. Seven heights are marked approximate where sources disagree (for younger players, by a few cm).
+- Uploads are capped at 10 minutes, so a full match goes in as a YouTube link (up to 60 minutes on Auto-Cut) or in parts.

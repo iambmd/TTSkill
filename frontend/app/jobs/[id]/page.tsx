@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Breakdown, Job, ProMatch } from "@/lib/submit";
-import { CheckIcon, DownloadIcon, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { CheckIcon, DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
 
 type Rally = NonNullable<Job["rallies"]>[number];
 
@@ -70,6 +70,7 @@ function titleFor(job: Job) {
   if (job.status !== "done") {
     return job.kind === "breakdown" ? "Building your breakdown" : job.kind === "match" ? "Finding your pro match" : "Cutting your match";
   }
+  if (job.kind === "autocut" && !job.rallies?.length && job.warning) return "No rallies found";
   if (job.kind === "autocut" && job.rallies?.length) {
     return job.params.mode === "full" ? `All ${job.rallies.length} rallies` : `Top ${job.rallies.length} rallies`;
   }
@@ -152,7 +153,9 @@ function Matches({ matches }: { matches: ProMatch[] }) {
               <span className="headline text-4xl leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold">{m.name}</p>
-                <p className="text-sm text-muted">{[m.country, `${m.height_cm} cm`, `${m.bat_hand}-handed`].filter(Boolean).join(" · ")}</p>
+                <p className="text-sm text-muted">
+                  {[m.country, `${m.height_cm} cm`, `${m.bat_hand}-handed`, m.grip].filter(Boolean).join(" · ")}
+                </p>
               </div>
               <div className="text-right">
                 <p className="headline text-4xl tabular-nums text-accent">{m.score}%</p>
@@ -174,6 +177,7 @@ function Matches({ matches }: { matches: ProMatch[] }) {
                 {m.differences.map((d) => <li key={d} className="flex gap-2"><span aria-hidden className="text-accent">→</span>{d}</li>)}
               </ul>
             )}
+            {m.warnings?.map((w) => <Warning key={w} className="mt-3">{w}</Warning>)}
           </li>
         ))}
       </ol>
@@ -406,6 +410,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           <p className="eyebrow">{eyebrowFor(job)}</p>
           <h1 className="headline text-5xl">{titleFor(job)}</h1>
           {job.message && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
+          {job.warning && <Warning>{job.warning}</Warning>}
           {ended && (
             <div className="grid grid-cols-2 gap-2 pt-2 sm:flex">
               {job.resultUrl && (

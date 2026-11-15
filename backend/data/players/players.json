@@ -8,6 +8,7 @@
       "country": "CHN",
       "height_cm": 175,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "dimensions.com, tabletennisteacher.com",
       "clips": {
         "forehand": [
@@ -16,9 +17,28 @@
             "title": "Malong's Forehand Loop Breakdown",
             "start": 0.0,
             "end": 8.0
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=tF1BiUA4NpA",
+            "title": "Ma Long | Forehand technique slow motion | Comprehensive Forehand",
+            "start": 0.0,
+            "end": 8.0
           }
         ],
-        "backhand": []
+        "backhand": [
+          {
+            "url": "https://www.youtube.com/watch?v=IvAc6phK4bg",
+            "title": "Ma Long | Backhand Technique | Slow motion | High Definition | Table Tennis",
+            "start": 91.4,
+            "end": 99.4
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=6qYkOZJYoUA",
+            "title": "Ma Long backhand technique in slowmotion",
+            "start": 7.0,
+            "end": 15.0
+          }
+        ]
       }
     },
     {
@@ -28,10 +48,37 @@
       "country": "CHN",
       "height_cm": 173,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Fan_Zhendong",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=gdU4l98m_hQ",
+            "title": "Table tennis in slow motion (240fps). Fan Zhendong, forehand loop",
+            "start": 0.0,
+            "end": 8.0
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=Sd5GjRFEyIE",
+            "title": "Table tennis in slow motion 240fps  Fan Zhendong, forehand loop",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": [
+          {
+            "url": "https://www.youtube.com/watch?v=kbTWaJZRQ54",
+            "title": "Fan Zhendong Backhand Slow Motion",
+            "start": 1.73,
+            "end": 9.72
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=zy5PFEZCFjM",
+            "title": "Coach Wang Hao and Fan Zhendong very tough backhand training | Chengdu 2022",
+            "start": 97.43,
+            "end": 105.43
+          }
+        ]
       }
     },
     {
@@ -41,10 +88,37 @@
       "country": "JPN",
       "height_cm": 178,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Tomokazu_Harimoto",
       "clips": {
-        "forehand": [],
-        "backhand": []
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=IKxVsr1Tg1s",
+            "title": "Mind-Blowing 4K SLOW-MO Harimoto vs. Jang Woo-jin | Insane Best Points | Table Tennis in Slow Motion",
+            "start": 0.0,
+            "end": 8.0
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=RyaTg3GB_Wk",
+            "title": "Tomokazu Harimoto Training | US Smash 2025",
+            "start": 0.34,
+            "end": 8.34
+          }
+        ],
+        "backhand": [
+          {
+            "url": "https://www.youtube.com/watch?v=nPexGu6mj7k",
+            "title": "Tomokazu Harimoto, Ma Long, Lin Gaoyuan, Xu Xin Training Demi Backhand Technique !",
+            "start": 94.63,
+            "end": 102.63
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=CGnCDCPKQhY",
+            "title": "Tomokazu Harimoto Backhand",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
       }
     },
     {
@@ -54,6 +128,7 @@
       "country": "BRA",
       "height_cm": 182,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Hugo_Calderano",
       "clips": {
         "forehand": [],
@@ -67,6 +142,7 @@
       "country": "CHN",
       "height_cm": 182,
       "bat_hand": "left",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Wang_Chuqin",
       "clips": {
         "forehand": [],
@@ -80,6 +156,7 @@
       "country": "GER",
       "height_cm": 181,
       "bat_hand": "left",
+      "grip": "shakehand",
       "height_source": "racketrampage.com height list (approximate)",
       "clips": {
         "forehand": [],
@@ -93,6 +170,7 @@
       "country": "CHN",
       "height_cm": 162,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Sun_Yingsha",
       "clips": {
         "forehand": [],
@@ -106,6 +184,7 @@
       "country": "CHN",
       "height_cm": 176,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Wang_Manyu + China Daily (2024)",
       "clips": {
         "forehand": [],
@@ -119,6 +198,7 @@
       "country": "CHN",
       "height_cm": 166,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "racketrampage.com height list (approximate)",
       "clips": {
         "forehand": [],
@@ -132,6 +212,7 @@
       "country": "JPN",
       "height_cm": 152,
       "bat_hand": "right",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Mima_Ito (Olympedia lists 150)",
       "clips": {
         "forehand": [],
@@ -145,6 +226,7 @@
       "country": "JPN",
       "height_cm": 167,
       "bat_hand": "left",
+      "grip": "shakehand",
       "height_source": "https://en.wikipedia.org/wiki/Hina_Hayata",
       "clips": {
         "forehand": [],
@@ -158,7 +240,188 @@
       "country": "CHN",
       "height_cm": 170,
       "bat_hand": "left",
+      "grip": "shakehand",
       "height_source": "dimensions.com (Wikipedia mirrors list 171)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "dimitrij-ovtcharov",
+      "name": "Dimitrij Ovtcharov",
+      "gender": "M",
+      "country": "GER",
+      "height_cm": 186,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "height_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov (cites rio2016.com), tabletennis.media",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov",
+      "clips": {
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=ZExF6XriLyU",
+            "title": "🏓 Dimitrij Ovtcharov - Forehand Topspin Training High Quality Slowmotion",
+            "start": 0.0,
+            "end": 8.0
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=5zox22abPzQ",
+            "title": "Dimitrij Ovtcharov 3 Point Forehand Topspin Training 2016!",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
+        "backhand": [
+          {
+            "url": "https://www.youtube.com/watch?v=z3Y5JZ6rs9Q",
+            "title": "TableTennis Forehand and Backhand loop how Ovtcharov D. 2020 november",
+            "start": 14.14,
+            "end": 22.14
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=VMkR3wdc5sM",
+            "title": "The Ovtcharov Backhand Masterclass: Why He’s Built Different | Tactical Masterclass Episode 14",
+            "start": 22.94,
+            "end": 30.94
+          }
+        ]
+      }
+    },
+    {
+      "id": "sora-matsushima",
+      "name": "Sora Matsushima",
+      "gender": "M",
+      "country": "JPN",
+      "height_cm": 172,
+      "bat_hand": "left",
+      "grip": "shakehand",
+      "height_source": "https://en.wikipedia.org/wiki/Sora_Matsushima (cites T.League profile); tabletennis.media lists 178 (approximate)",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Sora_Matsushima, tabletennis.media",
+      "clips": {
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=aoO2CXEJD44",
+            "title": "Sora Matsushima Slowmo",
+            "start": 0.79,
+            "end": 3.57
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=UN_LQDkUjUA",
+            "title": "Tomokazu Harimoto & Sora Matsushima Training | Singapore Smash 2025",
+            "start": 62.98,
+            "end": 70.97
+          }
+        ],
+        "backhand": [
+          {
+            "url": "https://www.youtube.com/watch?v=WuVR4xo_6-g",
+            "title": "🏓⚡💥Sora Matsushima’s Backhand Fast Punch & Pace Control | Tactical Masterclass Ep. 95 - Part 2",
+            "start": 0.0,
+            "end": 8.0
+          },
+          {
+            "url": "https://www.youtube.com/watch?v=HstCYhbshQg",
+            "title": "🛡️📐🇯🇵 Sora Matsushima’s Backhand Drive, Counter & Shift | Tactical Masterclass Episode 77 - Part 4",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ]
+      }
+    },
+    {
+      "id": "xu-xin",
+      "name": "Xu Xin",
+      "gender": "M",
+      "country": "CHN",
+      "height_cm": 183,
+      "bat_hand": "left",
+      "grip": "penhold",
+      "height_source": "https://en.wikipedia.org/wiki/Xu_Xin_(table_tennis) (cites ITTF profile); older listings give 180-181 (approximate)",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Xu_Xin_(table_tennis)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "felix-lebrun",
+      "name": "Félix Lebrun",
+      "gender": "M",
+      "country": "FRA",
+      "height_cm": 180,
+      "bat_hand": "right",
+      "grip": "penhold",
+      "height_source": "https://en.wikipedia.org/wiki/Félix_Lebrun (cites Tibhar profile); Top16 Montreux 2026 profile lists 178 (approximate)",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Félix_Lebrun, Top16 Montreux player profile",
+      "aliases": [
+        "Felix Lebrun",
+        "Félix Lebrun"
+      ],
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "ma-lin",
+      "name": "Ma Lin",
+      "gender": "M",
+      "country": "CHN",
+      "height_cm": 176,
+      "bat_hand": "right",
+      "grip": "penhold",
+      "height_source": "https://www.olympedia.org/athletes/107523; Wikipedia lists 174 (approximate)",
+      "bat_hand_source": "tabletennisdaily.com player profile (Wikipedia gives the grip, not the hand)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "kuai-man",
+      "name": "Kuai Man",
+      "gender": "F",
+      "country": "CHN",
+      "height_cm": 169,
+      "bat_hand": "left",
+      "grip": "shakehand",
+      "height_source": "Baidu Sports and Sina player profiles; some sites list 166-168 (approximate)",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Kuai_Man, Baidu Sports",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "bernadette-szocs",
+      "name": "Bernadette Szőcs",
+      "gender": "F",
+      "country": "ROU",
+      "height_cm": 159,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "height_source": "https://en.wikipedia.org/wiki/Bernadette_Szőcs (cites Olympedia), europeanchampionships.com",
+      "bat_hand_source": "Top16 Montreux player profiles (2025, 2026)",
+      "clips": {
+        "forehand": [],
+        "backhand": []
+      }
+    },
+    {
+      "id": "sabine-winter",
+      "name": "Sabine Winter",
+      "gender": "F",
+      "country": "GER",
+      "height_cm": 168,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "height_source": "https://en.wikipedia.org/wiki/Sabine_Winter (cites teamdeutschland.de), Top16 Montreux profile",
+      "bat_hand_source": "https://en.wikipedia.org/wiki/Sabine_Winter",
+      "equipment_notes": "Sabine Winter plays anti-spin on her backhand, so her backhand technique differs from standard inverted rubber. Use her forehand as reference, and be careful copying her backhand.",
+      "aliases": [
+        "Sabine Winter"
+      ],
       "clips": {
         "forehand": [],
         "backhand": []
