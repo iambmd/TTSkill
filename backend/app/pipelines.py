@@ -7,19 +7,34 @@ import traceback
 from pathlib import Path
 
 from . import jobs
+from .cut import cut_and_concat, duration, padded_segments
 from .rally import detect_rallies
 
 
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
     try:
         jobs.update(job_id, status="running", progress=0.1, message="Listening for ball contacts...")
-        rallies = detect_rallies(video, jobs.job_dir(job_id), threshold, gap, min_hits)
+        workdir = jobs.job_dir(job_id)
+        found = detect_rallies(video, workdir, threshold, gap, min_hits)
+        if not found:
+            jobs.update(job_id, status="failed", progress=1.0, rallies=[],
+                        message="No rallies found. Try a lower hit threshold or fewer min hits.")
+            return
         if mode == "highlights":
-            rallies = sorted(rallies, key=lambda r: -r.hits)[:top_n]
-        # TODO: transcode proxy, pad each rally 1.5 s, cut and concat with ffmpeg, set resultUrl.
-        jobs.update(job_id, status="done", progress=1.0,
-                    message=f"Found {len(rallies)} rallies. Cutting is not implemented yet.",
+            # Best rallies first; padding never merges them so each stays its own clip.
+            rallies = sorted(found, key=lambda r: -r.hits)[:top_n]
+            segments = padded_segments([(r.start, r.end) for r in rallies], duration(video), merge=False)
+        else:
+            rallies = found
+            segments = padded_segments([(r.start, r.end) for r in rallies], duration(video))
+        jobs.update(job_id, progress=0.3, message=f"Found {len(found)} rallies. Cutting {len(segments)} clips...",
                     rallies=[r.to_dict() for r in rallies])
+        cut_and_concat(video, segments, workdir, workdir / "result.mp4",
+                       progress=lambda f: jobs.update(job_id, progress=round(0.3 + 0.65 * f, 3)))
+        length = sum(e - s for s, e in segments)
+        label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
+        jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result",
+                    message=f"{label}, {length:.0f} s cut from {len(found)} detected.")
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

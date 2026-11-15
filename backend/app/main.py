@@ -22,6 +22,11 @@ def save_upload(upload: UploadFile, dest: Path) -> Path:
     return dest
 
 
+def has_file(upload: UploadFile | None) -> bool:
+    """Browsers send an empty, unnamed file part when the file input is left blank."""
+    return upload is not None and bool(upload.filename) and upload.size != 0
+
+
 @app.get("/health")
 def health() -> dict:
     return {"ok": True}
@@ -37,6 +42,8 @@ def create_autocut(
     gap: float = Form(1.6),
     min_hits: int = Form(4),
 ) -> dict:
+    if not has_file(video):
+        raise HTTPException(400, "upload a match video")
     if mode not in ("highlights", "full"):
         raise HTTPException(400, "mode must be 'highlights' or 'full'")
     params = {"video": video.filename, "mode": mode, "top_n": top_n, "threshold": threshold, "gap": gap, "min_hits": min_hits}
@@ -57,6 +64,8 @@ def create_breakdown(
 ) -> dict:
     if stroke not in STROKES:
         raise HTTPException(400, f"unknown stroke: {stroke}")
+    if not has_file(video):
+        video = None
     if video is None and not text.strip():
         raise HTTPException(400, "provide a video or a text description")
     if hand not in ("auto", "left", "right"):

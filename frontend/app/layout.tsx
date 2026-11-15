@@ -1,26 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Barlow, Barlow_Condensed } from "next/font/google";
 import Link from "next/link";
+import { Nav } from "./nav";
 import "./globals.css";
+
+const barlow = Barlow({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-barlow" });
+const condensed = Barlow_Condensed({
+  subsets: ["latin"], weight: ["700", "800"], style: ["normal", "italic"], variable: "--font-barlow-condensed",
+});
 
 export const metadata: Metadata = {
   title: "TTSkill",
   description: "AI technique breakdowns and automatic match highlights for table tennis.",
 };
 
+export const viewport: Viewport = {
+  themeColor: "#07090d",
+  colorScheme: "dark",
+  viewportFit: "cover",
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
-        <header className="border-b border-white/10">
-          <nav className="mx-auto flex max-w-3xl items-center gap-6 px-4 py-4 text-sm">
-            <Link href="/" className="text-lg font-bold tracking-tight">
-              TT<span className="text-accent">Skill</span>
+    <html lang="en" className={`${barlow.variable} ${condensed.variable}`}>
+      <body className="min-h-dvh font-sans antialiased">
+        <header className="sticky top-0 z-30 border-b border-line bg-ink/80 pt-[env(safe-area-inset-top)] backdrop-blur-md">
+          <nav className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4">
+            <Link href="/" className="headline flex items-center gap-2 text-2xl">
+              <span aria-hidden className="size-3 rounded-full bg-accent shadow-[0_0_12px_2px_rgb(255_107_44/0.6)]" />
+              <span>TT<span className="text-accent">Skill</span></span>
             </Link>
-            <Link href="/breakdown" className="text-white/70 hover:text-white">Technique Breakdown</Link>
-            <Link href="/autocut" className="text-white/70 hover:text-white">Match Auto-Cut</Link>
+            <Nav />
           </nav>
         </header>
-        <main className="mx-auto max-w-3xl px-4 py-10">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:pt-10">{children}</main>
       </body>
     </html>
   );
