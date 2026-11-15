@@ -87,7 +87,7 @@
     },
     "h3": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom2_dhs-hurricane-3-39.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-3-39"
     },
     "h3_national": {
       "src": "https://www.paddlepalace.com/cdn/shop/files/RCH3LB-dhs-hurricane-3-natl-ed-1.jpg?v=1776288486&width=720",
@@ -111,31 +111,31 @@
     },
     "hurricane_sun": {
       "src": "https://pongport.com/_next/image?url=https%3A%2F%2Fapi.pongport.com%2Fstatic%2Fdhs-s968-hurricane-sun.png&w=1080&q=90",
-      "page": "https://pongport.com/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-sun"
     },
     "falck_carbon": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom_y-falck-carbon.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=y-falck-carbon"
     },
     "ma_lin_exoff": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom2_y-ma-lin-ex-off.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=y-ma-lin-ex-off"
     },
     "mark_v": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom2_y-markv.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=y-markv"
     },
     "dynasty_carbon": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom2_s-dynasty-carbon-xu-xin.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=s-dynasty-carbon-xu-xin"
     },
     "timo_boll_alc": {
       "src": "https://cdn.megaspin.net/store/images/products/zoom_b-timo-boll-alc.jpg",
-      "page": "https://www.megaspin.net/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=b-timo-boll-alc"
     },
     "hybrid_k3": {
       "src": "https://www.paddlepalace.com/cdn/shop/files/RTHK3-tibhar-hybrid-k3.jpg?v=1776288571",
-      "page": "https://www.paddlepalace.com/"
+      "page": "https://www.megaspin.net/store/default.asp?pid=t-hybrid-k3"
     }
   }
 }
