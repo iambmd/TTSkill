@@ -23,7 +23,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | Path | What |
 | --- | --- |
 | `frontend/` | Next.js 15 App Router, React 19, TypeScript (strict), Tailwind CSS v4. Deploys to Vercel with root directory `frontend`. |
-| `frontend/app/` | Pages: `/`, `/breakdown`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
+| `frontend/app/` | Pages: `/`, `/breakdown`, `/match`, `/autocut`, `/jobs/[id]`. Shared UI lives in `ui.tsx`, `nav.tsx`, `video-picker.tsx`, `hero-video.tsx`. |
 | `frontend/app/api/jobs/` | Route handlers. They validate the form, then call `lib/jobs.ts`. |
 | `frontend/lib/jobs.ts` | Server-only job client with three modes: **proxy** to FastAPI when `BACKEND_URL` is set; **stub** (in-memory jobs with fake progress) when it is unset; **demo** (`DEMO_MODE=1`, every submission returns the cached results in `lib/demo-jobs.json` + `public/demo/*.mp4`). |
 | `frontend/lib/submit.ts` | Client upload via XHR, which reports upload progress. Also holds the `Job` and `Breakdown` types. |
@@ -36,6 +36,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
 | `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) so videos match the app's type. |
+| `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, weighted distance on height and proportions for the top 3, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
+| `backend/data/players/` | `players.json` (12 pros: height, bat hand, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
 | `samples/` | Local test videos. Git-ignored. |
 
@@ -45,6 +47,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
 | POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`); legacy `stroke` still accepted |
+| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `height_cm` (optional), `hand` |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |

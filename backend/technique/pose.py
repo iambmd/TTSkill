@@ -131,6 +131,18 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                      meta={"source_fps": fps, "stride": stride, "rejected": int(bad.sum())})
 
 
+def save_track(track: PoseTrack, path: str | Path) -> None:
+    np.savez_compressed(path, fps=track.fps, width=track.width, height=track.height,
+                        times=track.times, lm=track.lm, world=track.world,
+                        stride=track.meta.get("stride", 1))
+
+
+def load_track(path: str | Path) -> PoseTrack:
+    d = np.load(path)
+    return PoseTrack(fps=float(d["fps"]), width=int(d["width"]), height=int(d["height"]),
+                     times=d["times"], lm=d["lm"], world=d["world"], meta={"stride": int(d["stride"])})
+
+
 def implausible(lm: np.ndarray, w: int, h: int) -> np.ndarray:
     """Flag garbage detections (e.g. a 'lying down' skeleton on a table edge): the torso
     must be roughly upright and not tiny compared with the median torso."""

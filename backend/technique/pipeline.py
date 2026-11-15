@@ -163,6 +163,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     summary = pose.summarize(track, side)
     contact = pose.pose_metrics(track, peak_i, side) if len(track.times) else {}
     (out / "pose_summary.json").write_text(json.dumps(summary, indent=2))
+    pose.save_track(track, out / "pose_track.npz")
 
     dur = win["end"] - win["start"]
     frame_times = sorted(set([round(x, 2) for x in np.linspace(0.2, max(0.3, dur - 0.2), 6)] + keys))
@@ -205,10 +206,12 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         "analyzer": b.source,
         "bat_hand": {"side": side, "how": how},
         "key_times_s": keys,
+        "contact_frame": int(peak_i),
         "outputs": {
             "breakdown_json": str(out / "breakdown.json"),
             "video_prompt_json": str(out / "video_prompt.json"),
             "pose_summary_json": str(out / "pose_summary.json"),
+            "pose_track": str(out / "pose_track.npz"),
             "overlay_video": overlay,
             "generated_video": generated,
             "clip": clip,
