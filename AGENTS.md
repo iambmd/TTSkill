@@ -9,7 +9,7 @@ AI tools for amateur table tennis players and coaches, built for HackPrinceton F
 - The analyzer uses Claude vision when `ANTHROPIC_API_KEY` is set and falls back to an offline rule-based analyzer otherwise.
 - With text only, there is no pose step, and the render is made of cards only.
 
-**Match Auto-Cut** (`/autocut`). The user uploads their own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits`.
+**Match Auto-Cut** (`/autocut`). The user uploads their own match. Rallies are found from the sound of ball contact: 2–6 kHz band-pass → onset spikes over a rolling median → hits grouped into rallies by `gap` and `min_hits` → candidates where a player spends ≥25% of the span bent over with a hand below the hip (bouncing the ball on the floor before serving) are dropped using MediaPipe pose (`app/floor_bounce.py`).
 - `highlights` mode keeps the top N rallies by hit count as separate clips.
 - `full` mode keeps every rally, merges overlapping spans and drops the dead time.
 - Each segment gets 1.5 s of padding, is re-encoded to 720p/30fps H.264, and the parts are joined with the ffmpeg concat demuxer.
