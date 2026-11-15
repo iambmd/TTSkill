@@ -1,4 +1,5 @@
 import { createJob } from "@/lib/jobs";
+import { LINK_HINT, youtubeId } from "@/lib/youtube";
 
 const STROKES = new Set(["forehand", "backhand", "serve", "flick", "block", "footwork"]);
 
@@ -7,9 +8,13 @@ export async function POST(req: Request) {
   const video = form.get("video");
   const text = String(form.get("text") ?? "").trim();
   const stroke = String(form.get("stroke") ?? "");
+  const url = String(form.get("url") ?? "").trim();
   const hasVideo = video instanceof File && video.size > 0;
-  if (!hasVideo && !text) {
-    return Response.json({ error: "Provide a video or a text description." }, { status: 400 });
+  if (!hasVideo && !url && !text) {
+    return Response.json({ error: "Upload a clip, paste a YouTube link, or describe the training." }, { status: 400 });
+  }
+  if (!hasVideo && url && !youtubeId(url)) {
+    return Response.json({ error: LINK_HINT }, { status: 400 });
   }
   if (!STROKES.has(stroke)) {
     return Response.json({ error: `Unknown stroke: ${stroke}` }, { status: 400 });

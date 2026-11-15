@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
+import { LINK_HINT, youtubeId } from "@/lib/youtube";
 import { PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
 
@@ -23,13 +24,20 @@ export default function BreakdownPage() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const video = form.get("video") as File | null;
+    const url = String(form.get("url") ?? "").trim();
     const text = String(form.get("text") ?? "").trim();
-    if ((!video || video.size === 0) && !text) {
-      setError("Upload a clip, or describe the player's training instead.");
+    const hasVideo = !!video && video.size > 0;
+    if (!hasVideo && !url && !text) {
+      setError("Upload a clip, paste a YouTube link, or describe the player's training instead.");
       if (textRef.current) textRef.current.open = true;
       return;
     }
-    if (video && video.size === 0) form.delete("video");
+    if (!hasVideo && url && !youtubeId(url)) {
+      setError(LINK_HINT);
+      return;
+    }
+    if (!hasVideo) form.delete("video");
+    if (hasVideo || !url) form.delete("url");
     setProgress(0);
     setError(null);
     try {
@@ -51,7 +59,7 @@ export default function BreakdownPage() {
       <VideoPicker title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best." />
       <details ref={textRef} className="group rounded-2xl border border-line bg-panel">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-          No clip? Describe the training instead
+          No video? Describe the training instead
           <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
         </summary>
         <div className="px-4 pb-4">

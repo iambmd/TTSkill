@@ -30,6 +30,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/app/main.py` | FastAPI endpoints. They validate input, save the upload, create the job and start a background task. |
 | `backend/app/pipelines.py` | `run_autocut` and `run_breakdown`. Plain functions that update the job record as they go. |
 | `backend/app/rally.py`, `cut.py` | Auto-Cut: hit and rally detection; padding, cutting and joining segments. |
+| `backend/app/download.py` | Pasted YouTube links (watch, youtu.be, Shorts) via yt-dlp: probed before the job starts (private, unavailable, over 3 min fail on the form), downloaded at <=720p into the job folder, deleted after the pipeline runs. |
 | `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json`. Results go to `result.mp4` in the same folder. |
 | `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
@@ -39,8 +40,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 
 | Method | Path | Body |
 | --- | --- | --- |
-| POST | `/jobs/autocut` | multipart: `video`, `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
-| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video`, `player`, `hand` (`auto`/`left`/`right`) |
+| POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
+| POST | `/jobs/breakdown` | multipart: `stroke`, `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`) |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |

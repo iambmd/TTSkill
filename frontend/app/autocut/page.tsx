@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { submitJob } from "@/lib/submit";
+import { LINK_HINT, youtubeId } from "@/lib/youtube";
 import { PageIntro, RadioTiles, SubmitBar, inputClass, labelClass, labelTextClass } from "../ui";
 import { VideoPicker } from "../video-picker";
 
@@ -22,10 +23,18 @@ export default function AutoCutPage() {
     e.preventDefault();
     const form = new FormData(e.currentTarget);
     const video = form.get("video") as File | null;
-    if (!video || video.size === 0) {
-      setError("Upload a match video first.");
+    const url = String(form.get("url") ?? "").trim();
+    const hasVideo = !!video && video.size > 0;
+    if (!hasVideo && !url) {
+      setError("Upload a match video or paste a YouTube link.");
       return;
     }
+    if (!hasVideo && !youtubeId(url)) {
+      setError(LINK_HINT);
+      return;
+    }
+    if (!hasVideo) form.delete("video");
+    if (hasVideo || !url) form.delete("url");
     form.set("mode", mode);
     if (mode === "full") form.delete("top_n");
     setProgress(0);
