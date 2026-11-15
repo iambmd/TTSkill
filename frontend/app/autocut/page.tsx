@@ -18,6 +18,7 @@ export default function AutoCutPage() {
   const [topN, setTopN] = useState(5);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [starting, setStarting] = useState("Starting...");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -37,6 +38,7 @@ export default function AutoCutPage() {
     if (hasVideo || !url) form.delete("url");
     form.set("mode", mode);
     if (mode === "full") form.delete("top_n");
+    setStarting(form.has("url") ? "Checking the link..." : "Starting...");
     setProgress(0);
     setError(null);
     try {
@@ -92,7 +94,7 @@ export default function AutoCutPage() {
           </div>
         </div>
       </details>
-      <SubmitBar label="Cut my match" progress={progress} error={error} />
+      <SubmitBar label="Cut my match" progress={progress} error={error} startingLabel={starting} />
     </form>
   );
 }

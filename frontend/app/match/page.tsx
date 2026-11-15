@@ -21,6 +21,7 @@ export default function MatchPage() {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [starting, setStarting] = useState("Starting...");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -38,6 +39,7 @@ export default function MatchPage() {
     }
     if (!hasVideo) form.delete("video");
     if (hasVideo || !url) form.delete("url");
+    setStarting(form.has("url") ? "Checking the link..." : "Starting...");
     setProgress(0);
     setError(null);
     try {
@@ -78,7 +80,7 @@ export default function MatchPage() {
         <legend className={labelClass}>Bat hand</legend>
         <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
       </fieldset>
-      <SubmitBar label="Find my match" progress={progress} error={error} />
+      <SubmitBar label="Find my match" progress={progress} error={error} startingLabel={starting} />
     </form>
   );
 }

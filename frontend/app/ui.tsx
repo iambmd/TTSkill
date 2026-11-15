@@ -51,10 +51,16 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
 }
 
 /** Submit button that sticks to the bottom of the screen on long forms and fills up as the upload goes. */
-export function SubmitBar({ label, progress, error }: { label: string; progress: number | null; error: string | null }) {
+export function SubmitBar({ label, progress, error, startingLabel = "Starting..." }: {
+  label: string;
+  progress: number | null;
+  error: string | null;
+  /** Shown once the upload is done and the server is still answering, e.g. while it checks a link. */
+  startingLabel?: string;
+}) {
   const busy = progress !== null;
   const pct = Math.round((progress ?? 0) * 100);
-  const text = !busy ? label : pct === 0 ? "Uploading..." : pct < 100 ? `Uploading ${pct}%` : "Starting...";
+  const text = !busy ? label : pct === 0 ? "Uploading..." : pct < 100 ? `Uploading ${pct}%` : startingLabel;
   return (
     <div className="sticky bottom-0 z-10 -mx-4 bg-linear-to-t from-ink from-60% to-transparent px-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {error && (

@@ -18,6 +18,7 @@ export default function CoachPage() {
   const askRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
+  const [starting, setStarting] = useState("Starting...");
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -40,6 +41,7 @@ export default function CoachPage() {
     }
     if (!hasVideo) form.delete("video");
     if (hasVideo || !url) form.delete("url");
+    setStarting(form.has("url") ? "Checking the link..." : "Starting...");
     setProgress(0);
     setError(null);
     try {
@@ -77,7 +79,7 @@ export default function CoachPage() {
         </div>
       </div>
       <VideoPicker title="Add your video" hint="A match or a practice clip, with the sound on." />
-      <SubmitBar label="Ask the coach" progress={progress} error={error} />
+      <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} />
     </form>
   );
 }

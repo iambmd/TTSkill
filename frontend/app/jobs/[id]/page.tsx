@@ -322,25 +322,47 @@ function Rallies({ rallies, full }: { rallies: Rally[]; full: boolean }) {
   );
 }
 
+/** Shown when polls keep failing, so a lost server never looks like a job that is just slow. */
+function Trouble({ text }: { text: string | null }) {
+  if (!text) return null;
+  return (
+    <p role="alert" className="mx-auto mb-4 max-w-5xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+      {text}
+    </p>
+  );
+}
+
 export default function JobPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [trouble, setTrouble] = useState<string | null>(null);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     let alive = true;
+    let failures = 0;
     async function poll() {
       try {
         const res = await fetch(`/api/jobs/${id}`, { cache: "no-store" });
-        const data = await res.json();
+        if (res.status === 404) {
+          const data = await res.json().catch(() => ({}));
+          if (alive) setError(data.error ?? "Job not found");
+          return;
+        }
+        // A 5xx or an HTML error page is a server problem, not the job's answer: retry.
+        if (!res.ok) throw new Error(`server error ${res.status}`);
+        const data = (await res.json()) as Job;
         if (!alive) return;
-        if (!res.ok) return setError(data.error ?? "Job not found");
+        failures = 0;
+        setTrouble(null);
         setJob(data);
         if (data.status === "queued" || data.status === "running") timer = setTimeout(poll, 1500);
       } catch {
-        // Network blip: keep polling instead of freezing on the last state.
-        if (alive) timer = setTimeout(poll, 3000);
+        if (!alive) return;
+        failures += 1;
+        if (failures >= 3) setTrouble("Can't reach the server right now. Still trying... If this stays, check that the backend is running.");
+        timer = setTimeout(poll, Math.min(10_000, 1500 * 2 ** Math.min(failures, 3)));
       }
     }
     poll();
@@ -360,18 +382,21 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   if (!job) {
     return (
       <div className="mx-auto max-w-3xl" aria-busy="true">
+        <Trouble text={trouble} />
         <div className="stripes -mx-4 -mt-6 aspect-video bg-panel sm:mx-0 sm:mt-0 sm:rounded-3xl" />
         <p className="mt-4 text-muted">Loading...</p>
       </div>
     );
   }
 
-  if (job.kind === "coach") return <CoachView job={job} />;
+  if (job.kind === "coach") return <><Trouble text={trouble} /><CoachView job={job} /></>;
 
   const vertical = job.kind !== "autocut";
   const ended = job.status === "done" || job.status === "failed";
 
   return (
+    <>
+    <Trouble text={trouble} />
     <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_1fr] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
       <div className={vertical ? "lg:sticky lg:top-20" : ""}>
         <Stage job={job} />
@@ -406,5 +431,6 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         </details>
       </div>
     </div>
+    </>
   );
 }
