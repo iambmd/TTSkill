@@ -1,6 +1,6 @@
-"""Find the pros closest to a user: same bat hand, then a weighted distance on height and
-body proportions picks the top 3, then DTW on the chosen stroke's joint-angle curves says
-where the user's form differs from each of them."""
+"""Find the pros closest to a user: same bat hand, then pros with the user's grip first and a
+weighted distance on height and body proportions picks the top 3, then DTW on the chosen
+stroke's joint-angle curves says where the user's form differs from each of them."""
 from __future__ import annotations
 
 import json
@@ -109,12 +109,27 @@ def form_compare(user: dict, pro: dict, pro_name: str) -> dict:
             "joint_names": {j: JOINT_NAMES[j] for j in joints}}
 
 
+def warnings(pro: dict, user_grip: Optional[str] = None) -> list[str]:
+    """Why copying part of this pro's technique needs care: their equipment_notes (e.g. an
+    anti-spin backhand), and penhold, whose backhand differs from shakehand. A penhold user
+    doesn't need the penhold note."""
+    out = [pro["equipment_notes"]] if pro.get("equipment_notes") else []
+    if pro.get("grip") == "penhold" and user_grip != "penhold":
+        name = pro["name"]
+        out.append(f"{name} plays penhold, so the backhand technique differs from shakehand. "
+                   f"Use {name}'s forehand as reference, and be careful copying the backhand.")
+    return out
+
+
 def match(user_body: dict, user_curves: Optional[dict], stroke: str, bat_hand: str,
-          pros: Optional[list[dict]] = None, top: int = 3) -> list[dict]:
-    """user_body: body.body_ratios() plus optional height_cm. Returns the top pros, best first."""
+          pros: Optional[list[dict]] = None, top: int = 3, grip: Optional[str] = None) -> list[dict]:
+    """user_body: body.body_ratios() plus optional height_cm. grip: the user's grip, when they
+    gave it; pros with the same grip rank first, others only fill the list. Returns the top
+    pros, best first."""
     pros = load_pros() if pros is None else pros
     same_hand = [p for p in pros if p["bat_hand"] == bat_hand] or pros
-    ranked = sorted(same_hand, key=lambda p: body_distance(user_body, p))[:top]
+    ranked = sorted(same_hand, key=lambda p: (grip is not None and p.get("grip", "shakehand") != grip,
+                                              body_distance(user_body, p)))[:top]
     out = []
     for p in ranked:
         d = body_distance(user_body, p)
@@ -123,7 +138,8 @@ def match(user_body: dict, user_curves: Optional[dict], stroke: str, bat_hand: s
         form, clip = max(forms, key=lambda fc: fc[0]["score"]) if forms else (None, clips[0] if clips else None)
         out.append({
             "id": p["id"], "name": p["name"], "country": p.get("country"), "gender": p.get("gender"),
-            "height_cm": p["height_cm"], "bat_hand": p["bat_hand"],
+            "height_cm": p["height_cm"], "bat_hand": p["bat_hand"], "grip": p.get("grip", "shakehand"),
+            "warnings": warnings(p, grip),
             "score": similarity(d), "body_distance": round(d, 2),
             "form_score": form["score"] if form else None,
             "differences": form["notes"] if form else [],

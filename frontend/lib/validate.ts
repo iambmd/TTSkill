@@ -1,0 +1,111 @@
+/**
+ * Input checks shared by the forms (inline errors, submit disabled) and the API routes (422s).
+ * The limits live in shared/limits.json, which backend/app/validate.py reads too, and the
+ * messages match the backend's. Only the backend can see a file's tracks, or a link's
+ * privacy and length, so those checks happen there.
+ */
+import LIMITS from "../../shared/limits.json";
+import { linkProblem } from "./youtube";
+
+export { LIMITS };
+export type Kind = keyof typeof LIMITS.link_max_seconds;
+type ChoiceKey = keyof typeof LIMITS.choices;
+type RangeKey = Exclude<keyof typeof LIMITS.autocut, "min_rallies">;
+type TextKey = keyof typeof LIMITS.text_chars;
+
+const UP = LIMITS.upload;
+const H = LIMITS.height_cm;
+const NUMBER = /^[0-9]+(\.[0-9]+)?$/;
+const INCH_CM = 2.54;
+
+const or = (xs: readonly string[]) => (xs.length > 1 ? `${xs.slice(0, -1).join(", ")} or ${xs.at(-1)}` : xs[0]);
+export const fmtDuration = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+export const minutes = (s: number) => `${Math.round(s / 60)} minutes`;
+
+const EXT_NAMES = or(UP.extensions.map((e) => (e === "webm" ? "WebM" : e.toUpperCase())));
+
+/** A 422 with the error the form shows. */
+export const invalid = (error: string) => Response.json({ error }, { status: 422 });
+
+/** Extension and size, checked as soon as a file is picked. */
+export function fileProblem(file: { name: string; size: number }): string | null {
+  const ext = file.name.includes(".") ? file.name.split(".").pop()!.toLowerCase() : "";
+  if (!UP.extensions.includes(ext)) return `Upload a video file: ${EXT_NAMES}.`;
+  if (file.size > UP.max_mb * 1e6) {
+    return `That file is ${(file.size / 1e6).toFixed(0)} MB. Upload one under ${UP.max_mb} MB, or trim it first.`;
+  }
+  return null;
+}
+
+/** Length and resolution from the browser's preview, when it can read them (width 0 = unknown). */
+export function mediaProblem({ duration, width, height }: { duration: number; width: number; height: number }): string | null {
+  if (Number.isFinite(duration) && duration > 0) {
+    if (duration < UP.min_seconds) {
+      return `That clip is only ${duration.toFixed(1)} s long. Upload at least ${UP.min_seconds} seconds of play.`;
+    }
+    if (duration > UP.max_seconds) {
+      return `That video is ${fmtDuration(duration)} long. Uploads can be up to ${minutes(UP.max_seconds)}: trim it and try again.`;
+    }
+  }
+  if (width > 0 && height > 0 && Math.min(width, height) < UP.min_short_side) {
+    return `That video is only ${width}x${height}, too small to see the stroke. Re-record it at 480p or higher (your phone's normal video setting is fine).`;
+  }
+  return null;
+}
+
+/** Optional height in cm, as typed. */
+export function heightProblem(raw: string): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (!NUMBER.test(v)) return `Enter your height as a number in cm, between ${H.min} and ${H.max}.`;
+  const cm = Number(v);
+  if (cm < H.min || cm > H.max) return `Height must be between ${H.min} and ${H.max} cm. Leave it empty and we estimate it from the table.`;
+  return null;
+}
+
+/** The cm limits as whole feet and inches, rounded inwards so both ends are valid. */
+const inches = (cm: number, round: (x: number) => number) => round(cm / INCH_CM);
+const ftIn = (total: number) => `${Math.floor(total / 12)} ft ${total % 12} in`;
+export const HEIGHT_FT_RANGE = `${ftIn(inches(H.min, Math.ceil))} and ${ftIn(inches(H.max, Math.floor))}`;
+
+/** Feet + inches as typed -> { cm } or { error }. Both empty is fine (height is optional). */
+export function feetInches(ft: string, inch: string): { cm: number | null; error: string | null } {
+  const f = ft.trim();
+  const i = inch.trim() || "0";
+  if (!f && !inch.trim()) return { cm: null, error: null };
+  if (!/^[0-9]+$/.test(f) || !NUMBER.test(i)) return { cm: null, error: "Enter whole feet and inches as numbers, e.g. 5 ft 10 in." };
+  if (Number(i) >= 12) return { cm: null, error: "Inches go from 0 to 11." };
+  const cm = Math.round((Number(f) * 12 + Number(i)) * INCH_CM * 10) / 10;
+  if (cm < H.min || cm > H.max) return { cm: null, error: `Height must be between ${HEIGHT_FT_RANGE}. Leave it empty and we estimate it from the table.` };
+  return { cm, error: null };
+}
+
+/** Trimmed text within LIMITS.text_chars. Empty is the caller's call. */
+export function textProblem(raw: string, key: TextKey, label: string): string | null {
+  const n = raw.trim().length;
+  const most = LIMITS.text_chars[key];
+  return n > most ? `${label} can be up to ${most} characters (it has ${n}). Shorten it and try again.` : null;
+}
+
+export function choiceProblem(value: string, key: ChoiceKey, label: string): string | null {
+  const allowed: readonly string[] = LIMITS.choices[key];
+  return allowed.includes(value) ? null : `${label} must be ${or(allowed)}.`;
+}
+
+/** An Auto-Cut setting as typed. Blank means "use the default". */
+export function rangeProblem(raw: string, key: RangeKey, label: string, whole = false): string | null {
+  const v = raw.trim();
+  if (!v) return null;
+  if (!(whole ? /^-?[0-9]+$/ : /^-?[0-9]+(\.[0-9]+)?$/).test(v)) return `${label} must be a ${whole ? "whole number" : "number"}.`;
+  const { min, max } = LIMITS.autocut[key];
+  const n = Number(v);
+  return n < min || n > max ? `${label} must be between ${min} and ${max}.` : null;
+}
+
+/** The video part of a submitted form: a non-empty file wins over a link. */
+export function videoInputProblem(form: FormData, missing: string): string | null {
+  const video = form.get("video");
+  if (video instanceof File && video.size > 0) return fileProblem(video);
+  const url = String(form.get("url") ?? "").trim();
+  return url ? linkProblem(url) : missing;
+}

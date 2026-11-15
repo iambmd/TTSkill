@@ -51,12 +51,14 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
 }
 
 /** Submit button that sticks to the bottom of the screen on long forms and fills up as the upload goes. */
-export function SubmitBar({ label, progress, error, startingLabel = "Starting..." }: {
+export function SubmitBar({ label, progress, error, startingLabel = "Starting...", blocked = false }: {
   label: string;
   progress: number | null;
   error: string | null;
   /** Shown once the upload is done and the server is still answering, e.g. while it checks a link. */
   startingLabel?: string;
+  /** A field has an error (shown next to it), so there is nothing to send yet. */
+  blocked?: boolean;
 }) {
   const busy = progress !== null;
   const pct = Math.round((progress ?? 0) * 100);
@@ -66,11 +68,30 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
       {error && (
         <p role="alert" className="mb-3 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">{error}</p>
       )}
-      <button type="submit" disabled={busy} className={`${buttonClass} w-full`}>
+      <button
+        type="submit" disabled={busy || blocked}
+        className={`${buttonClass} w-full ${blocked && !busy ? "cursor-not-allowed opacity-40 hover:bg-accent active:scale-100" : ""}`}
+      >
         {busy && <span aria-hidden className="absolute inset-y-0 left-0 bg-black/15 transition-[width] duration-300" style={{ width: `${pct}%` }} />}
         <span className="relative" aria-live="polite">{text}</span>
       </button>
     </div>
+  );
+}
+
+/** Inline error under a field. Give the field aria-invalid and aria-describedby={id}. */
+export function FieldError({ id, children }: { id: string; children: React.ReactNode }) {
+  if (!children) return null;
+  return <p id={id} role="alert" className="mt-2 text-sm text-red-200">{children}</p>;
+}
+
+/** A heads-up that doesn't stop anything, e.g. a pro whose backhand you shouldn't copy. */
+export function Warning({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <p role="note" className={`flex gap-2.5 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2.5 text-sm text-amber-100 ${className}`}>
+      <WarningIcon className="mt-0.5 size-4 shrink-0 text-amber-300" />
+      <span>{children}</span>
+    </p>
   );
 }
 
@@ -106,4 +127,7 @@ export const LinkIcon = ({ className = "size-5" }: IconProps) => (
 );
 export const ChevronIcon = ({ className = "size-5" }: IconProps) => (
   <svg {...stroke} className={className}><path d="M6 9l6 6 6-6" /></svg>
+);
+export const WarningIcon = ({ className = "size-5" }: IconProps) => (
+  <svg {...stroke} className={className}><path d="M12 4 2.5 20h19L12 4zM12 10v4.5M12 17.5v.01" /></svg>
 );

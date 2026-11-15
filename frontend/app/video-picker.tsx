@@ -1,44 +1,53 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { LINK_HINT, youtubeId } from "@/lib/youtube";
+import { LIMITS, type Kind, fileProblem, fmtDuration, mediaProblem, minutes } from "@/lib/validate";
+import { linkProblem, youtubeId } from "@/lib/youtube";
 import { CheckIcon, CloseIcon, LinkIcon, PlayIcon, UploadIcon, inputClass, labelClass } from "./ui";
 
-const VIDEO_EXT = /\.(mov|mp4|m4v|webm|mkv|avi)$/i;
-
 const fmtSize = (b: number) => (b >= 1e9 ? `${(b / 1e9).toFixed(1)} GB` : `${(b / 1e6).toFixed(1)} MB`);
-const fmtTime = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+type Meta = { duration: number; width: number; height: number };
 
 /**
  * Big upload button that turns into a preview of the chosen clip, with a "paste a link" field under it.
  * The file lives in a real <input type="file" name={name}> and the link in <input name={linkName}>,
  * so the parent form's FormData picks up whichever one is set. A chosen file wins over a link.
+ * The file (type, size, then length and resolution once the preview loads) and the link are
+ * checked as they change; the problem is shown here and passed to `onProblem` so the form can
+ * disable its submit button.
  */
-export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
+export function VideoPicker({ name = "video", linkName = "url", title, hint, kind, onProblem }: {
   name?: string;
   linkName?: string;
   title: string;
   hint: string;
+  /** Which page this is, for the link length limit in shared/limits.json. */
+  kind: Kind;
+  onProblem?: (problem: string | null) => void;
 }) {
   const id = useId();
   const linkInputId = useId();
+  const fileErrorId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [canPreview, setCanPreview] = useState(true);
-  const [duration, setDuration] = useState<number | null>(null);
+  const [meta, setMeta] = useState<Meta | null>(null);
   const [dragging, setDragging] = useState(false);
   const [link, setLink] = useState("");
   const ytId = youtubeId(link);
-  const linkBad = link.trim() !== "" && !ytId;
+  const linkError = !file && link.trim() ? linkProblem(link) : null;
+  const fileError = file ? fileProblem(file) ?? (meta ? mediaProblem(meta) : null) : null;
+  const problem = fileError ?? linkError;
 
   // Revoke each preview URL once it is replaced or the picker unmounts.
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  useEffect(() => { onProblem?.(problem); }, [problem, onProblem]);
 
   function pick(f: File | null) {
     setFile(f);
     setCanPreview(true);
-    setDuration(null);
+    setMeta(null);
     setUrl(f ? URL.createObjectURL(f) : null);
   }
 
@@ -50,8 +59,9 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
   function onDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragging(false);
+    // Any file is taken, so a wrong one gets a clear message instead of being silently ignored.
     const f = e.dataTransfer.files[0];
-    if (!f || !(f.type.startsWith("video/") || VIDEO_EXT.test(f.name)) || !inputRef.current) return;
+    if (!f || !inputRef.current) return;
     const dt = new DataTransfer();
     dt.items.add(f);
     inputRef.current.files = dt.files;
@@ -68,14 +78,20 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
       >
         <input
           ref={inputRef} id={id} name={name} type="file" accept="video/*" className="sr-only"
+          aria-invalid={!!fileError} aria-describedby={fileError ? fileErrorId : undefined}
           onChange={(e) => pick(e.target.files?.[0] ?? null)}
         />
         {file ? (
-          <div className={`overflow-hidden rounded-3xl border bg-black ${dragging ? "border-accent" : "border-line"}`}>
+          <div className={`overflow-hidden rounded-3xl border bg-black ${dragging ? "border-accent" : fileError ? "border-red-500/50" : "border-line"}`}>
             {url && canPreview ? (
               <video
                 key={url} src={`${url}#t=0.001`} controls playsInline preload="metadata"
-                onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+                onLoadedMetadata={(e) => {
+                  // videoWidth is 0 when the browser can't decode the picture (e.g. HEVC on some desktops):
+                  // that's "unknown", not "no video", so the server makes that call.
+                  const v = e.currentTarget;
+                  setMeta({ duration: v.duration, width: v.videoWidth, height: v.videoHeight });
+                }}
                 onError={() => setCanPreview(false)}
                 className="block max-h-[60svh] w-full bg-black object-contain"
               />
@@ -85,11 +101,15 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
               </div>
             )}
             <div className="flex items-center gap-3 border-t border-line bg-panel px-4 py-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-4" /></span>
+              {fileError ? (
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-500/80 text-white"><CloseIcon className="size-4" /></span>
+              ) : (
+                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-4" /></span>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{file.name}</p>
                 <p className="text-xs text-muted">
-                  {duration && Number.isFinite(duration) ? `${fmtTime(duration)} · ` : ""}{fmtSize(file.size)}
+                  {meta && Number.isFinite(meta.duration) ? `${fmtDuration(meta.duration)} · ` : ""}{fmtSize(file.size)}
                 </p>
               </div>
               <label htmlFor={id} className="cursor-pointer rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
@@ -99,6 +119,11 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
                 <CloseIcon />
               </button>
             </div>
+            {fileError && (
+              <p id={fileErrorId} role="alert" className="border-t border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+                {fileError}
+              </p>
+            )}
           </div>
         ) : ytId ? (
           <div className={`overflow-hidden rounded-3xl border bg-black ${dragging ? "border-accent" : "border-line"}`}>
@@ -145,8 +170,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
             <input
               id={linkInputId} name={linkName} type="url" inputMode="url" autoComplete="off" spellCheck={false}
               placeholder="youtube.com/shorts/…" value={link} onChange={(e) => setLink(e.target.value)}
-              aria-invalid={linkBad} aria-describedby={`${linkInputId}-hint`}
-              className={`${inputClass} pr-12 pl-12 ${linkBad ? "border-red-500/50" : ""}`}
+              aria-invalid={!!linkError} aria-describedby={`${linkInputId}-hint`}
+              className={`${inputClass} pr-12 pl-12 ${linkError ? "border-red-500/50" : ""}`}
             />
             {link && (
               <button
@@ -157,8 +182,11 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint }: {
               </button>
             )}
           </div>
-          <p id={`${linkInputId}-hint`} className={`mt-2 text-xs ${linkBad ? "text-red-200" : "text-muted"}`}>
-            {linkBad ? LINK_HINT : "YouTube videos and Shorts, up to 3 minutes."}
+          <p
+            id={`${linkInputId}-hint`} role={linkError ? "alert" : undefined}
+            className={`mt-2 ${linkError ? "text-sm text-red-200" : "text-xs text-muted"}`}
+          >
+            {linkError ?? `YouTube videos and Shorts, up to ${minutes(LIMITS.link_max_seconds[kind])}.`}
           </p>
         </div>
       )}

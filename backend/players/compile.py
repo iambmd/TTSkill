@@ -26,7 +26,8 @@ def _card(rank: int, m: dict, stroke: str) -> np.ndarray:
         f = font("display", f.size - 8)
     d.text((56, 710), name, font=f, fill=WHITE)
     y = 710 + int(f.size * 1.05)
-    facts = f"{m['height_cm']} cm · {m['bat_hand']}-handed · {m.get('country') or ''}".strip(" ·")
+    facts = f"{m['height_cm']} cm · {m['bat_hand']}-handed · {m.get('grip') or 'shakehand'} · {m.get('country') or ''}"
+    facts = facts.strip(" ·")
     d.text((60, y + 10), facts, font=font("semibold", 46), fill=GREY)
     d.text((60, y + 90), f"{m['score']}%", font=font("display", 120), fill=ACCENT)
     d.text((60 + d.textlength(f"{m['score']}%", font=font("display", 120)) + 24, y + 150),

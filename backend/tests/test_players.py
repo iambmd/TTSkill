@@ -1,6 +1,7 @@
 """Find my pro match: body profile, DTW form comparison, bat-hand filtering and ranking,
 height from the table, and the compiled video."""
 import json
+import re
 
 import cv2
 import numpy as np
@@ -122,9 +123,38 @@ def test_compiled_video(tmp_path, monkeypatch):
 
 def test_roster_shape():
     d = json.loads(match.ROSTER.read_text())["players"]
-    assert len(d) == 12 and sum(p["gender"] == "M" for p in d) == 6
+    assert len(d) == 20 and sum(p["gender"] == "M" for p in d) == 11
+    assert len({p["id"] for p in d}) == 20 and all(re.fullmatch(r"[a-z]+(-[a-z]+)+", p["id"]) for p in d)
     assert {p["bat_hand"] for p in d} == {"left", "right"}
     assert all(140 <= p["height_cm"] <= 200 and p["height_source"] for p in d)
+    assert all(p["grip"] in ("shakehand", "penhold") for p in d)
+    assert {p["id"] for p in d if p["grip"] == "penhold"} == {"xu-xin", "ma-lin", "felix-lebrun"}
+    winter = next(p for p in d if p["id"] == "sabine-winter")
+    assert "anti-spin on her backhand" in winter["equipment_notes"]
+
+
+def test_same_grip_ranks_first_and_others_fill_in():
+    c = body.angle_curves(_track(), "right", 30)
+    pros = [_pro("close", "right", 171, c), _pro("mid", "right", 175, c), _pro("far", "right", 185, c),
+            {**_pro("pen", "right", 180, c), "grip": "penhold"}]
+    user = {**pros[0]["body"], "height_cm": 171}
+    assert [r["id"] for r in match.match(user, c, "forehand", "right", pros=pros, grip="penhold")][:2] == ["pen", "close"]
+    shake = match.match(user, c, "forehand", "right", pros=pros, grip="shakehand")
+    assert [r["id"] for r in shake] == ["close", "mid", "far"]
+    assert [r["id"] for r in match.match(user, c, "forehand", "right", pros=pros)][0] == "close"  # no grip given
+
+
+def test_warnings_for_anti_spin_and_penhold():
+    note = "Sabine Winter plays anti-spin on her backhand, so ..."
+    assert match.warnings({"name": "Sabine Winter", "grip": "shakehand", "equipment_notes": note}) == [note]
+    pen = {"name": "Xu Xin", "grip": "penhold"}
+    assert "Xu Xin plays penhold" in match.warnings(pen, "shakehand")[0]
+    assert match.warnings(pen, None) and match.warnings(pen, "penhold") == []
+    assert match.warnings({"name": "Ma Long", "grip": "shakehand"}, "shakehand") == []
+    c = body.angle_curves(_track(), "right", 30)
+    res = match.match({"height_cm": 170}, c, "forehand", "right",
+                      pros=[{**_pro("pen", "right", 180, c), "grip": "penhold"}], grip="shakehand")
+    assert res[0]["grip"] == "penhold" and "plays penhold" in res[0]["warnings"][0]
 
 
 class _InlinePool:
@@ -158,7 +188,7 @@ def test_build_uses_manual_clips(tmp_path, monkeypatch):
                  "PROFILES": tmp_path / "profiles.json"}.items():
         monkeypatch.setattr(build, k, v)
     searched, processed = [], []
-    monkeypatch.setattr(build, "search", lambda name, stroke: searched.append((name, stroke)) or [])
+    monkeypatch.setattr(build, "search", lambda name, stroke, override=None: searched.append((name, stroke)) or [])
 
     def fake_process(raw, out_dir, name, stroke, hand):
         processed.append((raw.rsplit("/", 1)[-1], hand))

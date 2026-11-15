@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
-import { LINK_HINT, youtubeId } from "@/lib/youtube";
-import { PageIntro, SubmitBar, inputClass, labelClass } from "../ui";
+import { LIMITS, textProblem } from "@/lib/validate";
+import { FieldError, PageIntro, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
 
 const EXAMPLES = [
@@ -19,24 +19,27 @@ export default function CoachPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [starting, setStarting] = useState("Starting...");
+  const [ask, setAsk] = useState("");
+  const [videoProblem, setVideoProblem] = useState<string | null>(null);
+  const most = LIMITS.text_chars.coach_request;
+  const length = ask.trim().length;
+  const askError = textProblem(ask, "coach_request", "Your request");
+  // An empty or whitespace-only request is ignored, like an empty chat message: nothing to send.
+  const blocked = length === 0 || !!askError || !!videoProblem;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (blocked) {
+      if (length === 0) askRef.current?.focus();
+      return;
+    }
     const form = new FormData(e.currentTarget);
     const video = form.get("video") as File | null;
     const url = String(form.get("url") ?? "").trim();
     const hasVideo = !!video && video.size > 0;
-    if (!String(form.get("request") ?? "").trim()) {
-      setError("Tell the coach what you want.");
-      askRef.current?.focus();
-      return;
-    }
+    form.set("request", ask.trim());
     if (!hasVideo && !url) {
       setError("Add a video: upload a clip or paste a YouTube link.");
-      return;
-    }
-    if (!hasVideo && !youtubeId(url)) {
-      setError(LINK_HINT);
       return;
     }
     if (!hasVideo) form.delete("video");
@@ -54,23 +57,31 @@ export default function CoachPage() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-7">
+    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
       <PageIntro
         eyebrow="TT Coach"
         title="Ask your coach."
         body="One request, one video. The coach plans the work, runs the tools, and shows you its to-do list as it goes."
       />
       <div>
-        <label className={labelClass} htmlFor="request">What do you want?</label>
+        <div className="flex items-end justify-between">
+          <label className={labelClass} htmlFor="request">What do you want?</label>
+          <span aria-hidden className={`mb-2 text-xs tabular-nums ${askError ? "font-bold text-red-200" : "text-muted"}`}>
+            {length}/{most}
+          </span>
+        </div>
         <textarea
-          ref={askRef} id="request" name="request" rows={3} className={inputClass}
+          ref={askRef} id="request" name="request" rows={3} value={ask} onChange={(e) => setAsk(e.target.value)}
+          aria-invalid={!!askError} aria-describedby="request-error"
+          className={`${inputClass} ${askError ? "border-red-500/50" : ""}`}
           placeholder="e.g. Show my best rallies and fix my forehand"
         />
+        <FieldError id="request-error">{askError}</FieldError>
         <div className="mt-2 flex flex-wrap gap-2">
           {EXAMPLES.map((x) => (
             <button
               key={x} type="button"
-              onClick={() => { if (askRef.current) { askRef.current.value = x; askRef.current.focus(); } }}
+              onClick={() => { setAsk(x); askRef.current?.focus(); }}
               className="rounded-full border border-line px-3 py-1.5 text-left text-xs font-semibold text-muted hover:border-accent hover:text-white"
             >
               {x}
@@ -78,8 +89,8 @@ export default function CoachPage() {
           ))}
         </div>
       </div>
-      <VideoPicker title="Add your video" hint="A match or a practice clip, with the sound on." />
-      <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} />
+      <VideoPicker kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
+      <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
   );
 }

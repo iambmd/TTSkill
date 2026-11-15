@@ -148,6 +148,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
                                 start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
     track = pose.extract_pose(clip)
+    pose.require_player(track)
     side, how = pose.bat_side(clip, track, hand, trust_hand)
     _log(progress, f"bat hand: {side} ({how})")
     hits = [h - win["start"] for h in win.get("hit_times", [])

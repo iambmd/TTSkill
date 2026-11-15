@@ -18,6 +18,7 @@ import json
 import os
 import shutil
 import time
+import unicodedata
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -34,20 +35,29 @@ MANUAL = DATA / "manual"
 _YDL = {"quiet": True, "no_warnings": True, "noprogress": True, "js_runtimes": {"node": {}}}
 
 
-def aliases(name: str) -> list[str]:
+def _ascii(text: str) -> str:
+    """Szőcs -> szocs, Félix -> felix: video titles often drop the accents."""
+    return unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode()
+
+
+def aliases(name: str, override: list[str] | None = None) -> list[str]:
+    """Names a video title must contain. `override` (players.json "aliases") replaces the
+    guesses when a family name alone is ambiguous: Lebrun is also Alexis, Winter is a season."""
+    if override:
+        return sorted({a.lower() for a in override} | {_ascii(a.lower()) for a in override})
     parts = name.lower().split()
     out = [name.lower(), "".join(parts)]
     if len(parts[-1]) > 3:
         out.append(parts[-1])          # family name last: Harimoto, Calderano, Boll, Ito, Hayata
     if len(parts) == 2 and len(parts[1]) > 4:
         out.append(parts[1])           # Chinese given name: Zhendong, Chuqin, Yingsha
-    return out
+    return list(dict.fromkeys(out + [_ascii(a) for a in out]))
 
 
-def search(name: str, stroke: str) -> list[dict]:
+def search(name: str, stroke: str, override: list[str] | None = None) -> list[dict]:
     import yt_dlp
 
-    names = aliases(name)
+    names = aliases(name, override)
     seen, out = set(), []
     for q in (f"{name} {stroke} slow motion", f"{name} {stroke} training"):
         with yt_dlp.YoutubeDL({**_YDL, "extract_flat": True}) as ydl:
@@ -124,7 +134,7 @@ def build(only: list[str] | None, workers: int) -> None:
                 if len(prof["strokes"].get(stroke, [])) >= CLIPS_PER_STROKE:
                     continue  # already built: the script resumes where it stopped
                 kept, pending = [], []
-                for cand in search(p["name"], stroke):
+                for cand in search(p["name"], stroke, p.get("aliases")):
                     while len(pending) >= 2:  # keep two clips processing while we download
                         _collect(*pending.pop(0), kept)
                     if len(kept) >= CLIPS_PER_STROKE:
@@ -198,8 +208,8 @@ def _save(roster: dict, profiles: dict, p: dict, prof: dict) -> None:
         keys = [k for k in bodies[0] if k not in ("units", "height_units")]
         prof["body"] = {k: round(float(sorted(b[k] for b in bodies)[len(bodies) // 2]), 3) for k in keys}
         profiles["players"][p["id"]] = prof
-    ROSTER.write_text(json.dumps(roster, indent=2) + "\n")
-    PROFILES.write_text(json.dumps(profiles, indent=2) + "\n")
+    ROSTER.write_text(json.dumps(roster, indent=2, ensure_ascii=False) + "\n")
+    PROFILES.write_text(json.dumps(profiles, indent=2, ensure_ascii=False) + "\n")
 
 
 def add_local(player_id: str, stroke: str, file: str, url: str, title: str) -> None:

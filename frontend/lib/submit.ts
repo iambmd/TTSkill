@@ -8,6 +8,8 @@ export type Job = {
   resultUrl?: string | null;
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
+  /** Auto-Cut: advice when too few rallies were heard (the job still counts as done). */
+  warning?: string | null;
   strokeType?: { key: string | null; label: string; detected: boolean } | null;
   matches?: ProMatch[];
   todos?: { content: string; status: "pending" | "in_progress" | "completed" }[];
@@ -25,6 +27,9 @@ export type ProMatch = {
   country?: string;
   height_cm: number;
   bat_hand: string;
+  grip?: "shakehand" | "penhold";
+  /** Why to copy part of this pro with care: equipment (e.g. anti-spin backhand) or penhold grip. */
+  warnings?: string[];
   score: number;
   form_score: number | null;
   differences: string[];

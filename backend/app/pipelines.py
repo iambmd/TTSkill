@@ -7,6 +7,8 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
+from limits import LIMITS
+
 from . import jobs
 from .cut import cut_and_concat, duration, padded_segments
 from .download import download
@@ -46,6 +48,16 @@ def pick_segments(found: list, video: Path, mode: str, top_n: int) -> tuple[list
     return found, padded_segments([(r.start, r.end) for r in found], duration(video))
 
 
+def few_rallies_warning(count: int) -> str | None:
+    """Advice when the sound gave fewer rallies than a useful cut needs (shared/limits.json)."""
+    if count >= LIMITS["autocut"]["min_rallies"]:
+        return None
+    heard = ("We didn't hear any rallies" if count == 0 else
+             f"We only heard {count} rall{'y' if count == 1 else 'ies'}")
+    return (f"{heard}. Film closer to the table, or somewhere with less background noise, so each "
+            "ball contact is clear. You can also lower the hit threshold under Detection settings.")
+
+
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
     try:
         jobs.update(job_id, status="running", progress=0.1, message="Listening for ball contacts...")
@@ -57,9 +69,10 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
             found, bounces = drop_floor_bounces(video, found)
             if bounces:
                 print(f"dropped {len(bounces)} floor-bounce spans: {[r.to_dict() for r in bounces]}")
-        if not found:
-            jobs.update(job_id, status="failed", progress=1.0, rallies=[],
-                        message="No rallies found. Try a lower hit threshold or fewer min hits.")
+        warning = few_rallies_warning(len(found))  # counted after floor bounces are dropped
+        if not found:  # nothing to cut, but the advice is the result: done, not failed
+            jobs.update(job_id, status="done", progress=1.0, rallies=[], warning=warning,
+                        message="No rallies found.")
             return
         rallies, segments = pick_segments(found, video, mode, top_n)
         jobs.update(job_id, progress=0.3, message=f"Found {len(found)} rallies. Cutting {len(segments)} clips...",
@@ -68,7 +81,7 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
                        progress=lambda f: jobs.update(job_id, progress=round(0.3 + 0.65 * f, 3)))
         length = sum(e - s for s, e in segments)
         label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
-        jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result",
+        jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", warning=warning,
                     message=f"{label}, {length:.0f} s cut from {len(found)} detected.")
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
@@ -128,10 +141,12 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
 
 
 def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
-                hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None) -> dict:
+                hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None,
+                grip: str | None = None) -> dict:
     """Find my pro match core, shared by the /jobs/match pipeline and the coach agent:
     pose on the user's clip, body profile, height (entered or from the table), top 3 pros
-    with the same bat hand, form differences, and one compiled video at `dest`."""
+    with the same bat hand (and grip first, when given), form differences, and one
+    compiled video at `dest`."""
     from players.body import angle_curves, body_ratios
     from players.compile import compile_matches
     from players.match import match
@@ -146,8 +161,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     report(0.3, "Reading your body and swing with MediaPipe...")
     track = pose.extract_pose(clip)
-    if not track.valid.any():
-        raise RuntimeError("No player found in the video. Film the whole body, side-on if you can.")
+    pose.require_player(track)
     side, how = pose.bat_side(clip, track, hand)
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
     _, contact = key_moments(track, side, hits, direction="up")
@@ -160,7 +174,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
         height = estimate_height_cm(str(clip), track)
     user = {**body, "height_cm": height["height_cm"] if height else None}
     report(0.65, "Comparing you with the pros...")
-    matches = match(user, curves, stroke, side)
+    matches = match(user, curves, stroke, side, grip=grip)
     if not matches:
         raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
     report(0.75, "Putting their breakdowns together...")
@@ -172,11 +186,12 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
 
 
 def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
-              hand: str = "auto") -> None:
+              hand: str = "auto", grip: str | None = None) -> None:
     try:
         jobs.update(job_id, status="running", progress=0.05, message="Starting...")
         res = match_video(video, stroke, jobs.job_dir(job_id) / "match", jobs.job_dir(job_id) / "result.mp4",
-                          height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m))
+                          height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m),
+                          grip=grip)
         top = res["matches"][0]
         jobs.update(job_id, status="done", progress=1.0,
                     message=f"You play most like {top['name']} ({top['score']}% body match).",

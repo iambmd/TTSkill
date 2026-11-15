@@ -3,9 +3,9 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
-import { LINK_HINT, youtubeId } from "@/lib/youtube";
 import { STROKE_TYPES } from "@/lib/strokes";
-import { ChevronIcon, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
+import { LIMITS, textProblem } from "@/lib/validate";
+import { ChevronIcon, FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
 
 const HANDS = [
@@ -20,9 +20,14 @@ export default function BreakdownPage() {
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [starting, setStarting] = useState("Starting...");
+  const [videoProblem, setVideoProblem] = useState<string | null>(null);
+  const [notes, setNotes] = useState("");
+  const notesError = textProblem(notes, "training_text", "The description");
+  const blocked = !!videoProblem || !!notesError;
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (blocked) return;
     const form = new FormData(e.currentTarget);
     const video = form.get("video") as File | null;
     const url = String(form.get("url") ?? "").trim();
@@ -31,10 +36,6 @@ export default function BreakdownPage() {
     if (!hasVideo && !url && !text) {
       setError("Upload a clip, paste a YouTube link, or describe the player's training instead.");
       if (textRef.current) textRef.current.open = true;
-      return;
-    }
-    if (!hasVideo && url && !youtubeId(url)) {
-      setError(LINK_HINT);
       return;
     }
     if (!hasVideo) form.delete("video");
@@ -52,13 +53,16 @@ export default function BreakdownPage() {
   }
 
   return (
-    <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-7">
+    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
       <PageIntro
         eyebrow="Technique Breakdown"
         title="Swing like the pros."
         body="Drop in a clip of a player you admire and get a step-by-step coaching video of their stroke."
       />
-      <VideoPicker title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best." />
+      <VideoPicker
+        kind="breakdown" onProblem={setVideoProblem}
+        title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best."
+      />
       <details ref={textRef} className="group rounded-2xl border border-line bg-panel">
         <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
           No video? Describe the training instead
@@ -67,14 +71,23 @@ export default function BreakdownPage() {
         <div className="px-4 pb-4">
           <label className="sr-only" htmlFor="text">Training description</label>
           <textarea
-            id="text" name="text" rows={4} className={inputClass}
+            id="text" name="text" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
+            aria-invalid={!!notesError} aria-describedby="text-error"
+            className={`${inputClass} ${notesError ? "border-red-500/50" : ""}`}
             placeholder="Paste notes, a transcript, or a description of how the player trains this stroke."
           />
+          <FieldError id="text-error">{notesError}</FieldError>
+          {!notesError && notes.length > LIMITS.text_chars.training_text * 0.8 && (
+            <p className="mt-2 text-xs text-muted tabular-nums">{notes.trim().length}/{LIMITS.text_chars.training_text} characters</p>
+          )}
         </div>
       </details>
       <div>
         <label className={labelClass} htmlFor="player">Player</label>
-        <input id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass} />
+        <input
+          id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass}
+          maxLength={LIMITS.text_chars.player}
+        />
       </div>
       <div>
         <label className={labelClass} htmlFor="stroke_type">
@@ -94,7 +107,7 @@ export default function BreakdownPage() {
         <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
         <p className="mt-2 text-xs text-muted">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
       </fieldset>
-      <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} />
+      <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
   );
 }

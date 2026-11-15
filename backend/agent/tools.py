@@ -62,7 +62,7 @@ class Session:
 # ------------------------------------------------------------------ the six tools
 
 def download_url(s: Session, url: str) -> dict:
-    info = dl.probe(url)
+    info = dl.probe(url, "coach")
     s.update(message=f"Downloading {info['title']}...")
     s.video = dl.download(url, s.dir)
     return {"title": info["title"], "duration_s": info["duration"], "loaded": True}
@@ -110,8 +110,10 @@ def extract_pose(s: Session, stroke: str = "forehand") -> dict:
     win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     track = pose.extract_pose(clip)
-    if not track.valid.any():
-        raise ToolError("No player visible in the best part of the video.")
+    try:
+        pose.require_player(track)
+    except pose.NoPlayer as e:
+        raise ToolError(str(e)) from e
     side, how = pose.bat_side(clip, track, "auto")
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
     _, p0 = key_moments(track, side, hits, direction="any")
@@ -181,8 +183,8 @@ def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[floa
         s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",
                      ", ".join(f"{m['name']} {m['score']}%" for m in res["matches"]))
     s.update(matches=res["matches"], you=res["you"])
-    return {"matches": [{k: m[k] for k in ("name", "score", "form_score", "differences", "height_cm", "bat_hand")}
-                        for m in res["matches"]], "you": res["you"]}
+    keys = ("name", "score", "form_score", "differences", "height_cm", "bat_hand", "grip", "warnings")
+    return {"matches": [{k: m.get(k) for k in keys} for m in res["matches"]], "you": res["you"]}
 
 
 TOOLS: dict[str, Callable] = {f.__name__: f for f in
