@@ -142,12 +142,15 @@ def create_breakdown(
     hand: str = Form("auto"),
     video: UploadFile | None = File(None),
     url: str = Form(""),
+    player_time: str = Form(""),
+    player_box: str = Form(""),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
     if stroke_type and stroke_type not in STROKE_TYPES:
         raise validate.Invalid(f"Unknown stroke type: {stroke_type}. Pick one from the list, or leave it blank to auto-detect.")
     validate.choice(hand, "hand", "Bat hand")
+    selection = validate.player_selection(player_time, player_box)
     player = validate.text(player, "player", "The player's name")
     text = validate.text(text, "training_text", "The training description")
     staged = stage_upload(video) if has_file(video) else None
@@ -157,8 +160,11 @@ def create_breakdown(
     params = {"stroke": stroke, "stroke_type": stroke_type or "auto", "player": player, "text": text, "hand": hand,
               "video": video.filename if staged else (link["title"] if link else None),
               "url": link and link["url"]}
+    if selection and (staged or link):
+        params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     job = jobs.create("breakdown", params)
-    args = (text, stroke, player, hand, stroke_type)
+    # The tapped player goes last, and only when there is one, so other calls are unchanged.
+    args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
     if link:
         background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_breakdown, *args)
     else:
@@ -176,8 +182,11 @@ def create_match(
     height_cm: str = Form(""),
     video: UploadFile | None = File(None),
     url: str = Form(""),
+    player_time: str = Form(""),
+    player_box: str = Form(""),
 ) -> dict:
     validate.choice(stroke, "match_stroke", "Stroke")
+    selection = validate.player_selection(player_time, player_box)
     validate.choice(hand, "hand", "Bat hand")
     validate.choice(grip, "grip", "Grip")
     height = validate.height_cm(height_cm)
@@ -187,8 +196,10 @@ def create_match(
         raise validate.Invalid("Upload a clip of yourself or paste a YouTube link.")
     params = {"video": video.filename if staged else link["title"], "url": link and link["url"],
               "stroke": stroke, "hand": hand, "grip": grip, "height_cm": height}
+    if selection:
+        params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     job = jobs.create("match", params)
-    args = (stroke, height, hand, grip)
+    args = (stroke, height, hand, grip) + ((selection,) if selection else ())
     if link:
         background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_match, *args)
     else:
@@ -202,12 +213,15 @@ def create_coach(
     request: str = Form(""),
     video: UploadFile | None = File(None),
     url: str = Form(""),
+    player_time: str = Form(""),
+    player_box: str = Form(""),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
     from agent.coach import run_coach
 
     request = validate.text(request, "coach_request", "Your request")
+    selection = validate.player_selection(player_time, player_box)
     if not request:
         raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
     staged = stage_upload(video) if has_file(video) else None
@@ -216,9 +230,12 @@ def create_coach(
         raise validate.Invalid("Add a video: upload a clip or paste a YouTube link.")
     params = {"request": request, "video": video.filename if staged else link["title"],
               "url": link and link["url"]}
+    if selection:
+        params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     job = jobs.create("coach", params)
     path = adopt(staged, job["id"]) if staged else None
-    background.add_task(jobs.run, run_coach, job["id"], path, link and link["url"], request)
+    background.add_task(jobs.run, run_coach, job["id"], path, link and link["url"], request,
+                        *((selection,) if selection else ()))
     return job
 
 

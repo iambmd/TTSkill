@@ -185,3 +185,15 @@ def test_render_and_match_reuse_the_window_the_pose_step_chose(tmp_path, monkeyp
     except RuntimeError:
         pass
     assert seen["match"]["chosen"] is win and seen["match"]["identity"] == "seed"
+
+
+def test_coach_seeds_from_the_tapped_player(tmp_path, monkeypatch):
+    from agent import tools
+    from technique import pose
+    calls = []
+    monkeypatch.setattr(pose, "identity_from_box", lambda video, t, box: calls.append(("box", t, box)) or "picked")
+    monkeypatch.setattr(pose, "initial_identity", lambda video: calls.append(("vote",)) or "voted")
+    s = tools.Session("x" * 32, selection=(12.5, (0.1, 0.2, 0.4, 0.9)))
+    assert s.seed(tmp_path / "v.mp4") == "picked" and s.seed(tmp_path / "v.mp4") == "picked"
+    assert calls == [("box", 12.5, (0.1, 0.2, 0.4, 0.9))]   # once per job
+    assert tools.Session("y" * 32).seed(tmp_path / "v.mp4") == "voted"

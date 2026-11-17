@@ -222,6 +222,50 @@ def initial_identity(video: str | Path) -> np.ndarray | None:
     return choose_seed(looks)
 
 
+def _overlap(a: tuple, b: tuple) -> float:
+    """Intersection over union of two normalised (x0, y0, x1, y1) boxes."""
+    w = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+    h = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+    union = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - w * h
+    return w * h / union if union > 0 else 0.0
+
+
+def identity_from_box(video: str | Path, time: float, box: tuple[float, float, float, float]) -> np.ndarray:
+    """The tracker seed for the player the user tapped: the appearance of the person at `time`
+    whose body box overlaps `box` most. Raises NoPlayer when nobody is there."""
+    import mediapipe as mp
+    from mediapipe.tasks.python import BaseOptions, vision
+    from .identity import appearance
+    from .people import box_of
+
+    cap = cv2.VideoCapture(str(video))
+    cap.set(cv2.CAP_PROP_POS_MSEC, max(0.0, time) * 1000)
+    ok, frame = cap.read()
+    cap.release()
+    when = f"{int(time // 60)}:{int(time % 60):02d}"
+    if not ok:
+        raise NoPlayer(f"We couldn't read the video at {when}, where you picked the player. Pick again.")
+    h, w = frame.shape[:2]
+    if h > 720:   # the working size of detection and tracking
+        frame = cv2.resize(frame, (round(w * 720 / h), 720))
+    opts = vision.PoseLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=str(model_path())),
+        running_mode=vision.RunningMode.IMAGE, num_poses=3,
+        min_pose_detection_confidence=0.4, min_tracking_confidence=0.4,
+    )
+    with vision.PoseLandmarker.create_from_options(opts) as landmarker:
+        people, _ = _pose_candidates(frame, landmarker, mp, extra=QUARTERS)
+    scored = []
+    for p in people:
+        hx, hy = p[[23, 24], :2].mean(0)
+        inside = box[0] <= hx <= box[2] and box[1] <= hy <= box[3]
+        scored.append((_overlap(box_of(p), box) + inside, p))
+    best = max(scored, key=lambda x: x[0], default=(0.0, None))
+    if best[0] < .3:
+        raise NoPlayer(f"We couldn't find the player you picked at {when}. Pick again, or trim the video.")
+    return appearance(frame, best[1])
+
+
 def save_track(track: PoseTrack, path: str | Path) -> None:
     np.savez_compressed(path, fps=track.fps, width=track.width, height=track.height,
                         times=track.times, lm=track.lm, world=track.world,

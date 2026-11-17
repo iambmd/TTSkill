@@ -507,3 +507,21 @@ def test_detect_players_runs_on_the_sent_frames(api, monkeypatch):
     r = api.post("/players/detect", files=files, data={"times": "1.5,30"})
     assert r.status_code == 200 and r.json()["decisive"]
     assert seen["frames"] == [(1.5, (90, 160, 3)), (30.0, (90, 160, 3))]
+
+
+def test_jobs_take_the_tapped_player_only_when_there_is_one(api, ran, upload):
+    pick = {"player_time": "12.5", "player_box": "0.1,0.2,0.4,0.9"}
+    r = api.post("/jobs/match", files=upload(), data={"stroke": "forehand", **pick})
+    assert r.status_code == 201 and r.json()["params"]["player_pick"] == {"time": 12.5, "box": [0.1, 0.2, 0.4, 0.9]}
+    assert ran["run_match"][0][-1] == (12.5, (0.1, 0.2, 0.4, 0.9))
+    api.post("/jobs/breakdown", files=upload(), data=pick)
+    assert ran["run_breakdown"][0][-1] == (12.5, (0.1, 0.2, 0.4, 0.9))
+    api.post("/jobs/coach", files=upload(), data={"request": "fix my forehand", **pick})
+    assert ran["run_coach"][0][-1] == (12.5, (0.1, 0.2, 0.4, 0.9))
+    r = api.post("/jobs/match", files=upload(), data={"stroke": "forehand"})
+    assert len(ran["run_match"][1]) == 5 and "player_pick" not in r.json()["params"]
+
+
+def test_a_broken_player_pick_is_a_422(api, ran, upload):
+    r = api.post("/jobs/match", files=upload(), data={"player_time": "3", "player_box": "0.5,0,0.4,1"})
+    assert r.status_code == 422 and "Pick the player again" in _error(r) and not ran

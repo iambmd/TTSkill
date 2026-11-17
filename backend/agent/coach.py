@@ -264,9 +264,10 @@ def _summary(r: dict, stroke: str) -> str:
 
 # ------------------------------------------------------------------ entry point
 
-def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: str) -> None:
+def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: str,
+              selection: Optional[tuple] = None) -> None:
     """Background job: the deep agent when a key is set, the fixed plan otherwise or on failure."""
-    s = Session(job_id, video=video, url=url, hand=hand_from_request(request))
+    s = Session(job_id, video=video, url=url, hand=hand_from_request(request), selection=selection)
     s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[])
     if os.environ.get("ANTHROPIC_API_KEY"):
         try:

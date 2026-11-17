@@ -1,6 +1,6 @@
 /** The checks behind the forms' inline errors and the routes' 422s (limits from shared/limits.json). */
 import { describe, expect, it } from "vitest";
-import {
+import { playerSelectionProblem,
   HEIGHT_FT_RANGE, LIMITS, feetInches, fileProblem, heightProblem, mediaProblem, rangeProblem, textProblem,
 } from "@/lib/validate";
 
@@ -76,4 +76,21 @@ describe("text and ranges", () => {
     expect(rangeProblem("4.5", "min_hits", "Min hits", true)).toBe("Min hits must be a whole number.");
     expect(rangeProblem("1e1", "gap", "Max gap")).toBe("Max gap must be a number.");
   });
+});
+
+describe("playerSelectionProblem", () => {
+  const form = (time: string, box: string) => {
+    const f = new FormData();
+    if (time) f.set("player_time", time);
+    if (box) f.set("player_box", box);
+    return f;
+  };
+  it("accepts no pick, or a time and a box inside the frame", () => {
+    expect(playerSelectionProblem(form("", ""))).toBeNull();
+    expect(playerSelectionProblem(form("12.5", "0.1,0.2,0.4,0.9"))).toBeNull();
+  });
+  it.each([["12", ""], ["", "0,0,1,1"], ["x", "0,0,1,1"], ["1", "0,0,1"], ["1", "0.5,0,0.4,1"], ["1", "0,0,1.2,1"], ["-1", "0,0,1,1"]])(
+    "rejects time %s with box %s like the API", (time, box) => {
+      expect(playerSelectionProblem(form(time, box))).toContain("Pick the player again");
+    });
 });

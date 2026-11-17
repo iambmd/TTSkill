@@ -128,3 +128,16 @@ export function playerFramesProblem(form: FormData): string | null {
   if (frames.some((f) => !["image/jpeg", "image/png"].includes(f.type))) return "Frames must be JPEG or PNG images.";
   return null;
 }
+
+/** The player tapped in "Which one is you?" (player_time + player_box "x0,y0,x1,y1", 0-1).
+ * Both missing is fine: the analysis then picks the player itself. Same rule as the API. */
+export function playerSelectionProblem(form: FormData): string | null {
+  const time = String(form.get("player_time") ?? "").trim();
+  const box = String(form.get("player_box") ?? "").trim();
+  if (!time && !box) return null;
+  const again = "The player you picked didn't come through. Pick the player again.";
+  const parts = box.split(",").map((v) => v.trim());
+  if (!NUMBER.test(time) || parts.length !== 4 || !parts.every((v) => NUMBER.test(v))) return again;
+  const [x0, y0, x1, y1] = parts.map(Number);
+  return 0 <= x0 && x0 < x1 && x1 <= 1 && 0 <= y0 && y0 < y1 && y1 <= 1 ? null : again;
+}

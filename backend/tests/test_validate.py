@@ -179,3 +179,13 @@ def test_require_player():
         require_player(_track(0))
     with pytest.raises(NoPlayer, match="couldn't find a player"):
         require_player(_track(0, n=0))
+
+
+def test_player_selection():
+    from app.validate import Invalid, player_selection
+    assert player_selection("", "") is None
+    assert player_selection("12.5", "0.1,0.2,0.4,0.9") == (12.5, (0.1, 0.2, 0.4, 0.9))
+    for t, box in [("12", ""), ("", "0,0,1,1"), ("x", "0,0,1,1"), ("1", "0,0,1"), ("1", "0.5,0,0.4,1"),
+                   ("1", "0,0,1.2,1"), ("-1", "0,0,1,1"), ("1", "a,b,c,d")]:
+        with pytest.raises(Invalid, match="Pick the player again"):
+            player_selection(t, box)

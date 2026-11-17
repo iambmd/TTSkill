@@ -39,6 +39,15 @@ class Session:
     # render and match steps: each scan of the candidate rallies costs about a minute.
     window: Optional[dict] = None
     identity: object = None
+    selection: Optional[tuple] = None   # (time, box) of the player tapped in "Which one is you?"
+
+    def seed(self, video: Path) -> object:
+        """The tracker seed, once per job: the tapped player, else the video-wide vote."""
+        if self.identity is None:
+            from technique import pose
+            self.identity = (pose.identity_from_box(video, *self.selection) if self.selection
+                             else pose.initial_identity(video))
+        return self.identity
 
     @property
     def dir(self) -> Path:
@@ -117,9 +126,8 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     out = s.dir / "pose"
     info = media.probe(video)
     if s.window is None:
-        s.identity = pose.initial_identity(video)
         s.window = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
-                                 identity=s.identity)
+                                 identity=s.seed(video))
     identity, win = s.identity, s.window
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     track = pose.extract_pose(clip, identity=identity)
@@ -169,7 +177,7 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
     res = run_video(str(video), str(out), stroke or "", player or None, progress=lambda m: s.update(message=m),
                     stroke_type=stroke_type or (s.pose or {}).get("stroke_type"),
                     hand=known or s.hand, trust_hand=bool(known), assume_hand="right",
-                    chosen=s.window, identity=s.identity)
+                    chosen=s.window, identity=s.seed(video))
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
     if cards:
         for step, card in zip(b.steps, cards):
@@ -196,7 +204,7 @@ def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[floa
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
                       hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m),
-                      chosen=s.window, identity=s.identity)
+                      chosen=s.window, identity=s.seed(video))
     if res["video"]:
         top = res["matches"][0]
         s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",

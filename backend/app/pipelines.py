@@ -108,7 +108,7 @@ def _progress(job_id: str):
 
 
 def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, player: str,
-                  hand: str = "auto", stroke_type: str = "") -> None:
+                  hand: str = "auto", stroke_type: str = "", selection: tuple | None = None) -> None:
     """Runs backend/technique and copies its breakdown.mp4 to result.mp4 for the job page."""
     try:
         from technique.pipeline import run_text, run_video  # heavy imports (MediaPipe, OpenCV)
@@ -118,8 +118,11 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
         report = _progress(job_id)
         report("starting technique pipeline")
         if video is not None:
+            # The player the user tapped, when they had to choose; otherwise the video-wide seed.
+            from technique import pose
+            seed = pose.identity_from_box(video, *selection) if selection else None
             res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand,
-                            stroke_type=stroke_type or None)
+                            stroke_type=stroke_type or None, identity=seed)
         else:
             res = run_text(text, str(out), stroke, player or None, progress=report,
                            stroke_type=stroke_type or None)
@@ -192,12 +195,16 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
 
 
 def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
-              hand: str = "auto", grip: str | None = None) -> None:
+              hand: str = "auto", grip: str | None = None, selection: tuple | None = None) -> None:
     try:
         jobs.update(job_id, status="running", progress=0.05, message="Starting...")
+        seed = None
+        if selection:
+            from technique import pose
+            seed = pose.identity_from_box(video, *selection)
         res = match_video(video, stroke, jobs.job_dir(job_id) / "match", jobs.job_dir(job_id) / "result.mp4",
                           height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m),
-                          grip=grip)
+                          grip=grip, identity=seed)
         top = res["matches"][0]
         jobs.update(job_id, status="done", progress=1.0,
                     message=f"You play most like {top['name']} ({top['score']}% body match).",

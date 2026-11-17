@@ -144,3 +144,21 @@ def player_frames(frames: list[tuple[str | None, bytes]], times: str) -> list[tu
             raise Invalid("Frames must be JPEG or PNG images.")
         out.append((float(stamp), data))
     return out
+
+
+PICK_AGAIN = "The player you picked didn't come through. Pick the player again."
+
+
+def player_selection(time_raw: str, box_raw: str) -> tuple[float, tuple[float, float, float, float]] | None:
+    """The player tapped in "Which one is you?": a frame time (s) and a normalised box
+    "x0,y0,x1,y1". Both blank means no choice (the analysis picks the player itself)."""
+    time_raw, box_raw = time_raw.strip(), box_raw.strip()
+    if not time_raw and not box_raw:
+        return None
+    parts = [v.strip() for v in box_raw.split(",")]
+    if not _NUMBER.fullmatch(time_raw) or len(parts) != 4 or not all(_NUMBER.fullmatch(v) for v in parts):
+        raise Invalid(PICK_AGAIN)
+    x0, y0, x1, y1 = map(float, parts)
+    if not (0 <= x0 < x1 <= 1 and 0 <= y0 < y1 <= 1):
+        raise Invalid(PICK_AGAIN)
+    return float(time_raw), (x0, y0, x1, y1)
