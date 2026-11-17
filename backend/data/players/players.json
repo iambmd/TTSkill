@@ -270,7 +270,14 @@
       "height_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov (cites rio2016.com), tabletennis.media",
       "bat_hand_source": "https://en.wikipedia.org/wiki/Dimitrij_Ovtcharov",
       "clips": {
-        "forehand": [],
+        "forehand": [
+          {
+            "url": "https://www.youtube.com/watch?v=sQU95GWIR4Q",
+            "title": "DIMITRIJ OVTCHAROV FOREHAND topspin for beginner (0.4-8.4 s, cropped to the far player)",
+            "start": 0.0,
+            "end": 8.0
+          }
+        ],
         "backhand": [
           {
             "url": "https://www.youtube.com/watch?v=z3Y5JZ6rs9Q",
