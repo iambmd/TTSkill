@@ -131,6 +131,13 @@ def classify(f: dict, wing: Optional[str] = None) -> str:
 
 def detect(track: PoseTrack, side: str, contact_i: int, wing: Optional[str] = None) -> tuple[str, dict]:
     f = features(track, side, contact_i)
+    if wing is None:
+        from . import temporal
+        suggested, evidence = temporal.classify(track, side, contact_i)
+        if suggested:
+            wing = suggested
+        if evidence:
+            f["temporal"] = evidence
     return classify(f, wing), f
 
 

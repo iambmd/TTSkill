@@ -117,8 +117,8 @@ What changed and what failed:
   size filtering, low/occluded pushes can be rejected, montage cuts are not audio events,
   and the ambiguous 80–96 s montage span needs finer annotation.
 
-No new dataset videos were downloaded. Existing ignored `data/` occupies ~276 MB,
-well below 10 GB. The cached Extended OpenTTGames README/LICENSE explicitly says
+At the rally milestone no new dataset videos had been downloaded; ignored `data/`
+occupied ~276 MB. The later visual experiment below added one 488 MB download. The cached Extended OpenTTGames README/LICENSE explicitly says
 CC BY-NC-SA 4.0; its stroke-side prefixes denote **table side**, not hitting hand.
 Its cached `test_2.mp4` is visual-only. Use those annotations for visual timing only.
 The earlier statement that swift_TT is licensed for training/reference was a user constraint,
@@ -190,3 +190,52 @@ MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -c "from technique import pose; pose.s
 
 Baseline uses `extract_pose`/`save_track` loaded from `git show 30a204d:backend/technique/pose.py`
 on the same source at stride 12; the saved track is scored with the same audit command.
+
+## Visual temporal-model experiment
+
+Reverified [OpenTTGames](https://lab.osai.ai/) and
+[Extended OpenTTGames](https://github.com/moamal01/table_tennis_data) on 2026-11-16:
+both publish CC BY-NC-SA 4.0. Direct HEAD for `test_7.mp4` returned 200 and
+488,378,737 bytes. Downloaded only that file (total peak data directory ~742 MiB),
+extracted features, and deleted the new raw video. Existing test_2 and prior local
+artifacts were preserved. Generated features/model/manifest are ignored.
+`ffprobe` confirmed test_7 also has only 120 fps video, **no audio**.
+
+The cached test_2 annotations contain no backhands. test_7 supplies loop/push/flick/block
+examples of both wings. `eval.train_strokes` extracts contact-centred sequences from
+separate half-frame crops using table-side annotations. Hands must be visually verified:
+in test_7, table-left is right-handed and table-right is left-handed. An initial experiment
+estimated hand from motion and flipped one right-side example, so this is now explicit.
+
+```bash
+# After verifying the same download link/terms; all commands from repository root:
+curl -fL --max-filesize 500000000 https://lab.osai.ai/datasets/openttgames/data/test_7.mp4 -o data/openttgames/test_7.mp4
+cd backend
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.train_strokes \
+  --video ../data/openttgames/test_7.mp4 \
+  --labels ../data/openttgames/extended/table_tennis_data-main/data/raw/game_data/test/test_7.json \
+  --left-hand right --right-hand left --max-per-wing 8 \
+  --output eval/work/stroke_templates.json
+.venv/bin/python -m pytest technique/tests/test_temporal.py -q
+```
+
+The temporal classifier compares 21-frame sequences of torso-normalized wrist/elbow
+position and elbow angle by banded DTW. It abstains for low pose visibility, missing
+classes, distant matches or margins below 20%. It only estimates forehand/backhand;
+it does **not** establish topspin/drive/push/block/flick/serve subtype accuracy. The
+existing subtype heuristics remain. `TTSKILL_STROKE_MODEL=/absolute/path/to/model.json`
+is an explicit experimental opt-in; **leave it unset for production**.
+
+Training uses 8 forehand + 8 backhand test_7 examples. Despite the dataset filename,
+those examples are **training data** here. coach_demo is separate from training but is
+already a development/tuning clip, so it is not called held-out. On the reviewed 43.3 s
+backhand, nearest-class distances were FH=.797, BH=.678 (margin .149): abstained.
+On the reviewed 62.8 s forehand, FH=.525, BH=.334: incorrectly predicted backhand.
+This domain-transfer experiment is **not accepted for default production use**, and the
+automatic-backhand regression remains xfailed. More reliable wrist/depth tracks and
+independent, contact-labelled local strokes are needed before enabling it. No spin-class
+accuracy, hit precision/recall, or held-out improvement is claimed.
+
+Final verification after the temporal experiment: **290 backend tests passed, 5 skipped,
+1 expected failure** (automatic backhand), in 51.51 s. Frontend remains at 111 passing
+tests, successful production build, and the HTTP/range smoke results above.
