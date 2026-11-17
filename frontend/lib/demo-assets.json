@@ -15,13 +15,13 @@
     "duration": 52.5
   },
   "coach": {
-    "generatedAt": "2026-11-17T01:58:55.550420-05:00",
+    "generatedAt": "2026-11-17T16:35:04.353051-05:00",
     "highlights": {
-      "url": "/examples/coach-after-highlights.mp4?v=bc8fb4481d98",
-      "duration": 48.5
+      "url": "/examples/coach-after-highlights.mp4?v=7b04839039ee",
+      "duration": 40.0
     },
     "breakdown": {
-      "url": "/examples/coach-after-breakdown.mp4?v=960d529faf62",
+      "url": "/examples/coach-after-breakdown.mp4?v=c65b703637de",
       "duration": 16.0
     }
   }

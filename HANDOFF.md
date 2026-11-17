@@ -52,6 +52,15 @@ is now the upper median of his two clips (2.17), so he no longer makes this clip
 Demo re-run with the user's real height (168 cm, `MATCH_HEIGHT_CM` in `scripts/refresh_demos.py`):
 Fan Zhendong 56%, Ma Long 55%, Harimoto 54%, each with a clip; the video opens on #1.
 
+Task 3 (2026-11-17): the Coach demo coached a turn away from the table after the point
+(57.86-58.12 s). The audio rally ran 1.5 s past the last stroke on dead-ball bounces, and a
+bounce 0.04 s from the turn made it the best-aligned, fastest wrist peak. `pipeline.real_strokes`
+(used by `key_moments` and the pose summary) keeps peaks inside the rally (first-last hit
++-0.15 s), within 0.15 s of a hit, and in a playing stance (legs visible, knees < 170 deg),
+relaxing a rule only when nothing passes. On 8 peaks labelled from frames: 5/5 real kept,
+3/3 false rejected (development evidence). Demo regenerated at 2bb8a6f: coaches the
+56.26-56.76 s forehand loop (frame-checked); its replay runs 55.0-57.71 s, all rally play.
+
 Decisions: an ambiguous seed vote falls back rather than failing (failing killed Coach on
 the main demo video). Breakdown and Match still ask for the hand (their forms can). A
 left-hander who doesn't say so gets a mirrored analysis; the reply tells them how to fix it.

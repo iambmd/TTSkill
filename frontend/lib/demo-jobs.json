@@ -309,14 +309,14 @@
       {
         "kind": "highlights",
         "title": "Top 5 rallies",
-        "url": "/examples/coach-after-highlights.mp4?v=bc8fb4481d98",
-        "summary": "48 s, most shots first"
+        "url": "/examples/coach-after-highlights.mp4?v=7b04839039ee",
+        "summary": "40 s, most shots first"
       },
       {
         "kind": "breakdown",
-        "title": "Forehand drive breakdown",
-        "url": "/examples/coach-after-breakdown.mp4?v=960d529faf62",
-        "summary": "Stay short. Hit through it."
+        "title": "Forehand topspin breakdown",
+        "url": "/examples/coach-after-breakdown.mp4?v=c65b703637de",
+        "summary": "Load low. Swing up through it."
       }
     ],
     "engine": "fallback",
@@ -324,71 +324,71 @@
     "breakdown": {
       "player": "Player",
       "stroke": "forehand",
-      "stroke_type": "forehand_drive",
+      "stroke_type": "forehand_topspin",
       "handedness": "right",
-      "headline": "Stay short. Hit through it.",
-      "grip": "Shakehand, firm at contact; bat face slightly closed.",
-      "stance": "Legs out of frame, so the stance isn't measured.",
-      "swing_path": "Short backswing to the hip, then a flatter forward swing straight through the ball.",
-      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~161 deg.",
-      "follow_through": "Compact finish in front of the face; recover quickly.",
+      "headline": "Load low. Swing up through it.",
+      "grip": "Shakehand, relaxed; index finger along the backhand rubber, thumb soft.",
+      "stance": "Wide base with moderate knee bend (knees ~157 deg).",
+      "swing_path": "Low-to-high and forward, driven by the legs and waist; bat closes over the top.",
+      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~130 deg.",
+      "follow_through": "Bat finishes near the forehead, then snaps back to ready.",
       "steps": [
         {
-          "title": "Stay short",
+          "title": "Load low",
           "lines": [
-            "Small backswing to the hip.",
-            "A big swing arrives late."
+            "Weight sinks onto the back leg.",
+            "That loaded leg is your power."
           ],
           "highlight_words": [
-            "Small backswing",
-            "late"
+            "back leg",
+            "power"
           ],
-          "key_time_s": 3.8666666666666667,
+          "key_time_s": 2.2666666666666666,
           "callouts": [
-            "SHORT BACKSWING"
+            "WEIGHT BACK"
           ]
         },
         {
-          "title": "Hit through",
+          "title": "Lift through",
           "lines": [
-            "Meet the ball at the peak.",
-            "Drive forward, not upward."
+            "Bat starts below the ball.",
+            "Topspin needs an upward path."
           ],
           "highlight_words": [
-            "peak",
-            "forward"
+            "below the ball",
+            "upward"
           ],
-          "key_time_s": 3.966666666666667,
+          "key_time_s": 2.5,
           "callouts": [
-            "BAT SLIGHTLY CLOSED"
+            "CONTACT IN FRONT"
           ]
         },
         {
-          "title": "Snap back",
+          "title": "End high",
           "lines": [
-            "Bat stops in front of your nose.",
-            "You are ready for the counter."
+            "Bat finishes by the forehead.",
+            "A short finish resets faster."
           ],
           "highlight_words": [
-            "nose",
-            "counter"
+            "forehead",
+            "resets faster"
           ],
-          "key_time_s": 4.133333333333334,
+          "key_time_s": 2.7666666666666666,
           "callouts": [
-            "STAY COMPACT"
+            "BACK TO READY"
           ]
         }
       ],
-      "recap": "Stay short, hit through, snap back.",
-      "drill": "Rally forehand to forehand for 2 minutes, flat and steady.",
+      "recap": "Load low, lift through, end high.",
+      "drill": "Shadow 20 swings in a mirror, checking each cue.",
       "source": "offline-pose-template"
     },
-    "summary": "I found 17 rallies and cut the best 5 into a 48 s reel. Your forehand drive: elbow about 161\u00b0 at contact. Work on: Stay short, hit through, snap back. Then: Rally forehand to forehand for 2 minutes, flat and steady.",
+    "summary": "I found 17 rallies and cut the best 5 into a 40 s reel. Your forehand topspin: elbow about 130\u00b0 and knees about 157\u00b0 at contact, stance 1.75x shoulder width. Work on: Load low, lift through, end high. Then: Shadow 20 swings in a mirror, checking each cue.",
     "demoRefresh": {
-      "job_id": "96be67c80db84ec396507fee24cd40c7",
+      "job_id": "edd030f863e64356bf5ec92b92cf6f60",
       "source_sha256": "703de3cb23af44823470aaece36fd7ef9c0dfe9e5ee92249290eb2cf833d0c3a",
-      "revision": "11e7c23ff767899b3147515e9342f9bbd3cd0c84",
-      "generated_at": "2026-11-17T01:58:55.550420-05:00"
+      "revision": "2bb8a6f630467c3f13bdec8489c59f1ef7614e9c",
+      "generated_at": "2026-11-17T16:35:04.353051-05:00"
     }
   }
 }

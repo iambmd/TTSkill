@@ -73,6 +73,7 @@ export function CoachExample() {
         "A LangChain deepagents agent running Claude reads your request and the video you sent.",
         "It writes a to-do list for the job, and you watch it tick off live.",
         "It calls its tools: Auto-Cut finds your best rallies by sound, and Technique Breakdown tracks your pose to check your forehand.",
+        "It only coaches a real stroke: one inside a rally, right on a ball-contact sound, from your playing stance. Swings after the point ends don't count.",
         "Helper agents split the work: a clip analyst, a pro matcher and a coach writer, each with its own notes.",
         "Claude writes your reply: what went well, the fix to work on, and a drill, with the videos it made.",
       ]}

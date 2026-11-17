@@ -21,19 +21,19 @@
       "status": "completed"
     }
   ],
-  "summary": "I found 17 rallies and cut the best 5 into a 48 s reel. Your forehand drive: elbow about 161\u00b0 at contact. Work on: Stay short, hit through, snap back. Then: Rally forehand to forehand for 2 minutes, flat and steady.",
+  "summary": "I found 17 rallies and cut the best 5 into a 40 s reel. Your forehand topspin: elbow about 130\u00b0 and knees about 157\u00b0 at contact, stance 1.75x shoulder width. Work on: Load low, lift through, end high. Then: Shadow 20 swings in a mirror, checking each cue.",
   "outputs": [
     {
       "kind": "highlights",
       "title": "Top 5 rallies",
-      "url": "/examples/coach-after-highlights.mp4?v=bc8fb4481d98",
-      "summary": "48 s, most shots first"
+      "url": "/examples/coach-after-highlights.mp4?v=7b04839039ee",
+      "summary": "40 s, most shots first"
     },
     {
       "kind": "breakdown",
-      "title": "Forehand drive breakdown",
-      "url": "/examples/coach-after-breakdown.mp4?v=960d529faf62",
-      "summary": "Stay short. Hit through it."
+      "title": "Forehand topspin breakdown",
+      "url": "/examples/coach-after-breakdown.mp4?v=c65b703637de",
+      "summary": "Load low. Swing up through it."
     }
   ],
   "engine": "fallback"
