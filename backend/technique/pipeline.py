@@ -27,15 +27,20 @@ def _log(progress: Optional[Progress], msg: str):
     (progress or (lambda m: print(f"[technique] {m}", flush=True)))(msg)
 
 
-CANDIDATE_RALLIES = 4   # busiest rallies checked for the player's visibility
-VISIBLE_ENOUGH = 0.6    # share of scan frames showing the player; above it, more hits wins
+CANDIDATE_RALLIES = 6   # busiest rallies checked for how well the player is seen
 
 
-def visible_share(src: str, start: float, end: float, identity: np.ndarray, path: Path) -> float:
-    """Share of frames in [start, end] where the identified player is selected (4 fps scan)."""
+def player_view(src: str, start: float, end: float, identity: np.ndarray, path: Path) -> tuple[float, float]:
+    """(share of frames showing the identified player head to ankles, their median height as a
+    fraction of the frame) over [start, end], from a 4 fps scan. A close camera that cuts the
+    player at the waist gives guessed knee and stance numbers; a far player gives coarse ones."""
     scan = media.make_proxy(src, path, height=480, fps=4, start=start, end=end)
     track = pose.extract_pose(scan, identity=identity)
-    return float(track.valid.mean()) if len(track.times) else 0.0
+    if not len(track.times):
+        return 0.0, 0.0
+    whole = pose.whole_body(track)
+    heights = track.lm[whole, :, 1].max(axis=1) - track.lm[whole, :, 1].min(axis=1)
+    return float(whole.mean()), float(np.median(heights)) if whole.any() else 0.0
 
 
 def choose_window(src: str, duration: float, window_s: float, workdir: Path,
@@ -57,13 +62,16 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
 
         best, reason, seen = ranked[0], "longest rally by ball-contact sound", None
         if identity is not None and len(ranked) > 1:
-            shares = [visible_share(src, *span(r), identity, Path(workdir) / f"scan_{i}.mp4")
-                      for i, r in enumerate(ranked[:CANDIDATE_RALLIES])]
-            good = [i for i, v in enumerate(shares) if v >= VISIBLE_ENOUGH]
-            i = good[0] if good else int(np.argmax(shares))
-            best, seen = ranked[i], round(shares[i], 2)
-            reason = "busiest rally where you're visible" if i else reason
-            _log(progress, f"player visible in candidate rallies: {[round(v, 2) for v in shares]}")
+            views = [player_view(src, *span(r), identity, Path(workdir) / f"scan_{i}.mp4")
+                     for i, r in enumerate(ranked[:CANDIDATE_RALLIES])]
+            # How much of you there is to measure: seen whole often, and big in the frame.
+            # Below the pose floor (require_player) a rally can't be analysed at all.
+            usable = [k for k, (share, _) in enumerate(views) if share >= pose.MIN_VISIBLE]
+            i = max(usable, key=lambda k: views[k][0] * views[k][1]) if usable else 0
+            best, seen = ranked[i], round(views[i][0], 2)
+            reason = "busy rally where you're seen best" if i else reason
+            _log(progress, f"player (visible, height) in candidate rallies: "
+                           f"{[(round(a, 2), round(b, 2)) for a, b in views]}")
         start, end = span(best)
         _log(progress, f"rally {best['start']:.1f}-{best['end']:.1f}s ({best['hits']} hits)")
         return {"start": start, "end": end, "reason": reason, "visible": seen,
