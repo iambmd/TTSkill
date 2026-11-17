@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { PlayerPicker } from "./player-picker";
 import { LIMITS, type Kind, fileProblem, fmtDuration, mediaProblem, minutes } from "@/lib/validate";
 import { linkProblem, youtubeId } from "@/lib/youtube";
 import { CheckIcon, CloseIcon, LinkIcon, PlayIcon, UploadIcon, inputClass, labelClass } from "./ui";
@@ -16,7 +17,7 @@ type Meta = { duration: number; width: number; height: number };
  * checked as they change; the problem is shown here and passed to `onProblem` so the form can
  * disable its submit button.
  */
-export function VideoPicker({ name = "video", linkName = "url", title, hint, kind, onProblem }: {
+export function VideoPicker({ name = "video", linkName = "url", title, hint, kind, onProblem, findPlayer = false }: {
   name?: string;
   linkName?: string;
   title: string;
@@ -24,6 +25,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   /** Which page this is, for the link length limit in shared/limits.json. */
   kind: Kind;
   onProblem?: (problem: string | null) => void;
+  /** Ask "Which one is you?" when the video shows more than one player (Breakdown, Match, Coach). */
+  findPlayer?: boolean;
 }) {
   const id = useId();
   const linkInputId = useId();
@@ -38,7 +41,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   const ytId = youtubeId(link);
   const linkError = !file && link.trim() ? linkProblem(link) : null;
   const fileError = file ? fileProblem(file) ?? (meta ? mediaProblem(meta) : null) : null;
-  const problem = fileError ?? linkError;
+  const [playerProblem, setPlayerProblem] = useState<string | null>(null);
+  const problem = fileError ?? linkError ?? (findPlayer ? playerProblem : null);
 
   // Revoke each preview URL once it is replaced or the picker unmounts.
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
@@ -162,6 +166,12 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
           </label>
         )}
       </div>
+      {findPlayer && kind !== "autocut" && !fileError && !linkError && (
+        <PlayerPicker
+          previewUrl={file && meta ? url : null} duration={file && meta ? meta.duration : null}
+          link={!file && ytId ? link.trim() : null} kind={kind} onProblem={setPlayerProblem}
+        />
+      )}
       {!file && (
         <div>
           <label className={labelClass} htmlFor={linkInputId}>Or paste a video link</label>

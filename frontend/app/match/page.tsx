@@ -82,7 +82,7 @@ export default function MatchPage() {
         title="Who do you play like?"
         body="Film yourself hitting a few strokes. We match your height, build and swing to the closest pros and show you their breakdowns."
       />
-      <VideoPicker
+      <VideoPicker findPlayer
         kind="match" onProblem={setVideoProblem}
         title="Upload your swing" hint="Full body in frame, a few forehands or backhands. Side-on with the table visible works best."
       />

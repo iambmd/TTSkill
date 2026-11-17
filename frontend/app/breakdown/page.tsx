@@ -62,7 +62,7 @@ export default function BreakdownPage() {
         title="Swing like the pros."
         body="Drop in a clip of a player you admire and get a step-by-step coaching video of their stroke."
       />
-      <VideoPicker
+      <VideoPicker findPlayer
         kind="breakdown" onProblem={setVideoProblem}
         title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best."
       />
