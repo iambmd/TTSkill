@@ -109,9 +109,10 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     s.update(message="Reading the pose with MediaPipe...")
     out = s.dir / "pose"
     info = media.probe(video)
-    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
+    identity = pose.initial_identity(video)
+    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=identity)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
-    track = pose.extract_pose(clip, identity=pose.initial_identity(video))
+    track = pose.extract_pose(clip, identity=identity)
     try:
         pose.require_player(track)
     except pose.NoPlayer as e:

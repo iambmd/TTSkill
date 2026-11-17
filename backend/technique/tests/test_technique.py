@@ -105,3 +105,19 @@ def test_bat_side_uses_paddle_colour_then_user_hand(tmp_path):
     assert side == "left" and how.startswith("paddle")
     # a known bat hand (roster pro) beats the paddle colour
     assert bat_side(vid, tr, "right", trust_hand=True) == ("right", "known")
+
+
+def test_window_prefers_busy_rally_where_the_player_is_visible(tmp_path, monkeypatch):
+    from technique import pipeline
+    rallies = [{"start": 80, "end": 88, "hits": 26, "hit_times": [81.]},   # user is the far player
+               {"start": 40, "end": 47, "hits": 20, "hit_times": [41.]},
+               {"start": 10, "end": 15, "hits": 12, "hit_times": [11.]}]
+    shares = {79.4: .2, 39.4: .8, 9.4: .9}
+    monkeypatch.setattr(pipeline.audio, "find_rallies", lambda src: rallies)
+    monkeypatch.setattr(pipeline, "visible_share", lambda src, s, e, ident, path: shares[round(s, 1)])
+    win = pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None, identity=np.ones(3))
+    assert win["rally"]["start"] == 40 and win["visible"] == .8
+    # Without an identity (or nobody visible anywhere) the loudest rally still wins.
+    assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None)["rally"]["start"] == 80
+    shares.update({39.4: .1, 9.4: .1})
+    assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None, identity=np.ones(3))["rally"]["start"] == 80

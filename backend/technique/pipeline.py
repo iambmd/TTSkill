@@ -27,8 +27,21 @@ def _log(progress: Optional[Progress], msg: str):
     (progress or (lambda m: print(f"[technique] {m}", flush=True)))(msg)
 
 
+CANDIDATE_RALLIES = 4   # busiest rallies checked for the player's visibility
+VISIBLE_ENOUGH = 0.6    # share of scan frames showing the player; above it, more hits wins
+
+
+def visible_share(src: str, start: float, end: float, identity: np.ndarray, path: Path) -> float:
+    """Share of frames in [start, end] where the identified player is selected (4 fps scan)."""
+    scan = media.make_proxy(src, path, height=480, fps=4, start=start, end=end)
+    track = pose.extract_pose(scan, identity=identity)
+    return float(track.valid.mean()) if len(track.times) else 0.0
+
+
 def choose_window(src: str, duration: float, window_s: float, workdir: Path,
-                  progress: Optional[Progress] = None) -> dict:
+                  progress: Optional[Progress] = None, identity: Optional[np.ndarray] = None) -> dict:
+    """identity: the coached player's torso template. When given, the window is the busiest
+    rally in which that player is actually visible, not one where they are the far player."""
     if duration <= max(window_s * 1.25, 20.0):
         # short clips (e.g. a Short of a pro drilling): analyse all of it; the renderer
         # only plays the part around the key moments
@@ -36,11 +49,24 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
                 "hit_times": [h for r in audio.find_rallies(src) for h in r["hit_times"]]}
     rallies = audio.find_rallies(src)
     if rallies:
-        best = max(rallies, key=lambda r: (r["hits"], r["end"] - r["start"]))
-        start = max(0.0, best["start"] - 0.6)
-        end = min(duration, start + window_s, best["end"] + 0.8)
-        _log(progress, f"longest rally {best['start']:.1f}-{best['end']:.1f}s ({best['hits']} hits)")
-        return {"start": start, "end": end, "reason": "longest rally by ball-contact sound",
+        ranked = sorted(rallies, key=lambda r: (r["hits"], r["end"] - r["start"]), reverse=True)
+
+        def span(r: dict) -> tuple[float, float]:
+            start = max(0.0, r["start"] - 0.6)
+            return start, min(duration, start + window_s, r["end"] + 0.8)
+
+        best, reason, seen = ranked[0], "longest rally by ball-contact sound", None
+        if identity is not None and len(ranked) > 1:
+            shares = [visible_share(src, *span(r), identity, Path(workdir) / f"scan_{i}.mp4")
+                      for i, r in enumerate(ranked[:CANDIDATE_RALLIES])]
+            good = [i for i, v in enumerate(shares) if v >= VISIBLE_ENOUGH]
+            i = good[0] if good else int(np.argmax(shares))
+            best, seen = ranked[i], round(shares[i], 2)
+            reason = "busiest rally where you're visible" if i else reason
+            _log(progress, f"player visible in candidate rallies: {[round(v, 2) for v in shares]}")
+        start, end = span(best)
+        _log(progress, f"rally {best['start']:.1f}-{best['end']:.1f}s ({best['hits']} hits)")
+        return {"start": start, "end": end, "reason": reason, "visible": seen,
                 "rally": {k: best[k] for k in ("start", "end", "hits")},
                 "hit_times": best["hit_times"]}
     _log(progress, "no rallies heard; scanning pose motion at 5 fps")
@@ -138,16 +164,17 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     info = media.probe(src)
     _log(progress, f"input {info['width']}x{info['height']} {info['duration']:.1f}s")
 
+    identity = pose.initial_identity(src)
     if window:
         win = {"start": window[0], "end": window[1], "reason": "user"}
     else:
-        win = choose_window(src, info["duration"], window_s, out, progress)
+        win = choose_window(src, info["duration"], window_s, out, progress, identity=identity)
     _log(progress, f"window {win['start']:.1f}-{win['end']:.1f}s ({win['reason']})")
 
     clip = str(media.make_proxy(src, out / "clip.mp4", height=720, fps=30,
                                 start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
-    track = pose.extract_pose(clip, identity=pose.initial_identity(src))
+    track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track)
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
