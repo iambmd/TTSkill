@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -28,6 +28,10 @@ class Rally:
     start: float
     end: float
     hits: int
+    # Onset times, so a candidate can be split at a clip join (app/clips.py).
+    times: np.ndarray | None = field(default=None, repr=False, compare=False)
+    note: str = field(default="", compare=False)  # why the non-play check dropped it
+    clip_bounds: tuple[float, float] | None = field(default=None, compare=False)
 
     @property
     def shots(self) -> int:
@@ -138,7 +142,7 @@ def group_rallies(hits: np.ndarray, gap: float = 1.6, min_hits: int = 4) -> list
             groups[-1].append(float(t))
         else:
             groups.append([float(t)])
-    return [Rally(g[0], g[-1], len(g)) for g in groups if len(g) >= min_hits]
+    return [Rally(g[0], g[-1], len(g), np.array(g)) for g in groups if len(g) >= min_hits]
 
 
 def group_rallies_anchored(times: np.ndarray, ratios: np.ndarray,
@@ -159,7 +163,7 @@ def group_rallies_anchored(times: np.ndarray, ratios: np.ndarray,
         right = min(g.end + 1.2, (g.end + groups[i + 1].start) / 2 if i + 1 < len(groups) else np.inf)
         members = times[(times >= left) & (times < right)]
         if len(members) >= min_hits:
-            rallies.append(Rally(float(members[0]), float(members[-1]), len(members)))
+            rallies.append(Rally(float(members[0]), float(members[-1]), len(members), members))
     return rallies
 
 

@@ -17,10 +17,14 @@ def duration(video: Path) -> float:
 
 
 def padded_segments(spans: list[tuple[float, float]], total: float, pad: float = PAD_S,
-                    merge: bool = True) -> list[tuple[float, float]]:
+                    merge: bool = True,
+                    bounds: list[tuple[float, float]] | None = None) -> list[tuple[float, float]]:
     """Pads each (start, end) span, clamps to [0, total] and, when `merge`, joins overlapping
     spans (input must then be chronological)."""
-    segs = [(max(0.0, s - pad), min(total, e + pad)) for s, e in spans]
+    limits = bounds if bounds is not None else [(0.0, total)] * len(spans)
+    # Padding must not pull a neighbouring montage clip back into a split rally.
+    segs = [(max(0.0, lo, s - pad), min(total, hi, e + pad))
+            for (s, e), (lo, hi) in zip(spans, limits, strict=True)]
     if not merge:
         return segs
     out: list[tuple[float, float]] = []

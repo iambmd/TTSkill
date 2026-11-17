@@ -467,9 +467,12 @@ def test_autocut_with_one_rally_cuts_it_and_warns(api, monkeypatch, media):
     from app import pipelines
     from app.rally import Rally
     monkeypatch.setattr(pipelines, "detect_rallies", lambda *a: [Rally(0.5, 2.0, 6)])
-    monkeypatch.setattr("app.floor_bounce.drop_non_play", lambda video, rs: (rs, []))
+    def filtered(video, rs, *, min_hits):
+        assert min_hits == 6
+        return rs, []
+    monkeypatch.setattr("app.floor_bounce.drop_non_play", filtered)
     job = jobs.create("autocut", {})
-    jobs.run(pipelines.run_autocut, job["id"], media["ok"], "full", 5, 3.0, 1.6, 4)
+    jobs.run(pipelines.run_autocut, job["id"], media["ok"], "full", 5, 3.0, 1.6, 6)
     got = api.get(f"/jobs/{job['id']}").json()
     assert got["status"] == "done" and got["resultUrl"] and "only heard 1 rally" in got["warning"]
     assert api.get(f"/jobs/{job['id']}/result").status_code == 200

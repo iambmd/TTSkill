@@ -98,3 +98,29 @@ def test_wide_shot_keeps_real_rallies_and_drops_non_play(tmp_path):
     wrong = [n for n in labels["not_play"]
              if any(overlap(k, (n["start"], n["end"])) > .5 * (k[1] - k[0]) for k in spans)]
     assert not missed and not wrong, (missed, wrong)
+
+
+def test_dropped_spans_say_why():
+    from app.floor_bounce import why_not_play
+    swing = STANDING.copy()
+    swing[16, 0] += .1
+    assert why_not_play([[STANDING], [swing], [STANDING], [swing]]) == ""
+    assert why_not_play([[], []]) == "no player in view"
+    assert why_not_play([[BOUNCING], [BOUNCING], [BOUNCING], [STANDING]]) == "bouncing the ball before a serve"
+    assert why_not_play([[STANDING], [STANDING], [STANDING]]) == "nobody swinging"
+
+
+def test_small_figures_in_one_clip_are_another_court():
+    from app.floor_bounce import figure_size, other_court
+    # coach_demo: this table's player ~.17-.18, the neighbouring court at the end ~.11-.13
+    assert other_court([.155, .172, .18, .175, .13, .113, .12, .178, .182]) == [False] * 4 + [True] * 3 + [False] * 2
+    assert other_court([.2]) == [False] and other_court([]) == []
+    assert round(figure_size([[STANDING], [STANDING * .5, STANDING], []]), 3) == .17
+
+
+def test_quiet_gap_between_merged_candidates_is_not_a_fast_swing():
+    from app.floor_bounce import swing_fraction
+    swing = STANDING.copy()
+    swing[16, 0] += .1
+    assert swing_fraction([[STANDING], [swing]], times=np.array([1.0, 3.5])) == 0
+    assert swing_fraction([[STANDING], [swing]], times=np.array([1.0, 1.1])) == 1

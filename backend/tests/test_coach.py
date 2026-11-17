@@ -106,8 +106,11 @@ def test_coach_rallies_use_non_play_filter(tmp_path, monkeypatch):
     candidate = Rally(1, 3, 5)
     session = SimpleNamespace(need_video=lambda: video, dir=tmp_path, update=lambda **kw: None)
     monkeypatch.setattr(tools, 'find_rallies', lambda *args: [candidate])
-    monkeypatch.setattr('app.floor_bounce.drop_non_play', lambda path, rs: ([], rs))
-    assert tools.detect_rallies(session)['count'] == 0
+    def filtered(path, rs, *, min_hits):
+        assert min_hits == 7
+        return [], rs
+    monkeypatch.setattr('app.floor_bounce.drop_non_play', filtered)
+    assert tools.detect_rallies(session, min_hits=7)['count'] == 0
     assert session.rallies == []
 
 

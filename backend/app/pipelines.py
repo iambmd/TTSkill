@@ -42,10 +42,11 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args) -> None:
 def pick_segments(found: list, video: Path, mode: str, top_n: int) -> tuple[list, list[tuple[float, float]]]:
     """Rallies to keep and their padded segments. Highlights: best rallies first, padding
     never merges them so each stays its own clip. Full: every rally, overlaps merged."""
-    if mode == "highlights":
-        rallies = sorted(found, key=lambda r: -r.hits)[:top_n]
-        return rallies, padded_segments([(r.start, r.end) for r in rallies], duration(video), merge=False)
-    return found, padded_segments([(r.start, r.end) for r in found], duration(video))
+    rallies = sorted(found, key=lambda r: -r.hits)[:top_n] if mode == "highlights" else found
+    total = duration(video)
+    return rallies, padded_segments([(r.start, r.end) for r in rallies], total,
+                                    merge=mode != "highlights",
+                                    bounds=[r.clip_bounds or (0.0, total) for r in rallies])
 
 
 def few_rallies_warning(count: int) -> str | None:
@@ -66,7 +67,7 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
         if found:
             jobs.update(job_id, progress=0.2, message="Checking each rally shows real play...")
             from .floor_bounce import drop_non_play  # heavy imports (MediaPipe, OpenCV)
-            found, bounces = drop_non_play(video, found)
+            found, bounces = drop_non_play(video, found, min_hits=min_hits)
             if bounces:
                 print(f"dropped {len(bounces)} non-play spans: {[r.to_dict() for r in bounces]}")
         warning = few_rallies_warning(len(found))  # counted after non-play spans are dropped

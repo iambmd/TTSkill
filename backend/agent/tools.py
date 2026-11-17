@@ -73,7 +73,7 @@ def detect_rallies(s: Session, threshold: float = 3.0, gap: float = 1.6, min_hit
     s.update(message="Listening for ball contacts...")
     s.rallies = find_rallies(video, s.dir, threshold, gap, min_hits)
     from app.floor_bounce import drop_non_play
-    s.rallies, _ = drop_non_play(video, s.rallies)
+    s.rallies, _ = drop_non_play(video, s.rallies, min_hits=min_hits)
     rs = [r.to_dict() for r in s.rallies]
     return {"count": len(rs), "rallies": rs[:25],
             "longest": max(rs, key=lambda r: r["shots"]) if rs else None,

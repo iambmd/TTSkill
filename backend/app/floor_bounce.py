@@ -8,10 +8,12 @@ frames per second and must show a person who is actually swinging."""
 from __future__ import annotations
 
 import subprocess
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
+from . import clips
 from .rally import Rally
 
 # MediaPipe pose landmark indices
@@ -26,6 +28,8 @@ MIN_PRESENCE = 0.5   # share of sampled frames that must show a player-sized per
 MIN_SWING = 0.10     # share of sampled steps with a fast wrist (someone is striking)
 SWING_SPEED = 2.5    # wrist speed that counts as a swing, in torso-lengths per second
 MIN_TORSO = 0.07    # normalized torso length; smaller people are neighbouring courts
+OTHER_COURT = 0.8    # a rally whose biggest figure is under this share of the clip's usual size
+JOIN_MARGIN = 0.7    # seconds decoded each side of a candidate to catch a crossfade at its edge
 # A stroke lasts ~0.2 s: at 5 fps a wide phone shot of a player seen from behind showed
 # 0.04-0.13 swing on real rallies (IMG_8782), the same as pre-serve. 10 fps separates them.
 SAMPLE_FPS = 10
@@ -62,13 +66,16 @@ def _torso(lm: np.ndarray) -> float:
     return float(np.linalg.norm(sh - hp)) + 1e-6
 
 
-def swing_fraction(frames: list[list[np.ndarray]], fps: float = SAMPLE_FPS) -> float:
+def swing_fraction(frames: list[list[np.ndarray]], fps: float = SAMPLE_FPS,
+                   times: np.ndarray | None = None) -> float:
     """Share of steps where some person's wrist moves at swing speed. People are matched
     between consecutive frames by hip centre, so two players don't blur together."""
     if len(frames) < 2:
         return 0.0
     active = 0
-    for a, b in zip(frames, frames[1:]):
+    for i, (a, b) in enumerate(zip(frames, frames[1:])):
+        if times is not None and not 0.5 / fps <= times[i + 1] - times[i] <= 1.5 / fps:
+            continue  # regrouped candidates can have an unsampled quiet gap between them
         step = False
         for p in b:
             if not a:
@@ -89,16 +96,56 @@ def swing_fraction(frames: list[list[np.ndarray]], fps: float = SAMPLE_FPS) -> f
     return active / (len(frames) - 1)
 
 
-def shows_play(frames: list[list[np.ndarray]]) -> bool:
-    """Reject tiny background people, static bodies, and sustained pre-serve crouching."""
+def why_not_play(frames: list[list[np.ndarray]], times: np.ndarray | None = None) -> str:
+    """Empty when the span shows play, else the reason it doesn't: tiny background people,
+    sustained pre-serve crouching, or static bodies."""
     players = [[lm for lm in people if _torso(lm) >= MIN_TORSO] for people in frames]
-    return (presence_fraction(players) >= MIN_PRESENCE
-            and swing_fraction(players) >= MIN_SWING
-            and crouch_fraction(players) < MAX_CROUCH)
+    if presence_fraction(players) < MIN_PRESENCE:
+        return "no player in view"
+    if crouch_fraction(players) >= MAX_CROUCH:
+        return "bouncing the ball before a serve"
+    if swing_fraction(players, times=times) < MIN_SWING:
+        return "nobody swinging"
+    return ""
 
 
-def drop_non_play(video: Path, rallies: list[Rally]) -> tuple[list[Rally], list[Rally]]:
+def shows_play(frames: list[list[np.ndarray]]) -> bool:
+    return not why_not_play(frames)
+
+
+def figure_size(frames: list[list[np.ndarray]]) -> float:
+    """Median torso length of the biggest person per frame: the near player's size."""
+    sizes = [max(_torso(lm) for lm in people) for people in frames if people]
+    return float(np.median(sizes)) if sizes else 0.0
+
+
+def other_court(sizes: list[float]) -> list[bool]:
+    """Per rally of one clip: is its biggest figure too small to be this table's near player?
+    Sound from a neighbouring court passes every other check when its players are in view."""
+    if len(sizes) < 2:
+        return [False] * len(sizes)
+    usual = float(np.median(sizes))
+    return [s < OTHER_COURT * usual for s in sizes]
+
+
+@dataclass
+class Refined:
+    kept: list[Rally]
+    dropped: list[Rally]   # each with .note saying why
+    joins: list[float]     # crossfade times found in an edited video
+
+
+def drop_non_play(video: Path, rallies: list[Rally], min_hits: int = 4) -> tuple[list[Rally], list[Rally]]:
     """Returns (kept, dropped). If pose can't run (e.g. missing libGLES), keeps everything."""
+    r = refine(video, rallies, min_hits)
+    return r.kept, r.dropped
+
+
+def refine(video: Path, rallies: list[Rally], min_hits: int = 4) -> Refined:
+    """Audio proposes, video decides: regroup candidates around clip joins, then keep the
+    ones that show this table's players in play."""
+    if not rallies:
+        return Refined([], [], [])
     try:
         import mediapipe as mp
         from mediapipe.tasks.python import BaseOptions, vision
@@ -106,34 +153,73 @@ def drop_non_play(video: Path, rallies: list[Rally]) -> tuple[list[Rally], list[
         from technique.pose import model_path
     except Exception as exc:  # pose is an extra check; the cut still works without it
         print(f"non-play pose check skipped: {exc}")
-        return rallies, []
+        return Refined(rallies, [], [])
 
     try:
-        return _filter(video, rallies, mp, BaseOptions, vision, model_path)
+        return _refine(video, rallies, min_hits, mp, BaseOptions, vision, model_path)
     except Exception as exc:
         print(f"non-play pose check skipped: {exc}")
-        return rallies, []
+        return Refined(rallies, [], [])
 
 
-def _filter(video: Path, rallies: list[Rally], mp, BaseOptions, vision, model_path) -> tuple[list[Rally], list[Rally]]:
+def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, vision, model_path) -> Refined:
     opts = vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path())),
         running_mode=vision.RunningMode.IMAGE,
         num_poses=2,
         min_pose_detection_confidence=0.3,
     )
-    kept: list[Rally] = []
-    dropped: list[Rally] = []
+    rallies = sorted(rallies, key=lambda r: r.start)
+    seen: list[tuple[float, list[np.ndarray]]] = []   # (time, people) for every posed frame
+    joins: list[float] = []
     with vision.PoseLandmarker.create_from_options(opts) as landmarker:
         for r in rallies:
-            frames: list[list[np.ndarray]] = []
-            for rgb in _frames(video, r.start, r.end):
-                people = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb)).pose_landmarks
-                lms = [np.array([[p.x, p.y] for p in person]) for person in people]
-                frames.append(lms)
-            ok = shows_play(frames)
-            (kept if ok else dropped).append(r)
-    return kept, dropped
+            # A margin each side, so a crossfade at the edge of a candidate is still seen.
+            t0 = max(0.0, r.start - JOIN_MARGIN)
+            rgb = _frames(video, t0, r.end + JOIN_MARGIN)
+            joins += clips.find_joins(clips.gray(rgb), t0)
+            for k, frame in enumerate(rgb):
+                t = t0 + k / SAMPLE_FPS
+                if r.start <= t <= r.end:
+                    people = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)).pose_landmarks
+                    seen.append((t, [np.array([[p.x, p.y] for p in person]) for person in people]))
+    times = np.array([t for t, _ in seen])
+    if joins:
+        # An edited video: also look for joins in the short gaps, where a merge is on the table.
+        for a, b in zip(rallies, rallies[1:]):
+            if 2 * JOIN_MARGIN < b.start - a.end <= clips.MERGE_GAP:
+                joins += clips.find_joins(clips.gray(_frames(video, a.end, b.start)), a.end)
+        joins = clips.merge_joins(joins)
+        # Do this before merging: a retrieval/pre-serve candidate otherwise joins two
+        # rallies through a chain of short gaps, and its non-play gets averaged away.
+        non_play = []
+        for r in rallies:
+            indices = np.flatnonzero((times >= r.start) & (times <= r.end))
+            if why_not_play([seen[i][1] for i in indices], times[indices]):
+                non_play.append((r.start, r.end))
+        rallies = clips.regroup(rallies, joins, min_hits, non_play=non_play)
+
+    kept: list[Rally] = []
+    dropped: list[Rally] = []
+    sizes: list[float] = []
+    for r in rallies:
+        indices = np.flatnonzero((times >= r.start) & (times <= r.end))
+        frames = [seen[i][1] for i in indices]
+        r.note = why_not_play(frames, times[indices])
+        if r.note:
+            dropped.append(r)
+        else:
+            kept.append(r)
+            sizes.append(figure_size(frames))
+    # Within each clip, a rally whose figures are all small is another court.
+    for c in {clips.clip_index(r.start, joins) for r in kept}:
+        idx = [i for i, r in enumerate(kept) if clips.clip_index(r.start, joins) == c]
+        for i, small in zip(idx, other_court([sizes[i] for i in idx])):
+            if small:
+                kept[i].note = "another court"
+    dropped += [r for r in kept if r.note]
+    kept = [r for r in kept if not r.note]
+    return Refined(kept, sorted(dropped, key=lambda r: r.start), joins)
 
 
 def drop_floor_bounces(video: Path, rallies: list[Rally]) -> tuple[list[Rally], list[Rally]]:
