@@ -1,111 +1,74 @@
 # HANDOFF
 
-Read this first, then `PROGRESS.md` (history and goal table) and `AGENTS.md` (layout, conventions).
-Last updated 2026-11-17 after Milestone 2 (clip-aware rally refinement). Work is on `main`; code and evaluation/report changes are separate commits.
+Read this first, then `PROGRESS.md` (history, goal table, every measurement) and `AGENTS.md`
+(layout, conventions). Last updated 2026-11-17 after the player-selection and Coach-hand fixes.
+Work is on `main`; each change is its own commit. Scope set by the user: accuracy fixes only;
+the Milestone 3 product feature is deferred.
 
-## Current state (measured, development data only)
+## Current state (development data only; no held-out set exists)
 
 | Thing | Metric |
 | --- | --- |
 | Auto-Cut rally F1 (`eval.run --pose`, IoU >= .5) | coach_demo .500, match_b .647, 720p montage .743 |
-| Measured merges / splits | coach_demo 0 / 3; match_b 0 / 1; 720p montage 0 / 1 |
 | IMG_8782 Auto-Cut regression | 10/10 real rallies kept, 0/4 non-play kept |
-| Identity audit, match_b, 12 frames | 8 correct, 0 wrong, 4 abstained |
-| Coach end to end | breakdown produced on 4/4 test runs |
-| Forehand/backhand auto-detection | fails its one labelled case (strict xfail) |
-| Tests | backend 321 pass, 2 network skips, 1 known backhand xfail; frontend 119 pass and production build passes |
+| Identity audits, 12 frames each | IMG_8782 12 correct / 0 wrong / 0 abstained; match_b 8 / 0 / 4 |
+| Coach end to end | coaches the user on IMG_8782, coach_demo, both montage encodes (frame-checked) |
+| Forehand/backhand auto-detection | fails its one labelled case (strict xfail); geometry candidate rejected |
+| Tests | backend 335 pass, 2 network skips, 1 xfail; frontend 119 pass, build passes |
 
-Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match), `coach_demo.mp4`
-(640x360 continuous drill), `match_b.mp4` (480p montage, 18 clips), `coaching-demo.mp4`
-(the same montage at 720p). The user is the teal "CHINA" shirt, right-handed.
+Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone far back),
+`coach_demo.mp4` (640x360 continuous drill), `match_b.mp4` (480p montage, 18 clips with
+crossfades), `coaching-demo.mp4` (the same montage at 720p; shares match_b's labels via
+`"also"`). The user is the teal "CHINA" shirt, right-handed. OpenTTGames calibration and
+validation videos are in ignored `data/openttgames/` (about 1.9 GB of the 10 GB cap).
 
-## Upgrade plan (Milestone 1)
+## This session
 
-Three weakest points, each with the evidence, the options compared, and the choice.
+| Commit | Change | Why |
+| --- | --- | --- |
+| a49f107 | `technique/pose.py:initial_identity` seeds the player from 24 frames across the video (`identity.dominant_appearance`), falling back to the first frame's nearest person when the vote is ambiguous (`identity.choose_seed`); `implausible()` rejects bodies under 1.5 torso lengths tall | IMG_8782 seeded the opponent. Codex's draft raised on a 7 v 7 tie on the 720p coaching demo, and the fallback frame held a table phantom |
+| fd4598c | `pose.bat_side(assume=...)`; Coach reads the hand from the request (`coach.hand_from_request`), states "assumed right-handed" otherwise, and reuses one hand decision in render and match (`tools.Session.hand`) | Coach on IMG_8782 failed with "couldn't tell your hitting hand" and has no hand field |
+| f16f93f | `eval/geometry.py`, `extract_strokes.py`, `score_geometry.py`, `geometry_protocol.json` | Codex's frozen wing experiment; failed validation, kept reproducible, not in production |
 
-### 1. Rally segmentation uses audio gaps only (Auto-Cut F1 .45 / .34)
+Decisions: an ambiguous seed vote falls back rather than failing (failing killed Coach on
+the main demo video). Breakdown and Match still ask for the hand (their forms can). A
+left-hander who doesn't say so gets a mirrored analysis; the reply tells them how to fix it.
 
-Where F1 is lost (per-rally breakdown of `eval.run`):
-- coach_demo: 4 of 11 real rallies are split into 2-3 pieces by quiet stretches; 4 false
-  rallies (1 ball retrieval, 3 at the end when the table is empty and a neighbouring court plays).
-- match_b: detections straddle montage joins; late starts; 2 quiet rallies missed.
+## Next steps (ordered, each implementable directly)
 
-| Option | Evidence | Cost | Verdict |
-| --- | --- | --- | --- |
-| Tune threshold/gap/min_hits | best of 80 settings: mean F1 .39 -> .50, fitted to 2 clips | minutes | rejected |
-| Per-onset audio classifier | within-video AUC of every feature .54-.68; the ball sounds the same in and out of play | days + contact labels | rejected |
-| Pose evidence in the quiet gap | swing .2-.9 and 1-4 weak onsets/s in both same-rally and different-rally gaps | - | rejected |
-| **Clip structure from video** | crossfade score: 16 peaks on the montage (14 at labelled clip gaps), none >= .35 on continuous video; prototype F1 .32 -> .63 (480p) / .69 (720p) | reuses frames the pose filter decodes | **chosen (Milestone 2)** |
-| Ball tracking (TTNet/WASB-style) | highest ceiling; fixes continuous-video splits | GPU, labelled amateur footage, weeks | long term |
-
-Chosen design: (a) crossfade joins = share of changed pixels that ramp linearly over 0.6 s;
-(b) split candidates at joins; (c) in a video with joins, merge pieces of one clip when the
-gap is <= 4 s; (d) drop a rally whose biggest figure is under 80% of the clip's usual
-near-player size (another court). Not fixed by this: splits inside continuous recordings.
-
-### 2. Forehand/backhand is read at contact, on an axis that flips in side views
-
-Evidence: on the two labelled strokes the shoulder-axis feature scores both 1.4-1.7 (bat side).
-The wrist's position along the direction of play during the backswing separates them:
-forehand -0.9..-1.0 torso lengths (behind the hips), backhand +0.7..+0.9 (in front).
-There is no block type. Nothing local is labelled, but `data/openttgames/extended/` has
-~1,700 strokes labelled `{table side}_{forehand|backhand}_{loop|push|block|flick|serve}`
-on side-on video (frame-indexed JSON; videos download per file from lab.osai.ai).
-
-| Option | Verdict |
-| --- | --- |
-| DTW templates from OpenTTGames (Codex) | failed transfer: 1 abstain, 1 wrong of 2 |
-| **Per-stroke geometric features, self-calibrated per video** | **chosen**; spec in Milestone 4 |
-| Claude vision on 3-5 frames per contact | optional labeller when a key is set; costs per stroke |
-
-### 3. The coached player is seeded from the first five frames
-
-Evidence: on IMG_8782 the user walks in at ~1 s, so the seed is the far opponent (hip x .49,
-height .31) and the tracker then follows the opponent in 61% of mid-rally frames. Coach on
-the user's own match would coach the wrong person. The matcher itself is sound (0 wrong on the audit).
-
-| Option | Verdict |
-| --- | --- |
-| **Seed = the person nearest the camera most often across ~24 frames spread over the video** (cluster the largest person's torso histograms, take the biggest cluster's medoid) | **chosen**; cheap, no UI |
-| Let the user tap themselves on a frame | good override, needs UI; later |
-| Re-ID embedding model (OSNet) | new dependency and weights; not needed yet |
-
-## Milestone 2 completed
-
-Production commit: `94996b7`. Continued the existing uncommitted `app/clips.py` and
-`floor_bounce.py` draft. Auto-Cut
-and Coach now split candidates at crossfades, regroup pieces within a clip, and clamp
-cut padding at the joins. The 720p 27.45–50.15 s four-rally merge is fixed. A relative
-figure-size check removes three neighboring-court false rallies on coach_demo.
-
-Two important corrections to the draft: non-play candidates must block regrouping
-(otherwise retrieval at 114–117 s bridges the 107–112 and 121–127 s rallies); and
-unsampled gaps must not contribute a fast-wrist vote. The first merge-before-filter
-attempt was measured and rejected. Final P/R/F1, the failed attempt, exact reproduction
-commands and remaining cases are in `backend/eval/README.md`, under Milestone 2.
-
-`eval.run --baseline` now loads revision-local sibling modules with a real `__file__`.
-Both montage encodes use the same labels/timeline; they are not independent examples.
-Raw videos and JSON reports stay ignored, and no new dataset downloads were needed.
-The site refresh requested earlier is complete and is not the next task.
-
-## Next steps
-
-1. Milestone 3 was described only as “one product feature”; no feature or acceptance
-   criteria were left in this handoff. Get that brief before choosing a new product feature.
-2. Milestone 4: specify and validate the per-video stroke geometry and majority-near-player
-   seeding described above. Automatic backhand recognition and IMG_8782 identity remain open.
-3. Rally follow-up: hard-cut boundaries, quiet continuous-play splits, and independently
-   labelled contacts/held-out clips. Do not report the current tuning clips as held-out.
+1. **Pool bat-hand evidence across windows.** In `technique/pipeline.choose_window`, the six
+   candidate scans already run pose on the identified player. Compute
+   `pose.paddle_scores(scan, track, every=1)` per scan, sum left and right over scans, and
+   return it as `win["paddle"]`. In `bat_side`, accept `pooled: dict | None`; after the
+   window's own cues fail, apply the same `hi > 2000 and hi > 1.8 * lo` rule to the pooled
+   sums before `assume`. Acceptance: on IMG_8782 the six windows sum to left 79,047 vs
+   right 148,698 at 720p (1.88x), so Coach reports "right" from bat colour, not assumed;
+   the 720p coaching demo stays right; add a unit test with fake per-scan scores.
+2. **Coach runs the window scan twice** (`tools.extract_pose`, then `run_video` inside
+   `render_breakdown`), about a minute and a half per job. Store `win` on the Session in
+   `extract_pose` and pass `window=(start, end)` plus its hit times to `run_video`
+   (add a `hit_times` parameter so the hand and key moments still use them). Acceptance:
+   Coach on coach_demo produces the same window, hand and stroke as now, one scan only.
+3. **Montage rally rejected as "another court"** (129.5-132.9 s): print `refine()`'s joins
+   and per-rally `figure_size` around 120-138 s on both encodes. If the clip has one rally,
+   `other_court` should not run; if a join was missed, scan gaps up to `MERGE_GAP` for joins
+   even when the gap is under `2 * JOIN_MARGIN`. Acceptance: F1 on both montage encodes does
+   not drop; coach_demo keeps rejecting its three neighbouring-court rallies.
+4. **Forehand/backhand.** The hand-built geometry failed (see PROGRESS.md). Next candidate:
+   a small learned classifier (logistic regression or gradient boosting on resampled
+   wrist/elbow trajectories in the body frame) trained on OpenTTGames test_7 plus the
+   `train/` games' strokes, frozen, then scored once on test_6/test_3 with the same gates
+   as `geometry_protocol.json`. Download only the strokes' videos needed; stay under 10 GB.
+   Do not enable in production unless it passes the gates and the local backhand regression.
+5. **Block stroke type** after step 4: `technique/strokes.py` (label, direction, phases,
+   focus), offline template in `technique/analyze.py`, `frontend/lib/strokes.ts`.
 
 ## Known bugs and open questions
 
-- Coach on IMG_8782 tracks the opponent (weakness 3).
-- Hard cuts (no crossfade) between clips from the same camera are not detected. An undetected
-  camera/view change also makes relative figure size unreliable: the 129.5–132.9 s montage
-  rally is currently rejected as “another court.”
-- Coach runs the window scan twice (pose tool, then render): about a minute per job.
-- Quiet continuous-video rallies still split; one retrieval false rally remains on coach_demo.
-- Contact-level hit precision/recall is still blocked by missing contact labels. The unchanged
-  play-window proxy precisions are .699 / .876 / .874 (coach_demo / 480p / 720p).
-- All metrics are on clips that also informed the thresholds. No held-out set exists.
+- Quiet continuous-video rallies still split (3 on coach_demo); one retrieval false rally remains.
+- Same-camera hard cuts are not detected; relative figure size can then misfire.
+- On an ambiguous montage whose first frame shows the partner nearest, the fallback seed
+  coaches the partner. A "tap yourself" override in the UI would remove this.
+- Contact-level hit precision/recall is unmeasurable without per-contact labels.
+- The deep-agent path (with `ANTHROPIC_API_KEY`) was not re-run this session; the fallback
+  plan was. Its tools share the same code.

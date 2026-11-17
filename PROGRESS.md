@@ -1,8 +1,9 @@
 # Progress: detection and coaching accuracy
 
-Last updated 2026-11-17. Covers Codex's four commits (30a204d..aa32e8f, 2026-11-16) and the
-follow-up fixes (f9c9d48..60accf9), and Milestone 2 below. Every number below was re-measured on this machine; all
-of it is **development data, not held-out**: the same clips informed the thresholds.
+Last updated 2026-11-17. Covers the original fixes, Milestone 2, and the accuracy
+continuation below. Local sample results are **development data, not held-out**.
+The final section separately records two reserved visual validation clips; that
+stroke experiment failed its promotion criteria and is not in production.
 
 ## Status by goal
 
@@ -10,8 +11,8 @@ of it is **development data, not held-out**: the same clips informed the thresho
 | --- | --- | --- |
 | a. Floor bounces / shoe squeaks not counted as hits | partial | The pre-serve floor-bounce routine in IMG_8782 (14.4–19.8 s) is dropped by the crouch check (`tests/test_floor_bounce.py`). Within a kept rally, audio still counts every sharp sound: the onset play-window proxy is unchanged (coach_demo .699, match_b .876). Contact-level hit precision/recall needs per-contact labels, which don't exist. |
 | b. Merged rallies split; serve prep not counted | partial | merges = 0 on both labelled clips; anchored grouping keeps weak sounds from bridging breaks (`tests/test_rally.py`). Pre-serve span 120.0–122.9 s in IMG_8782 is dropped. Milestone 2 splits the 720p 27.4–50.1 s merge at crossfades; measured merges are now zero on both encodes. Quiet continuous-video splits remain. |
-| c. Correct hitting hand + stroke type | partial | Hand: right on every run (bat colour on the coaching demo and the match example; faster-wrist fallback on coach_demo), matching the provisional label. No per-contact hand labels. Forehand/backhand auto-detection still fails on the one labelled backhand (strict xfail). There is no **block** stroke type, and no subtype (drive/topspin/push/flick) accuracy can be measured. |
-| d. Coaching tracks you, not your opponent | partial | match_b identity audit (12 reviewed frames): 8 correct, **0 wrong**, 4 abstained; sampled coverage 52% → 62%. Coach windows: coach_demo 89% of frames with you; 720p coaching demo picks 54.0–60.2 s (you near, 85%), checked against source frames. Find my pro match now uses the same identity. The later Milestone 1 review found that first-frame seeding selects the opponent on IMG_8782; that remains unresolved. |
+| c. Correct hitting hand + stroke type | partial | Hand: Coach states an assumption (right) when no cue is decisive, as on IMG_8782, and reads "left-handed" from the request. Otherwise right on every run (bat colour on the coaching demo and the match example; faster-wrist fallback on coach_demo), matching the provisional label. No per-contact hand labels. Forehand/backhand auto-detection still fails on the one labelled backhand (strict xfail). There is no **block** stroke type, and no subtype (drive/topspin/push/flick) accuracy can be measured. |
+| d. Coaching tracks you, not your opponent | done on the available evidence | Video-wide near-player seeding fixes the IMG_8782 audit: 2 correct / 5 wrong / 5 abstained → **12 correct / 0 wrong / 0 abstained**. match_b stays **8 / 0 / 4**. Coach completes on IMG_8782 and the 720p coaching demo, coaching the user in both (checked on frames). Coach, Breakdown and Match share this selector. Sparse development audits do not establish full-video accuracy; an ambiguous vote falls back to the first frame's nearest person. |
 | e. Your backhand recognized in coaching | partial | "Fix my backhand" now renders a backhand breakdown (was a Chop). Automatic backhand detection on the labelled 43.3 s backhand still says forehand. |
 
 ## Review of Codex's work (2026-11-16)
@@ -122,3 +123,107 @@ excerpt, each returning four rallies in a 27 s reel. Both result routes served
 `206 Partial Content` for byte-range requests. Reproduce from `backend/` with
 `MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.smoke_rallies` (external analysis
 is disabled by the script; generated jobs and `eval/work/milestone2-smoke.json` are ignored).
+
+## Accuracy continuation (2026-11-17)
+
+User scope: accuracy fixes only; Milestone 3's new product feature is deferred.
+
+1. **Player selection:** compare first-frame-seed baseline tracks with a dominant
+   near-player appearance from 24 samples across each clip, retaining a fixed identity.
+2. **Stroke geometry:** validate the proposed backswing/direction-of-play features
+   on labelled contacts before enabling them in production. Separate calibration
+   footage from validation footage; do not tune on validation results.
+3. **Verification:** run relevant regressions, full backend checks, frontend build,
+   and update this file and HANDOFF with actual outcomes before separate commits/push.
+
+Official OpenTTGames and Extended OpenTTGames access/license pages were rechecked
+on November 17: both state CC BY-NC-SA 4.0. Existing annotations are local; no new
+video had been downloaded at the start of this continuation. Subsequent downloads
+and results are recorded below; footage stays local and counts toward the 10 GB limit.
+
+### Player-selection trial and data check
+
+The initial video-wide seed trial on IMG_8782 changes the 12-frame manual audit
+from **2 correct / 5 wrong / 5 abstained** to **12 correct / 0 wrong / 0 abstained**;
+sampled track visibility rises .617 → .952. Labels are in
+`eval/regressions/img8782_identity.json`. This is a development audit, not full-video
+identity accuracy. The same trial abstains on match_b's tied appearance-cluster
+vote, so it is **not ready to ship**; montage compatibility is being investigated.
+
+Downloaded `test_2.mp4` (225,118,372 bytes, calibration) and `test_3.mp4`
+(487,941,402 bytes, reserved validation) after checking public access and terms.
+New total: **713,059,774 bytes**, well below the 10 GB cap including the documented
+previous downloads. Hashes, URLs and splits are in ignored
+`data/openttgames/accuracy_downloads.json`. These videos are for visual timing/wing
+evaluation, not audio training; no raw footage or generated features will enter Git.
+
+### Revised selector and stroke sample coverage
+
+The montage's two leading clusters had **7 vs 6** observations, not an exact tie.
+The initial extra two-vote margin rejected the correct largest cluster. Following
+the handoff's largest-cluster design, the selector now rejects exact ties and weak
+support, while keeping the existing strict appearance-distance threshold. Re-audit:
+match_b remains **8 correct / 0 wrong / 4 abstained**; IMG_8782 remains **12 / 0 / 0**.
+Shipped in `a49f107` after the checks below.
+
+Annotation counts showed test_2 has only forehands, so it cannot calibrate both
+wings. Added test_7 (41 non-serve/non-lob contacts, calibration) and test_6 (31,
+reserved validation), while test_3 has 19 validation contacts including a left-hander.
+Total new video downloads are now **1,877,170,209 bytes**; all remain ignored and
+within the 10 GB limit. The simple “wrist in front = backhand” rule already fails
+forehand pushes on calibration, so it will not ship unchanged. Evaluating calibrated
+forward/lateral backswing geometry before opening validation results.
+
+### Geometry candidate frozen before validation
+
+On the 41 test_7 calibration contacts, the existing wing decision gets **16/41**
+correct. The candidate supplies a decision on **22/41** contacts, of which **21**
+are correct; falling back to the existing decision elsewhere gives **32/41**.
+It also returns backhand on the local 43.3 s regression and forehand on the prior
+62.8 s development check. These are calibration observations, not validation.
+
+The candidate and promotion criteria are frozen in ignored
+`eval/work/accuracy-next/geometry-freeze.json` before scoring test_6/test_3:
+selective precision >= .90, improved hybrid accuracy, no wing's recall falling
+more than .05, and the real backhand regression passing. If it fails, retain it
+as an experiment rather than retuning on those validation results.
+
+### Frozen validation outcome — candidate rejected
+
+The geometry candidate failed its predeclared promotion gates. On test_6, wing-stage
+correctness rises **17/31 → 20/31**, but selective precision is **16/21 (.762)** and
+forehand recall falls **1.000 → .857**. On test_3 it falls **14/19 → 13/19**, with
+backhand recall **.286 → .143**. Combined, only **25/31 (.806)** supplied decisions
+are correct. These are visual, labelled-contact/player/hand-conditioned results,
+not end-to-end stroke or audio accuracy. No thresholds were changed after validation.
+The candidate stays in `backend/eval/` (committed as `f16f93f`); production stroke
+detection is unchanged and the automatic-backhand regression remains an expected failure.
+
+### Player selection and Coach hand shipped (a49f107, fd4598c)
+
+Verifying the video-wide seed end to end found two problems, both fixed before committing:
+
+- **Ambiguous vote failed Coach on the user's 720p coaching demo.** The user's cluster and a
+  mixed cluster (partner frames, two user frames, crossfades) tied 7 v 7, and the draft
+  raised "couldn't choose a consistent player". An ambiguous vote now falls back to the
+  nearest person in the first sampled frame, the previous default.
+- **That first frame held a phantom.** MediaPipe placed a skeleton on the table base with
+  full visibility and a longer torso than the player's, but a body only 0.87 torso lengths
+  tall. `implausible()` now requires a body at least 1.5 torso lengths tall.
+- **Coach then failed on IMG_8782 with "couldn't tell your hitting hand".** Seen from
+  behind at a distance, no cue was decisive in the chosen window (bat colour 1.5x, under
+  the 1.8x bar), and Coach has no hand field. Coach now reads the hand from the request
+  ("left-handed", "lefty") and otherwise states "I assumed right-handed" in its reply.
+  Breakdown and Match still ask, since their forms have a hand selector. Across the six
+  candidate windows, bat colour said right in all six (the truth); wrist speed at contacts
+  decided once, wrongly (left); the faster wrist split 3/2/1.
+
+| Check | Before | After |
+| --- | --- | --- |
+| IMG_8782 identity audit (12 frames) | 2 correct / 5 wrong / 5 abstained | 12 / 0 / 0 |
+| match_b identity audit (12 frames) | 8 / 0 / 4 | 8 / 0 / 4 |
+| Coach on IMG_8782 ("best rallies and coach my technique") | no breakdown | 5-rally reel + forehand drive breakdown of the user, 80.6-88.1 s, assumed right-handed |
+| Coach on the 720p coaching demo | user, 54-60 s | same (hips x .14, right hand by bat colour) |
+
+Backend: **335 passed, 2 network skips, 1 known automatic-backhand xfail** (with
+`TTSKILL_SAMPLE` = IMG_8782). The seed is chosen on all demo inputs and samples.
