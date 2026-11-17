@@ -35,6 +35,10 @@ class Session:
     rallies: list = field(default_factory=list)
     pose: Optional[dict] = None
     hand: str = "auto"  # from the request ("left-handed"); Coach has no hand field to ask with
+    # The analysis window and player seed, chosen once by extract_pose and reused by the
+    # render and match steps: each scan of the candidate rallies costs about a minute.
+    window: Optional[dict] = None
+    identity: object = None
 
     @property
     def dir(self) -> Path:
@@ -110,8 +114,11 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     s.update(message="Reading the pose with MediaPipe...")
     out = s.dir / "pose"
     info = media.probe(video)
-    identity = pose.initial_identity(video)
-    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=identity)
+    if s.window is None:
+        s.identity = pose.initial_identity(video)
+        s.window = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
+                                 identity=s.identity)
+    identity, win = s.identity, s.window
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     track = pose.extract_pose(clip, identity=identity)
     try:
@@ -159,7 +166,8 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
     known = (s.pose or {}).get("bat_hand")
     res = run_video(str(video), str(out), stroke or "", player or None, progress=lambda m: s.update(message=m),
                     stroke_type=stroke_type or (s.pose or {}).get("stroke_type"),
-                    hand=known or s.hand, trust_hand=bool(known), assume_hand="right")
+                    hand=known or s.hand, trust_hand=bool(known), assume_hand="right",
+                    chosen=s.window, identity=s.identity)
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
     if cards:
         for step, card in zip(b.steps, cards):
@@ -185,7 +193,8 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
 def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[float] = None) -> dict:
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
-                      hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m))
+                      hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m),
+                      chosen=s.window, identity=s.identity)
     if res["video"]:
         top = res["matches"][0]
         s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",

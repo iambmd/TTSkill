@@ -153,3 +153,35 @@ def test_summary_states_an_assumed_hand():
     assert "assumed right-handed" in text and "left-handed" in text
     pz["bat_hand_how"] = "paddle colour near wrist"
     assert "assumed" not in _summary({"extract_pose": pz}, "forehand")
+
+
+def test_render_and_match_reuse_the_window_the_pose_step_chose(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from agent import tools
+    import technique.pipeline as pipeline
+    seen = {}
+    win = {"start": 34.6, "end": 42.6, "reason": "busy rally", "hit_times": [36.0], "paddle": {"left": 1, "right": 9}}
+    session = SimpleNamespace(need_video=lambda: tmp_path / "v.mp4", dir=tmp_path, update=lambda **kw: None,
+                              pose={"bat_hand": "right", "stroke_type": "forehand_drive"}, hand="auto",
+                              window=win, identity="seed", add_output=lambda *a: None)
+
+    def fake_run_video(*args, **kwargs):
+        seen["render"] = kwargs
+        raise RuntimeError("stop after the call")
+    monkeypatch.setattr(pipeline, "run_video", fake_run_video)
+    try:
+        tools.render_breakdown(session)
+    except RuntimeError:
+        pass
+    assert seen["render"]["chosen"] is win and seen["render"]["identity"] == "seed"
+    assert seen["render"]["hand"] == "right" and seen["render"]["trust_hand"]
+
+    def fake_match_video(*args, **kwargs):
+        seen["match"] = kwargs
+        raise RuntimeError("stop after the call")
+    monkeypatch.setattr(tools, "match_video", fake_match_video)
+    try:
+        tools.match_players(session)
+    except RuntimeError:
+        pass
+    assert seen["match"]["chosen"] is win and seen["match"]["identity"] == "seed"

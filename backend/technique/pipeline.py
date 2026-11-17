@@ -166,9 +166,12 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
               window_s: float = 8.0, t2v_provider: str = "none",
               progress: Optional[Progress] = None, hand: str = "auto",
               stroke_type: Optional[str] = None, trust_hand: bool = False,
-              assume_hand: Optional[str] = None) -> dict:
+              assume_hand: Optional[str] = None, chosen: Optional[dict] = None,
+              identity: Optional[np.ndarray] = None) -> dict:
     """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible;
     with trust_hand, always used).
+    chosen, identity: a choose_window result and the player seed already computed for this
+    video (Coach's pose step), so the candidate rallies aren't scanned again.
     stroke: a broad stroke, or "" / "auto" to read it from the swing.
     stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect."""
     t0 = time.time()
@@ -180,8 +183,11 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     info = media.probe(src)
     _log(progress, f"input {info['width']}x{info['height']} {info['duration']:.1f}s")
 
-    identity = pose.initial_identity(src)
-    if window:
+    if identity is None:
+        identity = pose.initial_identity(src)
+    if chosen:
+        win = chosen
+    elif window:
         win = {"start": window[0], "end": window[1], "reason": "user"}
     else:
         win = choose_window(src, info["duration"], window_s, out, progress, identity=identity)

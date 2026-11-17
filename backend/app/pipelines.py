@@ -143,7 +143,7 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
 
 def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
                 hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None,
-                grip: str | None = None) -> dict:
+                grip: str | None = None, chosen: dict | None = None, identity=None) -> dict:
     """Find my pro match core, shared by the /jobs/match pipeline and the coach agent:
     pose on the user's clip, body profile, height (entered or from the table), top 3 pros
     with the same bat hand (and grip first, when given), form differences, and one
@@ -159,8 +159,11 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     report(0.1, "Finding your best swings...")
     info = media.probe(video)
     # Same video-wide player seed as Breakdown and Coach, then fixed appearance tracking.
-    identity = pose.initial_identity(video)
-    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=identity)
+    # Coach passes the window and seed its pose step already chose (`chosen`, `identity`).
+    if identity is None:
+        identity = pose.initial_identity(video)
+    win = chosen or choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
+                                  identity=identity)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     report(0.3, "Reading your body and swing with MediaPipe...")
     track = pose.extract_pose(clip, identity=identity)
