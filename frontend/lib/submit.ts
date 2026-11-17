@@ -33,6 +33,8 @@ export type ProMatch = {
   score: number;
   form_score: number | null;
   differences: string[];
+  /** The pro's cached breakdown of this stroke; null when no usable clip exists. */
+  breakdown?: string | null;
   source_url?: string | null;
 };
 

@@ -11,5 +11,7 @@ export default defineConfig({
       { find: "server-only", replacement: `${root}test/server-only.ts` },
     ],
   },
+  // Same JSX runtime as Next.js, so components render in tests without importing React.
+  esbuild: { jsx: "automatic" },
   test: { environment: "node", include: ["test/**/*.test.ts"] },
 });

@@ -19,6 +19,7 @@ from app import jobs, pipelines
 
 KINDS = ('autocut', 'breakdown', 'match', 'coach')
 REQUEST = "Here's my match, show my best rallies and fix my forehand"
+MATCH_HEIGHT_CM = 168  # the player's real height, entered as on the form (else estimated from the table)
 
 
 def probe(path: Path) -> dict:
@@ -51,7 +52,7 @@ def run(kind: str, manifest: Path) -> None:
     elif kind == 'breakdown':
         params.update(stroke='', stroke_type='auto', player='Ma Long', hand='auto')
     elif kind == 'match':
-        params.update(stroke='forehand', hand='auto', grip='shakehand', height_cm=None)
+        params.update(stroke='forehand', hand='auto', grip='shakehand', height_cm=MATCH_HEIGHT_CM)
     else:
         params['request'] = REQUEST
     job = jobs.create(kind, params)
@@ -67,7 +68,7 @@ def run(kind: str, manifest: Path) -> None:
     elif kind == 'breakdown':
         jobs.run(pipelines.run_breakdown, job['id'], video, '', '', 'Ma Long', 'auto', '')
     elif kind == 'match':
-        jobs.run(pipelines.run_match, job['id'], video, 'forehand', None, 'auto', 'shakehand')
+        jobs.run(pipelines.run_match, job['id'], video, 'forehand', MATCH_HEIGHT_CM, 'auto', 'shakehand')
     else:
         from agent.coach import run_coach
         jobs.run(run_coach, job['id'], video, None, REQUEST)

@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
-import type { Breakdown, Job, ProMatch } from "@/lib/submit";
+import type { Breakdown, Job } from "@/lib/submit";
 import { BoldText, CheckIcon, DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { Matches } from "./matches";
 
 type Rally = NonNullable<Job["rallies"]>[number];
 
@@ -142,49 +143,6 @@ function Steps({ b }: { b: Breakdown }) {
   );
 }
 
-function Matches({ matches }: { matches: ProMatch[] }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="eyebrow">Your closest pros</h2>
-      <ol className="space-y-2">
-        {matches.map((m, i) => (
-          <li key={m.id} className="rounded-2xl border border-line bg-panel p-4">
-            <div className="flex items-start gap-4">
-              <span className="headline text-4xl leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
-              <div className="min-w-0 flex-1">
-                <p className="text-lg font-bold">{m.name}</p>
-                <p className="text-sm text-muted">
-                  {[m.country, `${m.height_cm} cm`, `${m.bat_hand}-handed`, m.grip].filter(Boolean).join(" · ")}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="headline text-4xl tabular-nums text-accent">{m.score}%</p>
-                <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted">body match</p>
-              </div>
-            </div>
-            {m.form_score !== null && (
-              <div className="mt-3">
-                <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-muted">
-                  <span>Swing match</span><span className="tabular-nums">{m.form_score}%</span>
-                </div>
-                <div className="mt-1 h-1.5 rounded-full bg-white/10">
-                  <div className="h-full rounded-full bg-accent" style={{ width: `${m.form_score}%` }} />
-                </div>
-              </div>
-            )}
-            {m.differences.length > 0 && (
-              <ul className="mt-3 space-y-1 text-sm">
-                {m.differences.map((d) => <li key={d} className="flex gap-2"><span aria-hidden className="text-accent">→</span>{d}</li>)}
-              </ul>
-            )}
-            {m.warnings?.map((w) => <Warning key={w} className="mt-3">{w}</Warning>)}
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
 function Todos({ todos, running }: { todos: NonNullable<Job["todos"]>; running: boolean }) {
   if (!todos.length) {
     return (
@@ -264,7 +222,7 @@ function CoachView({ job }: { job: Job }) {
         ))}
         {running && !(job.outputs ?? []).length && <div className="stripes aspect-video rounded-3xl border border-line bg-panel" />}
         {job.breakdown && <Steps b={job.breakdown} />}
-        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} />}
+        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {(job.agentFiles ?? []).length > 0 && (
           <details className="group rounded-2xl border border-line bg-panel">
             <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
@@ -425,7 +383,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           )}
         </div>
         {job.breakdown && <Steps b={job.breakdown} />}
-        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} />}
+        {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
         <details className="group rounded-2xl border border-line bg-panel">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">

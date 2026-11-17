@@ -15,7 +15,7 @@ from .match import DATA
 CARD_S = 1.6
 
 
-def _card(rank: int, m: dict, stroke: str) -> np.ndarray:
+def _card(rank: int, m: dict, stroke: str, has_clip: bool = True) -> np.ndarray:
     img = Image.new("RGB", (W, H), BG[::-1])
     d = ImageDraw.Draw(img)
     _brand(d)
@@ -32,22 +32,29 @@ def _card(rank: int, m: dict, stroke: str) -> np.ndarray:
     d.text((60, y + 90), f"{m['score']}%", font=font("display", 120), fill=ACCENT)
     d.text((60 + d.textlength(f"{m['score']}%", font=font("display", 120)) + 24, y + 150),
            "body match", font=font("semibold", 44), fill=WHITE)
+    if not has_clip:
+        d.text((60, y + 290), f"No {stroke} clip of {m['name'].split()[-1]} yet.", font=font("semibold", 46), fill=GREY)
     return np.array(img)[:, :, ::-1].copy()
 
 
 def compile_matches(matches: list[dict], stroke: str, workdir: Path, dest: Path) -> Path | None:
-    """Concatenates card + breakdown for each match that has a cached video. None if none do."""
+    """A card per match in rank order, each followed by the pro's cached breakdown when there
+    is one. A pro can rank first on body proportions with no usable clip of this stroke
+    (Ovtcharov's forehands tracked his sparring partner and were dropped); skipping him made
+    the video open on "#2 MATCH" under a list that starts with him. None if no pro has a clip."""
     workdir.mkdir(parents=True, exist_ok=True)
     parts: list[Path] = []
+    clips = 0
     for i, m in enumerate(matches, 1):
         video = DATA / m["breakdown"] if m.get("breakdown") else None
-        if not video or not video.exists():
-            continue
+        has_clip = bool(video and video.exists())
         card = workdir / f"card{i}.mp4"
-        frame = _card(i, m, stroke)
-        encode_frames((frame for _ in range(int(CARD_S * 30))), card, W, H, 30)
-        parts += [card, video]
-    if not parts:
+        frame = _card(i, m, stroke, has_clip)
+        # Hold a card with no clip after it a little longer, so the note can be read.
+        encode_frames((frame for _ in range(int(CARD_S * (1 if has_clip else 1.5) * 30))), card, W, H, 30)
+        parts += [card, video] if has_clip else [card]
+        clips += has_clip
+    if not clips:
         return None
     listing = workdir / "list.txt"
     listing.write_text("".join(f"file '{p.resolve()}'\n" for p in parts))

@@ -121,6 +121,29 @@ def test_compiled_video(tmp_path, monkeypatch):
     assert comp.compile_matches([{**m[0], "breakdown": None}], "forehand", tmp_path / "w2", tmp_path / "o2.mp4") is None
 
 
+def test_compiled_video_opens_on_the_top_match_even_without_its_clip(tmp_path, monkeypatch):
+    # Demo: Ovtcharov ranked #1 with no usable forehand clip, and the video opened on "#2 MATCH".
+    import subprocess as sp
+    monkeypatch.setattr(comp, "DATA", tmp_path)
+    clip = tmp_path / "p" / "breakdown.mp4"
+    clip.parent.mkdir()
+    encode_frames((np.zeros((1920, 1080, 3), np.uint8) for _ in range(15)), clip, 1080, 1920, 30)
+    pro = {"height_cm": 180, "bat_hand": "right", "country": "X", "score": 50}
+    ranked = [{**pro, "name": "Dimitrij Ovtcharov", "breakdown": None},
+              {**pro, "name": "Tomokazu Harimoto", "breakdown": "p/breakdown.mp4"}]
+    cards = []
+    original = comp._card
+    monkeypatch.setattr(comp, "_card", lambda rank, m, stroke, has_clip=True: cards.append(
+        (rank, m["name"], has_clip)) or original(rank, m, stroke, has_clip))
+    out = comp.compile_matches(ranked, "forehand", tmp_path / "w", tmp_path / "out.mp4")
+    assert cards == [(1, "Dimitrij Ovtcharov", False), (2, "Tomokazu Harimoto", True)]
+    listing = (tmp_path / "w" / "list.txt").read_text().splitlines()
+    assert [line.split("'")[1].rsplit("/", 1)[-1] for line in listing] == ["card1.mp4", "card2.mp4", "breakdown.mp4"]
+    seconds = float(sp.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                            str(out)], capture_output=True, text=True, check=True).stdout)
+    assert seconds > 2 * comp.CARD_S
+
+
 def test_roster_shape():
     d = json.loads(match.ROSTER.read_text())["players"]
     assert len(d) == 20 and sum(p["gender"] == "M" for p in d) == 11

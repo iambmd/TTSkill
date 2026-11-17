@@ -40,6 +40,18 @@ rally changed on both encodes (also found a missed join at 67.8 s); coach_demo/I
 no joins. F1 match_b .647 -> .629, 720p .743 -> .722: the rally is real but detected from
 131.4 s (label 129.5 s), IoU .41, so it scores as an unmatched detection. Late starts are open.
 
+Task 2 (2026-11-17): the pro-match demo video opened on "#2 MATCH". No rendering bug: the
+cached JSON and a fresh API response have the same fields and order. Cause: Ovtcharov ranked
+#1 with no usable forehand clip (both tracked his sparring partner and were dropped on Nov 15),
+and `players/compile.py` silently skipped pros without a clip. Now every match gets a card in
+rank order ("No forehand clip of X yet" when missing); the cards component moved to
+`frontend/app/jobs/[id]/matches.tsx` and says the same; `frontend/test/matches.test.ts`
+checks the top match renders first. Ovtcharov's forehand added from the user's video
+`sQU95GWIR4Q` (0.4-8.4 s, cropped to the far player; commit 8429cd6). His profile's stance
+is now the upper median of his two clips (2.17), so he no longer makes this clip's top 3.
+Demo re-run with the user's real height (168 cm, `MATCH_HEIGHT_CM` in `scripts/refresh_demos.py`):
+Fan Zhendong 56%, Ma Long 55%, Harimoto 54%, each with a clip; the video opens on #1.
+
 Decisions: an ambiguous seed vote falls back rather than failing (failing killed Coach on
 the main demo video). Breakdown and Match still ask for the hand (their forms can). A
 left-hander who doesn't say so gets a mirrored analysis; the reply tells them how to fix it.
@@ -65,5 +77,6 @@ left-hander who doesn't say so gets a mirrored analysis; the reply tells them ho
 - A left-hander whose pooled bat colour stays under 1.8x (2 of the 4 mirrored test videos)
   gets "assumed right-handed" unless the request says otherwise; the reply says how to fix it.
 - Contact-level hit precision/recall is unmeasurable without per-contact labels.
+- A profile with two clips takes the upper of the two values as its "median" body (`players/build._save`), so one wide-stance clip moves a pro's stance.
 - The deep-agent path (with `ANTHROPIC_API_KEY`) was not re-run this session; the fallback
   plan was. Its tools share the same code.
