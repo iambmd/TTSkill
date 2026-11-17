@@ -1,0 +1,21 @@
+{
+  "date": "2026-11-17",
+  "geometry_sha256": "fc25e0a0a713b861dd13c800f451f0bfcc319c89e4af4602858a933ed4bbd9d9",
+  "calibration": [
+    "test_7",
+    "local_backhand",
+    "local_forehand"
+  ],
+  "validation": [
+    "test_6",
+    "test_3"
+  ],
+  "frozen_before_validation": true,
+  "promotion_criteria": {
+    "selective_precision_min": 0.9,
+    "per_wing_recall_drop_max": 0.05,
+    "hybrid_accuracy_must_improve": true,
+    "local_backhand_regression_must_pass": true
+  },
+  "notes": "Scores are conditional on labelled contact/player and manually verified hitting hand. Validation labels will not tune this candidate."
+}
