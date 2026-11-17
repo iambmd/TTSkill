@@ -46,3 +46,34 @@ def test_drops_pre_serve_floor_bounce_on_sample(tmp_path):
     kept, dropped = drop_floor_bounces(SAMPLE, detect_rallies(SAMPLE, tmp_path))
     assert any(r.start < 17 and r.end > 15 for r in dropped)  # Duke bouncing the ball at ~14-16 s
     assert any(r.start < 66 and r.end > 54 for r in kept)     # the longest rally survives
+
+
+def test_walking_and_discontinuities_do_not_count_as_swings():
+    from app.floor_bounce import swing_fraction
+    assert swing_fraction([[STANDING], [STANDING + [.08, 0]]]) == 0
+    assert swing_fraction([[STANDING], [STANDING + [.5, 0]]]) == 0
+    assert swing_fraction([[STANDING], [], [STANDING]]) == 0
+    swinging = STANDING.copy()
+    swinging[16, 0] += .1
+    assert swing_fraction([[STANDING], [swinging]]) == 1
+
+
+def test_missing_model_keeps_candidates(monkeypatch):
+    from app import floor_bounce
+    from technique import pose as pose_module
+    from app.rally import Rally
+    def missing():
+        raise OSError('model unavailable')
+    monkeypatch.setattr(pose_module, 'model_path', missing)
+    rs = [Rally(1, 4, 6)]
+    assert floor_bounce.drop_non_play(Path('unused.mp4'), rs) == (rs, [])
+
+
+def test_background_players_and_pre_serve_bounces_are_rejected():
+    from app.floor_bounce import shows_play
+    swing = STANDING.copy()
+    swing[16, 0] += .1
+    assert shows_play([[STANDING], [swing], [STANDING], [swing]])
+    assert not shows_play([[p * .1 for p in frame] for frame in [[STANDING], [swing]]])
+    assert not shows_play([[BOUNCING], [BOUNCING], [BOUNCING], [STANDING]])
+    assert not shows_play([[], []])

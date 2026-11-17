@@ -96,3 +96,16 @@ def test_agent_failure_falls_back(tmp_path, monkeypatch):
     done = jobs.load(job["id"])
     assert done["status"] == "done" and done["engine"] == "fallback"
     assert "model unavailable" in done["agentError"] and done["summary"].startswith("I found 1 rally and cut it")
+
+
+def test_coach_rallies_use_non_play_filter(tmp_path, monkeypatch):
+    from agent import tools
+    from app.rally import Rally
+    from types import SimpleNamespace
+    video = tmp_path / 'video.mp4'
+    candidate = Rally(1, 3, 5)
+    session = SimpleNamespace(need_video=lambda: video, dir=tmp_path, update=lambda **kw: None)
+    monkeypatch.setattr(tools, 'find_rallies', lambda *args: [candidate])
+    monkeypatch.setattr('app.floor_bounce.drop_non_play', lambda path, rs: ([], rs))
+    assert tools.detect_rallies(session)['count'] == 0
+    assert session.rallies == []

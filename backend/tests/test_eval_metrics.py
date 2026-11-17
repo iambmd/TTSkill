@@ -40,3 +40,17 @@ def test_onset_split():
     assert res["in_play"] == 2 and res["in_dead"] == 1
     assert res["play_precision"] == round(2 / 3, 3)
     assert in_spans(10.2, [(0, 10)], margin=0.3)
+
+
+def test_evaluations_have_isolated_workdirs(tmp_path, monkeypatch):
+    from eval import run
+    paths = []
+    def evaluate(gt, workdir, use_pose, **kwargs):
+        paths.append(workdir)
+        (workdir / 'audio.wav').write_text(gt['name'])
+        return {'ok': True}
+    monkeypatch.setattr(run, '_evaluate', evaluate)
+    for _ in range(2):
+        assert run.evaluate({'name': 'same_clip'}, tmp_path, False) == {'ok': True}
+    assert paths[0] != paths[1]
+    assert all(not p.exists() for p in paths)

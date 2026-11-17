@@ -8,8 +8,6 @@ import subprocess
 from pathlib import Path
 
 import numpy as np
-from scipy.ndimage import median_filter
-from scipy.signal import butter, find_peaks, sosfiltfilt
 
 
 def load_audio(path: str | Path, sr: int = 22050) -> tuple[np.ndarray, int]:
@@ -22,16 +20,8 @@ def load_audio(path: str | Path, sr: int = 22050) -> tuple[np.ndarray, int]:
 
 
 def detect_hits(x: np.ndarray, sr: int, threshold: float = 3.0) -> np.ndarray:
-    if len(x) < sr:
-        return np.array([])
-    sos = butter(4, [2000, min(6000, sr / 2 - 100)], btype="band", fs=sr, output="sos")
-    y = sosfiltfilt(sos, x)
-    hop = int(sr * 0.005)
-    env = np.sqrt(np.convolve(y ** 2, np.ones(hop) / hop, "same"))[::hop]
-    base = median_filter(env, size=200)
-    onset = env / (base + 1e-6)
-    pk, _ = find_peaks(onset, height=threshold, distance=int(0.12 / 0.005))
-    return pk * 0.005
+    from app.rally import audio_onsets
+    return audio_onsets(x, sr, threshold)
 
 
 def group_rallies(hits: np.ndarray, gap: float = 1.6, min_hits: int = 4) -> list[dict]:
@@ -56,4 +46,7 @@ def find_rallies(path: str | Path, threshold: float = 3.0) -> list[dict]:
         x, sr = load_audio(path)
     except subprocess.CalledProcessError:
         return []  # no audio track
-    return group_rallies(detect_hits(x, sr, threshold))
+    from app.rally import audio_onsets, group_rallies_anchored
+    times, ratios = audio_onsets(x, sr, min(threshold, 2.0), with_ratios=True)
+    return [{**r.to_dict(), "hit_times": times[(times >= r.start) & (times <= r.end)].tolist()}
+            for r in group_rallies_anchored(times, ratios, threshold)]

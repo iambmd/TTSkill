@@ -22,3 +22,8 @@ backend/data/players/manual/
 
 # Style references (reference only: never commit or serve)
 backend/data/style_ref/
+.env
+
+# Local evaluation intermediates
+backend/eval/work/
+backend/app/onset_model.json

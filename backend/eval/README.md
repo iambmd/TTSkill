@@ -49,3 +49,78 @@ The headline failures, confirmed by the labels:
 | TTStroke-21 (MediaEval) | **gated**: per-user usage agreement via task registration | custom | skipped; Extended OpenTTGames + @swift_TT shorts cover the classes. |
 | [P2ANet](https://github.com/Fred1991/P2ANET) | **gated**: Baidu pan, key by emailing the author; archive deprecated | repo says MIT, data gated | skipped. |
 | @swift_TT YouTube Shorts | yt-dlp, titles name the stroke | reference/training only; no redistribution, no branding in output | extra labeled swings for the stroke classifier. |
+
+## Resumed evaluation (2026-11-16)
+
+Handoff verified: `main` and fetched `origin/main` were `30a204d8fda4e343f5af0958c9c6534c200f7abb`.
+The uncommitted rally/filter/caller changes, onset model and trainer were present.
+Both samples exist; the original `IMG_8782.MOV` and cached job folders `4c0fa52e` /
+`4d3b268c` do not. `match_b` is a montage substitute, not IMG_8782.
+The corrected coach_demo second span is **16.5–33.2 s** for every comparison below.
+
+All results below are **development/tuning**, not held-out. Both clips informed Claude's
+thresholds and its original model. The labels provide play windows, not individual paddle,
+table, floor or shoe contacts. Consequently **contact-level hit precision and recall are
+blocked**; the onset column is only the fraction inside a play window (±0.3 s). It cannot
+establish recall or contact-type accuracy. Teal-shirt = provisional player identity.
+
+| path / clip | rally P | rally R | merges | splits | false rallies | onset play-window proxy P |
+| --- | --- | --- | --- | --- | --- | --- |
+| baseline 30a204d / coach_demo | .333 | .364 | 0 | 2 | 2 | .706 |
+| recovered handoff / coach_demo | .333 | .545 | 0 | 2 | 3 | .706 |
+| current / coach_demo | .368 | .636 | 0 | 2 | 4 | .699 |
+| baseline 30a204d / match_b | .333 | .278 | 0 | 1 | 1 | .876 |
+| recovered handoff / match_b | .438 | .389 | 0 | 2 | 0 | .876 |
+| current / match_b | .333 | .278 | 0 | 2 | 0 | .876 |
+
+IoU ≥ .5, greedy one-to-one matching; defaults threshold=3, gap=1.6, min_hits=4;
+all rows include the corresponding production pose filter. The original table above used
+an older label revision. Current increases coach_demo recall but still has more false rallies;
+match_b removes the false rally without improving baseline recall. This is **not a solved
+audio classifier or rally state machine**. Merges are zero under these coarse annotations,
+so synthetic break/weak-chain tests provide the direct regression for merging.
+
+Reproduce from the repository root (JSON records include video/label SHA-256):
+
+```bash
+cd backend
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.run --pose --baseline 30a204d --output eval/work/baseline.json
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.run --pose --output eval/work/current.json
+.venv/bin/python -m eval.train_onset_model --train coach_demo --validate match_b --output eval/work/onset_model.json
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m pytest tests/test_rally.py tests/test_floor_bounce.py tests/test_eval_metrics.py tests/test_coach.py -q
+```
+
+The recovered handoff was saved to `/tmp/ttskill-handoff` before editing and evaluated by
+loading its `rally.py` and `floor_bounce.py` with the current eval runner. This is a local
+recovery artifact, not a reproducible Git revision. Its original tiny model is preserved
+locally at `app/onset_model.json`, ignored. Neither model is used for production decisions.
+The trainer now requires explicit disjoint train/validation clips and writes only ignored
+experimental data. Training on coach_demo, validating on match_b yielded proxy P=.821,
+R=1.000, retaining **38/46 non-play onsets**. This is not reliable contact rejection.
+
+What changed and what failed:
+
+- Weak chains no longer override a shorter user-selected gap. Soft onsets still count
+  inside strong-onset groups, with bounded .5 s lead-in / 1.2 s tail, partitioned between
+  adjacent groups. Prep sounds can still occur within those bounds.
+- Removing all edge sounds reduced rally P/R to .294/.455 (coach_demo), .308/.222
+  (match_b). Retaining bounded edges recovered those truncated endings.
+- Audio timestamps now use the actual integer hop / sample rate. At 22,050 Hz,
+  treating 110 samples as exactly 5 ms drifted by ~.27 s over two minutes.
+- Technique and Auto-Cut share onset extraction/grouping; Coach now invokes the pose filter.
+- Pose swing speed subtracts body translation and rejects large jumps/scale changes.
+  Tiny background poses and sustained crouching are rejected; missing model/runtime
+  failures preserve audio candidates. Walking must not look like wrist action.
+- Concurrent evaluations initially collided on `audio.wav`; those results were discarded.
+  Each clip/run now gets a unique temporary directory and has an isolation regression.
+- Remaining: noisy strong onsets can still join rallies, background people can still pass
+  size filtering, low/occluded pushes can be rejected, montage cuts are not audio events,
+  and the ambiguous 80–96 s montage span needs finer annotation.
+
+No new dataset videos were downloaded. Existing ignored `data/` occupies ~276 MB,
+well below 10 GB. The cached Extended OpenTTGames README/LICENSE explicitly says
+CC BY-NC-SA 4.0; its stroke-side prefixes denote **table side**, not hitting hand.
+Its cached `test_2.mp4` is visual-only. Use those annotations for visual timing only.
+The earlier statement that swift_TT is licensed for training/reference was a user constraint,
+not a verified license grant. Do not treat it as permission for new downloads. No new
+TTStroke-21/P2ANet access was obtained; gated datasets remain unavailable here.

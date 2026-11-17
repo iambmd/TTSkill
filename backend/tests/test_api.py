@@ -467,6 +467,7 @@ def test_autocut_with_one_rally_cuts_it_and_warns(api, monkeypatch, media):
     from app import pipelines
     from app.rally import Rally
     monkeypatch.setattr(pipelines, "detect_rallies", lambda *a: [Rally(0.5, 2.0, 6)])
+    monkeypatch.setattr("app.floor_bounce.drop_non_play", lambda video, rs: (rs, []))
     job = jobs.create("autocut", {})
     jobs.run(pipelines.run_autocut, job["id"], media["ok"], "full", 5, 3.0, 1.6, 4)
     got = api.get(f"/jobs/{job['id']}").json()
