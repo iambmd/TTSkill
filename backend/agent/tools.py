@@ -106,9 +106,11 @@ def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict
 def extract_pose(s: Session, stroke: str = "auto") -> dict:
     """Pose on the best ~8 s: bat hand, stroke type, key moments, joint angles at contact,
     body proportions."""
+    import numpy as np
+
     from players.body import body_ratios
     from technique import media, pose, strokes
-    from technique.pipeline import choose_window, key_moments
+    from technique.pipeline import choose_window, key_moments, real_strokes
 
     video = s.need_video()
     s.update(message="Reading the pose with MediaPipe...")
@@ -133,7 +135,7 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     stype, feats = strokes.detect(track, side, p0, wing=wing)
     st = strokes.STROKE_TYPES[stype]
     keys, peak = key_moments(track, side, hits, direction=st.direction, window_s=st.window_s)
-    summary = pose.summarize(track, side)
+    summary = pose.summarize(track, side, real_strokes(track, list(pose.swing_peaks(track, side)), np.array(hits)))
     s.pose = {
         "window_s": [round(win["start"], 2), round(win["end"], 2)], "bat_hand": side, "bat_hand_how": how,
         "stroke_type": stype, "stroke_label": st.label, "stroke_features": feats,

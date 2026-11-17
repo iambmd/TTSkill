@@ -175,3 +175,44 @@ def test_unclear_hand_is_asked_for_or_stated_as_an_assumption(tmp_path):
     assert side == "left" and how.startswith("paddle colour over several rallies")
     assert bat_side(vid, tr, assume="right", pooled={"left": 21602, "right": 12561})[1].startswith("assumed")
     assert bat_side(vid, tr, "right", pooled={"left": 50000, "right": 10})[1] == "user"
+
+
+def _stance_track(n=120, fps=30.0, knee_bend=True):
+    """A player whose legs bend at the knee (ready stance) or stand straight."""
+    tr = _fake_track(n=n, fps=fps)
+    if knee_bend:
+        tr.lm[:, [25, 26], 0] += .06   # knees pushed forward: about 150 deg at the knee
+    return tr
+
+
+def test_strokes_outside_the_rally_or_away_from_a_hit_are_not_coached():
+    from technique.pipeline import real_strokes
+    tr = _stance_track()
+    T = tr.times
+    peaks = [15, 45, 75, 105]                     # 0.5, 1.5, 2.5, 3.5 s
+    hits = np.array([0.48, 1.0, 1.52, 2.0, 2.3])  # the rally ends at 2.3 s
+    assert real_strokes(tr, peaks, hits) == [15, 45]        # 2.5 s is after the last hit
+    assert real_strokes(tr, peaks, np.array([])) == peaks   # no audio: nothing to check against
+    assert real_strokes(tr, [75, 105], hits) == [75, 105]   # nothing passes: keep, don't fail
+
+
+def test_standing_up_after_the_point_is_not_a_stroke():
+    from technique.pipeline import ready_stance, real_strokes
+    bent, straight = _stance_track(), _stance_track(knee_bend=False)
+    assert ready_stance(bent, 30) and not ready_stance(straight, 30)
+    # Turn-away after the point: straight legs at the second peak only.
+    tr = _stance_track()
+    tr.lm[70:80, [25, 26], 0] -= .06
+    assert real_strokes(tr, [45, 75], np.array([1.5, 2.5])) == [45]
+    legs_cut = _stance_track()
+    legs_cut.lm[:, 25:29, 3] = .1                 # close camera: legs out of frame everywhere
+    assert real_strokes(legs_cut, [45, 75], np.array([1.5, 2.5])) == [45, 75]
+
+
+def test_pose_summary_reports_only_the_swings_it_is_given():
+    from technique import pose
+    tr = _fake_track()
+    every = pose.summarize(tr, "right")
+    only = pose.summarize(tr, "right", peaks=[45])
+    assert only["swing_count"] == 1 and len(only["swings"]) == 1
+    assert every["swing_count"] >= 1

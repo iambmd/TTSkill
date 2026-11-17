@@ -461,9 +461,10 @@ def whole_body(track: PoseTrack) -> np.ndarray:
     return track.valid & (legs >= MIN_JOINT_VIS)
 
 
-def summarize(track: PoseTrack, side: str | None = None) -> dict:
+def summarize(track: PoseTrack, side: str | None = None, peaks: list[int] | None = None) -> dict:
+    """peaks: the swings to report (pipeline.real_strokes); default every wrist-speed peak."""
     side = side or dominant_side(track)
-    pk = swing_peaks(track, side)
+    pk = swing_peaks(track, side) if peaks is None else np.asarray(peaks, int)
     return {
         "frames": int(len(track.times)),
         "person_visible_ratio": round(float(track.valid.mean()) if len(track.times) else 0.0, 2),

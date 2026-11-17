@@ -91,6 +91,38 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
     return {"start": s, "end": e, "reason": "most bat-hand motion"}
 
 
+HIT_NEAR = 0.15       # s: a stroke has a ball-contact sound this close to its swing peak
+MAX_READY_KNEE = 170  # deg: a stroke is played with bent knees; standing up means the point is over
+
+
+def ready_stance(track: pose.PoseTrack, i: int) -> bool:
+    """Legs in view and knees bent at frame i: an athletic stance, not standing or walking."""
+    from .strokes import _points
+
+    legs = [pose.L_KNEE, pose.R_KNEE, pose.L_ANKLE, pose.R_ANKLE]
+    if np.nan_to_num(track.lm[i, legs, 3]).min() < pose.MIN_JOINT_VIS:
+        return False
+    p = _points(track)[i]
+    knee = np.mean([pose._angle(p[pose.L_HIP], p[pose.L_KNEE], p[pose.L_ANKLE]),
+                    pose._angle(p[pose.R_HIP], p[pose.R_KNEE], p[pose.R_ANKLE])])
+    return bool(knee < MAX_READY_KNEE)
+
+
+def real_strokes(track: pose.PoseTrack, peaks: list[int], hits: np.ndarray) -> list[int]:
+    """Swing peaks that are strokes in play. The Coach demo coached a turn away from the table
+    after the point (57.96 s): it had the fastest wrist and a bounce sound 0.04 s away, inside
+    an audio rally that ran on through 1.5 s of dead-ball bounces. Keep peaks inside the rally
+    (first to last hit), next to a hit, and in a playing stance. Each rule is relaxed only when
+    no peak passes it (no audio; a close camera that cuts the legs off)."""
+    T = track.times
+    if len(hits):
+        inside = [i for i in peaks if hits.min() - HIT_NEAR <= T[i] <= hits.max() + HIT_NEAR
+                  and float(np.min(np.abs(hits - T[i]))) <= HIT_NEAR]
+        peaks = inside or peaks
+    ready = [i for i in peaks if ready_stance(track, i)]
+    return ready or peaks
+
+
 def key_moments(track: pose.PoseTrack, side: str, hit_times: Optional[list[float]] = None,
                 direction: str = "up", window_s: float = 0.6) -> tuple[list[float], int]:
     """[preparation, contact, finish] times (s) and the contact frame index.
@@ -112,10 +144,11 @@ def key_moments(track: pose.PoseTrack, side: str, hit_times: Optional[list[float
     hip_y = (xy[:, pose.L_HIP, 1] + xy[:, pose.R_HIP, 1]) / 2
     wy = uniform_filter1d(xy[:, wi, 1] - hip_y, size=max(1, int(track.fps * 0.07)))  # +down
     vy = np.gradient(wy)
+    hits = np.array(hit_times or [])
+    pk = real_strokes(track, list(pk), hits)
     # strongest swing that leaves room for the lead-in and the finish
     ok = ([i for i in pk if 1.0 <= track.times[i] <= dur - 0.8]
           or [i for i in pk if 0.45 <= track.times[i] <= dur - 0.5] or list(pk))
-    hits = np.array(hit_times or [])
 
     def score(i: int) -> float:
         along = direction == "any" or (vy[i] < 0) == (direction == "up")
@@ -212,7 +245,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     stroke = stroke or "forehand"
     keys, peak_i = key_moments(track, side, hits, direction=st.direction if st else "up",
                                window_s=st.window_s if st else 0.6)
-    summary = pose.summarize(track, side)
+    # Report only real strokes, so turns and walks after the point never reach the analyzer.
+    summary = pose.summarize(track, side, real_strokes(track, list(pose.swing_peaks(track, side)), np.array(hits)))
     contact = pose.pose_metrics(track, peak_i, side) if len(track.times) else {}
     (out / "pose_summary.json").write_text(json.dumps(summary, indent=2))
     pose.save_track(track, out / "pose_track.npz")
