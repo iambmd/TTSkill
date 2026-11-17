@@ -239,3 +239,62 @@ accuracy, hit precision/recall, or held-out improvement is claimed.
 Final verification after the temporal experiment: **290 backend tests passed, 5 skipped,
 1 expected failure** (automatic backhand), in 51.51 s. Frontend remains at 111 passing
 tests, successful production build, and the HTTP/range smoke results above.
+
+## Milestone 2: clip-aware rally refinement (2026-11-17)
+
+Continued the uncommitted draft after `2661c16` (Milestone 1); final production code is `94996b7`. Compared that commit and the final production refinement on the **same source files and label bytes**, including the coach_demo 16.5–33.2 s correction. Source and label SHA-256 values match between both JSON reports. All clips informed development; none is held-out. `match_b@coaching-demo` is the 720p encode of the same montage, with the same timeline (140.247 s) and labels, not a third independent recording.
+
+| Clip / version | Rally P | Rally R | F1 | Merges | Splits | False rallies |
+| --- | --- | --- | --- | --- | --- | --- |
+| coach_demo / Milestone 1 | 0.350 | 0.636 | 0.452 | 0 | 3 | 4 |
+| coach_demo / Milestone 2 | 0.412 | 0.636 | 0.500 | 0 | 3 | 1 |
+| match_b / Milestone 1 | 0.353 | 0.333 | 0.343 | 0 | 2 | 0 |
+| match_b / Milestone 2 | 0.688 | 0.611 | 0.647 | 0 | 1 | 0 |
+| match_b@coaching-demo / Milestone 1 | 0.353 | 0.333 | 0.343 | 1 | 1 | 0 |
+| match_b@coaching-demo / Milestone 2 | 0.765 | 0.722 | 0.743 | 0 | 1 | 0 |
+
+Rally matches use greedy one-to-one IoU ≥ 0.5, threshold=3, gap=1.6 s, min_hits=4. Contact-level hit precision/recall is **still unmeasurable** without contact labels. The unchanged onset **play-window proxy precision** is .699 / .876 / .874 respectively; these are not classified paddle-contact scores.
+
+Implementation and production checks:
+
+- Crossfades are detected from linearly changing pixels in the same 10 fps frames decoded for the pose check. Found 14 joins on each montage encode and none on coach_demo. Candidates split at joins; pieces within a clip can merge across gaps up to 4 s. No new audio threshold or trained model was introduced.
+- Candidates already identified as non-play block those merges. Unsampled gaps cannot supply a wrist-speed vote. The per-clip figure-size comparison drops three neighboring-court false rallies at the end of coach_demo, retaining all seven matched rallies.
+- Auto-Cut and Coach pass the user's `min_hits` through refinement. Both use `pick_segments`, which now clamps padding to clip joins so an adjacent clip is not pulled back into a highlight.
+- The 720p 27.45–50.15 s candidate previously covered four rallies. It now becomes 27.45–32.48, 33.35–38.99, 39.71–44.45, and 45.00–52.74 s after splitting/regrouping. A real-video crossfade regression and pure regrouping/padding tests cover this behavior.
+- The eval loader now gives snapshot modules their own `__file__` and sibling imports. Previously `--baseline 2661c16` failed with `NameError: __file__`; simply importing current sibling modules would also contaminate comparisons after this milestone.
+
+Failed approach: merging every nearby candidate before checking play produced a new 106.99–127.36 s merged rally in the 720p montage. A 114.26–117.35 s ball-retrieval candidate chained two real rallies together through individually short gaps, and its non-play disappeared in the average pose score. Using non-play candidates as barriers removed that merge. The discarded attempt had F1 .500 / .667 / .706 with one 720p merge; it remains locally at `eval/work/milestone2-merge-before-filter.json`.
+
+Remaining cases:
+
+- Continuous recordings still split during quiet play (three split labels in coach_demo); one ball-retrieval false rally remains there.
+- Same-camera hard cuts are not detected. A view change at an undetected cut can invalidate the relative figure-size comparison: the real 129.5–132.9 s montage rally is currently rejected as “another court.” Strong appearance/scale changes and global lighting ramps need separate validation before broader use.
+- Late starts and low/occluded strokes are still missed. The montage's 80–95.9 s label may contain two rallies; its crossfade near 89 s contributes the remaining measured split. No labels were retimed to fit the detector.
+- No hand/stroke classifier or coached-player seeding change is included in this milestone. The backhand auto-detection xfail and the IMG_8782 opponent-seeding issue remain.
+
+Reproduce from the repository root; use one pose-heavy run at a time:
+
+```bash
+cd backend
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.run --pose --baseline 2661c16 --output eval/work/milestone2-before.json
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.run --pose --baseline 94996b7 --output eval/work/milestone2-after.json
+ANTHROPIC_API_KEY='' TTSKILL_SAMPLE="$PWD/../samples/IMG_8782.MOV" MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m pytest tests technique/tests -q -rs
+cd ../frontend
+npm test
+npm run build
+```
+
+Raw videos and all generated evaluation reports remain ignored. No new downloads or external analyzer calls were needed.
+
+Final checks: **321 backend tests passed, 2 YouTube network tests skipped, 1 known
+automatic-backhand xfail**. The IMG_8782 regression still keeps 10/10 labeled play
+spans and 0/4 labeled non-play spans. Frontend: **119 tests passed**, production
+build passed.
+
+HTTP smoke: both Auto-Cut and fixed-plan Coach completed on the 26–53 s montage
+excerpt, each returning four rallies in a 27 s reel. Both result routes served
+`206 Partial Content` for byte-range requests. Reproduce from `backend/` with
+`MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.smoke_rallies` (external analysis
+is disabled by the script; generated jobs and `eval/work/milestone2-smoke.json` are ignored).
+
+The crossfade-only scan also found **zero joins on IMG_8782**, using the same candidate windows and margins as production.

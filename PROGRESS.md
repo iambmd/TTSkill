@@ -1,7 +1,7 @@
 # Progress: detection and coaching accuracy
 
 Last updated 2026-11-17. Covers Codex's four commits (30a204d..aa32e8f, 2026-11-16) and the
-follow-up fixes (f9c9d48..60accf9). Every number below was re-measured on this machine; all
+follow-up fixes (f9c9d48..60accf9), and Milestone 2 below. Every number below was re-measured on this machine; all
 of it is **development data, not held-out**: the same clips informed the thresholds.
 
 ## Status by goal
@@ -9,9 +9,9 @@ of it is **development data, not held-out**: the same clips informed the thresho
 | Goal | Status | Evidence |
 | --- | --- | --- |
 | a. Floor bounces / shoe squeaks not counted as hits | partial | The pre-serve floor-bounce routine in IMG_8782 (14.4–19.8 s) is dropped by the crouch check (`tests/test_floor_bounce.py`). Within a kept rally, audio still counts every sharp sound: the onset play-window proxy is unchanged (coach_demo .699, match_b .876). Contact-level hit precision/recall needs per-contact labels, which don't exist. |
-| b. Merged rallies split; serve prep not counted | partial | merges = 0 on both labelled clips; anchored grouping keeps weak sounds from bridging breaks (`tests/test_rally.py`). Pre-serve span 120.0–122.9 s in IMG_8782 is dropped. Still fails: the 720p coaching demo merges four montage clips (27.4–50.1 s) across crossfades. |
+| b. Merged rallies split; serve prep not counted | partial | merges = 0 on both labelled clips; anchored grouping keeps weak sounds from bridging breaks (`tests/test_rally.py`). Pre-serve span 120.0–122.9 s in IMG_8782 is dropped. Milestone 2 splits the 720p 27.4–50.1 s merge at crossfades; measured merges are now zero on both encodes. Quiet continuous-video splits remain. |
 | c. Correct hitting hand + stroke type | partial | Hand: right on every run (bat colour on the coaching demo and the match example; faster-wrist fallback on coach_demo), matching the provisional label. No per-contact hand labels. Forehand/backhand auto-detection still fails on the one labelled backhand (strict xfail). There is no **block** stroke type, and no subtype (drive/topspin/push/flick) accuracy can be measured. |
-| d. Coaching tracks you, not your opponent | done (on the evidence available) | match_b identity audit (12 reviewed frames): 8 correct, **0 wrong**, 4 abstained; sampled coverage 52% → 62%. Coach windows: coach_demo 89% of frames with you; 720p coaching demo picks 54.0–60.2 s (you near, 85%), checked against source frames. Find my pro match now uses the same identity. |
+| d. Coaching tracks you, not your opponent | partial | match_b identity audit (12 reviewed frames): 8 correct, **0 wrong**, 4 abstained; sampled coverage 52% → 62%. Coach windows: coach_demo 89% of frames with you; 720p coaching demo picks 54.0–60.2 s (you near, 85%), checked against source frames. Find my pro match now uses the same identity. The later Milestone 1 review found that first-frame seeding selects the opponent on IMG_8782; that remains unresolved. |
 | e. Your backhand recognized in coaching | partial | "Fix my backhand" now renders a backhand breakdown (was a Chop). Automatic backhand detection on the labelled 43.3 s backhand still says forehand. |
 
 ## Review of Codex's work (2026-11-16)
@@ -74,7 +74,7 @@ Tests: backend 303 passed, 2 skipped (network), 1 strict xfail (automatic backha
    - Lead worth testing: on the two labelled strokes, the wrist's position along the direction of play during the backswing separated them (forehand −0.9 to −1.0 torso lengths behind the hips, backhand +0.7 to +0.9 in front). The shoulder-axis feature called both bat-side (1.4–1.7).
    - Validate on 20+ labelled contacts from a side-on camera before shipping it.
 2. **Block stroke type** doesn't exist yet (strokes.py, offline template, frontend `strokes.ts`).
-3. **Montage rallies merge across crossfades.** Scene-cut detection doesn't see dissolves (scene score ≈ 0 except the outro card).
+3. **Crossfade regrouping shipped in Milestone 2.** Hard cuts, continuous-video quiet gaps and false pose rejections remain; see the final section.
 4. **Contact-level hit precision/recall** (floor bounces and shoe squeaks inside a rally) needs per-contact labels. Full rally-span labels for IMG_8782 would also let it join `eval.run`.
 5. **Coach runs the window scan twice** (pose tool and render), about a minute per job. Reuse the first window.
 6. ~~Uncommitted demo refresh~~ **done 2026-11-17**: all four demos re-run with the fixed pipeline
@@ -82,3 +82,43 @@ Tests: backend 303 passed, 2 skipped (network), 1 strict xfail (automatic backha
    player, 54.0–60.2 s, right hand from bat colour, 84% visible), checked against source
    frames; before, it measured the 80–88 s rally where the user is the far player. Results
    come from the offline templates and Coach's fixed plan, not Claude-written text.
+
+
+## Milestone 2: clip-aware rally refinement (2026-11-17)
+
+Commit `94996b7` finishes the crossfade/refinement draft left after `2661c16`, including both production
+callers. Rally P / R / F1 at IoU ≥ .5, using the same videos and label bytes:
+
+| Clip | Milestone 1 | Milestone 2 | Merges before → after | Splits before → after |
+| --- | --- | --- | --- | --- |
+| coach_demo | .350 / .636 / .452 | .412 / .636 / .500 | 0 → 0 | 3 → 3 |
+| match_b (480p) | .353 / .333 / .343 | .688 / .611 / .647 | 0 → 0 | 2 → 1 |
+| coaching-demo (720p) | .353 / .333 / .343 | .765 / .722 / .743 | 1 → 0 | 1 → 1 |
+
+These are development results. The montage encodes share footage/labels and are not
+independent samples. Audio contact classification has not improved: play-window proxy
+precision remains .699 / .876 / .874; contact-level P/R is blocked by missing labels.
+
+- Crossfade joins split rallies, and pieces of an edited clip can merge over short gaps.
+  Padding is clamped to joins in Auto-Cut and Coach. The 27–50 s four-rally merge is fixed.
+- Non-play candidates block merges. The initial merge-first draft created a new
+  107–127 s merge through ball retrieval; that approach was rejected and regression-tested.
+- Relative figure size removes three neighboring-court false rallies on coach_demo.
+- The baseline loader now isolates revision-local modules and supplies `__file__`.
+  The eval README records exact commands, complete metrics, and the failed approach.
+
+Still open: quiet continuous-video splits, missing hard cuts, occasional false pose
+rejections (including the 129.5–132.9 s montage rally), automatic backhand recognition,
+and selecting the correct initial player on IMG_8782. No new data was downloaded.
+The already-refreshed website examples were intentionally not regenerated for this step.
+
+Final verification: backend **321 passed, 2 network tests skipped, 1 known automatic-backhand
+xfail** with `TTSKILL_SAMPLE` set to IMG_8782. The IMG_8782 regression retains all 10
+labeled play spans and rejects all 4 labeled non-play spans. Frontend **119 passed** and
+production build passed.
+
+HTTP smoke: both Auto-Cut and fixed-plan Coach completed on the 26–53 s montage
+excerpt, each returning four rallies in a 27 s reel. Both result routes served
+`206 Partial Content` for byte-range requests. Reproduce from `backend/` with
+`MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m eval.smoke_rallies` (external analysis
+is disabled by the script; generated jobs and `eval/work/milestone2-smoke.json` are ignored).

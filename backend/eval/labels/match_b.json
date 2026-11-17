@@ -1,5 +1,6 @@
 {
   "video": "samples/match_b.mp4",
+  "also": ["samples/coaching-demo.mp4"],
   "duration_s": 140.25,
   "notes": "CapCut highlights montage of ~18 rally clips across 4 gyms, hard cuts between clips, ends with a CapCut outro card (music, no play). The teal 'CHINA' shirt player (assumed to be the user) appears in every scene but is the FAR player in several clips. Labeled visually like coach_demo (298 onsets reviewed).",
   "scene_cuts": [60.5, 79.8, 106.5, 128.9, 133.0, 138.5],

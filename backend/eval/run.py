@@ -9,11 +9,14 @@ from __future__ import annotations
 import argparse
 import json
 import hashlib
+import importlib
 import subprocess
 import sys
 import types
 import tempfile
+from contextlib import contextmanager
 from pathlib import Path
+from typing import Iterator
 
 from app import rally
 
@@ -23,58 +26,84 @@ LABELS = Path(__file__).parent / "labels"
 SAMPLES = Path(__file__).resolve().parent.parent.parent / "samples"
 
 
+@contextmanager
+def baseline_modules(revision: str) -> Iterator[tuple[types.ModuleType, types.ModuleType]]:
+    """Load a snapshot package so __file__ and sibling imports belong to that revision."""
+    with tempfile.TemporaryDirectory(prefix="ttskill-baseline-") as tmp:
+        package_name = "_ttskill_baseline_" + Path(tmp).name.replace("-", "_")
+        package = types.ModuleType(package_name)
+        package.__path__ = [tmp]
+        sys.modules[package_name] = package
+        try:
+            for name in ("rally", "floor_bounce", "clips"):
+                result = subprocess.run(["git", "show", f"{revision}:backend/app/{name}.py"],
+                                        capture_output=True, text=True)
+                if name == "clips" and result.returncode:  # introduced after Milestone 1
+                    continue
+                result.check_returncode()
+                (Path(tmp) / f"{name}.py").write_text(result.stdout)
+            yield (importlib.import_module(f"{package_name}.rally"),
+                   importlib.import_module(f"{package_name}.floor_bounce"))
+        finally:
+            for name in list(sys.modules):
+                if name == package_name or name.startswith(package_name + "."):
+                    del sys.modules[name]
+
+
 def load_labels() -> list[dict]:
     out = []
     for p in sorted(LABELS.glob("*.json")):
         gt = json.loads(p.read_text())
-        video = SAMPLES / Path(gt["video"]).name
-        if video.exists():
-            out.append({**gt, "name": p.stem, "video": video})
-        else:
-            print(f"skip {p.stem}: {video} not found")
+        # "also": other encodes of the same footage (same timeline, same labels).
+        for i, rel in enumerate([gt["video"], *gt.get("also", [])]):
+            video = SAMPLES / Path(rel).name
+            name = p.stem if i == 0 else f"{p.stem}@{video.stem}"
+            if video.exists():
+                out.append({**gt, "name": name, "video": video, "labels": p})
+            else:
+                print(f"skip {name}: {video} not found")
     return out
 
 
 def _evaluate(gt: dict, workdir: Path, use_pose: bool,
              threshold: float = 3.0, gap: float = 1.6, min_hits: int = 4,
-             revision: str | None = None) -> dict:
-    detector = rally
-    filter_module = None
-    if revision:
-        # Load the actual committed code, while keeping the current label revision.
-        for name in ("rally", "floor_bounce"):
-            source = subprocess.run(["git", "show", f"{revision}:backend/app/{name}.py"],
-                                    check=True, capture_output=True, text=True).stdout
-            module = types.ModuleType(f"app._eval_{name}")
-            sys.modules[module.__name__] = module
-            exec(compile(source, f"{revision}/{name}.py", "exec"), module.__dict__)
-            if name == "rally":
-                detector = module
-            else:
-                filter_module = module
+             detector=rally, filter_module=None) -> dict:
     wav = detector.extract_audio(gt["video"], workdir / f"{gt['name']}.wav")
     onsets = detector.detect_hits(wav, threshold)
     found = detector.detect_rallies(gt["video"], workdir, threshold, gap, min_hits)
+    visual = None
     if use_pose:
-        from app.floor_bounce import drop_floor_bounces
-        filter_fn = filter_module.drop_floor_bounces if filter_module else drop_floor_bounces
-        found, _ = filter_fn(gt["video"], found)
+        from app import floor_bounce
+        module = filter_module or floor_bounce
+        if hasattr(module, "refine"):
+            result = module.refine(gt["video"], found, min_hits=min_hits)
+            found = result.kept
+            visual = {"joins": result.joins,
+                      "dropped": [{**r.to_dict(), "reason": r.note} for r in result.dropped]}
+        else:
+            found, dropped = module.drop_floor_bounces(gt["video"], found)
+            visual = {"joins": [], "dropped": [r.to_dict() for r in dropped]}
     truth = [(r["start"], r["end"]) for r in gt["rallies"]]
     prep = [tuple(s) for s in gt.get("prep", [])]
     return {
-        "label_sha256": hashlib.sha256((LABELS / f"{gt['name']}.json").read_bytes()).hexdigest(),
+        "label_sha256": hashlib.sha256(gt["labels"].read_bytes()).hexdigest(),
         "video_sha256": hashlib.sha256(gt["video"].read_bytes()).hexdigest(),
         "contact_metrics": None,  # span labels cannot establish contact-level precision/recall
+        "visual": visual,
         "rallies": match_rallies([(r.start, r.end) for r in found], truth),
         "onsets_play_window_proxy": onset_play_split(list(onsets), truth, prep),
         "found": [r.to_dict() for r in found],
     }
 
 
-def evaluate(gt: dict, workdir: Path, use_pose: bool, **kwargs) -> dict:
+def evaluate(gt: dict, workdir: Path, use_pose: bool, revision: str | None = None, **kwargs) -> dict:
     workdir.mkdir(parents=True, exist_ok=True)
     # Production writes audio.wav: concurrent evaluations must never share that path.
     with tempfile.TemporaryDirectory(dir=workdir, prefix=gt["name"] + "-") as tmp:
+        if revision:
+            with baseline_modules(revision) as (detector, filter_module):
+                return _evaluate(gt, Path(tmp), use_pose, detector=detector,
+                                 filter_module=filter_module, **kwargs)
         return _evaluate(gt, Path(tmp), use_pose, **kwargs)
 
 

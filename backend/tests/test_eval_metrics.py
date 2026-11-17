@@ -67,3 +67,41 @@ def test_player_audit_counts_wrong_identity_and_abstention_separately():
     labels = {'frames': [{'time': i, 'box': [0,0,.5,1]} for i in range(3)]}
     result = audit(tr, labels)
     assert (result['correct'], result['wrong'], result['abstained']) == (1,1,1)
+
+
+def test_baseline_loads_its_own_files_and_sibling_imports(monkeypatch):
+    import subprocess
+    import sys
+    from pathlib import Path
+    from eval.run import baseline_modules
+
+    sources = {
+        "rally": "from pathlib import Path\nVALUE = 17\nHERE = Path(__file__).parent\n",
+        "floor_bounce": "from . import rally, clips\nVALUE = rally.VALUE + clips.VALUE\n",
+        "clips": "from .rally import VALUE\n",
+    }
+    def git_show(cmd, **kwargs):
+        name = Path(cmd[-1]).stem
+        return subprocess.CompletedProcess(cmd, 0, sources[name], "")
+    monkeypatch.setattr(subprocess, "run", git_show)
+    with baseline_modules("test-revision") as (rally, floor):
+        assert floor.VALUE == 34
+        assert rally.HERE.is_dir()
+        name, folder = rally.__package__, rally.HERE
+        assert floor.rally is rally
+    assert not folder.exists()
+    assert not any(k == name or k.startswith(name + ".") for k in sys.modules)
+
+
+def test_label_alias_keeps_the_same_label_file(tmp_path, monkeypatch):
+    import json
+    from eval import run
+    (tmp_path / "low.mp4").touch()
+    (tmp_path / "high.mp4").touch()
+    label = tmp_path / "same.json"
+    label.write_text(json.dumps({"video": "low.mp4", "also": ["high.mp4"], "rallies": []}))
+    monkeypatch.setattr(run, "LABELS", tmp_path)
+    monkeypatch.setattr(run, "SAMPLES", tmp_path)
+    low, high = run.load_labels()
+    assert low["labels"] == high["labels"] == label
+    assert low["name"] == "same" and high["name"] == "same@high"
