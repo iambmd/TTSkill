@@ -86,16 +86,17 @@ def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
 
 
 def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
-                 max_frames: int | None = None) -> PoseTrack:
+                 max_frames: int | None = None,
+                 identity: np.ndarray | None = None) -> PoseTrack:
     """Run PoseLandmarker over every `stride`-th frame. When several people are visible,
-    keep the largest one, preferring continuity with the previous frame (the near player)."""
+    select the nearest initially, then retain that torso identity across cuts/occlusions."""
     import mediapipe as mp
     from mediapipe.tasks.python import BaseOptions
     from mediapipe.tasks.python import vision
 
     opts = vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path())),
-        running_mode=vision.RunningMode.VIDEO,
+        running_mode=vision.RunningMode.IMAGE,
         num_poses=num_poses,
         min_pose_detection_confidence=0.4,
         min_tracking_confidence=0.4,
@@ -108,7 +109,9 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     times, lms, worlds = [], [], []
-    prev_c = None
+    from .identity import PlayerIdentity, appearance
+    tracker = PlayerIdentity(identity)
+    previous_scene = None
     idx = 0
     with vision.PoseLandmarker.create_from_options(opts) as lmk:
         while True:
@@ -118,25 +121,34 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
             if idx % stride == 0:
                 t = idx / fps
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                res = lmk.detect_for_video(mp.Image(image_format=mp.ImageFormat.SRGB, data=rgb),
-                                           int(t * 1000))
+                # Wide gym views can hallucinate a body on the table. Half-frame
+                # crops give each player enough pixels; the full view covers centre crossings.
+                regions = [(0., 1.)] if w / h < 1.5 else [(0., .6), (.4, 1.), (0., 1.)]
+                people, world_people = [], []
+                for left, right in regions:
+                    crop = np.ascontiguousarray(rgb[:, int(left * w):int(right * w)])
+                    result = lmk.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
+                    for k, pl in enumerate(result.pose_landmarks):
+                        p = np.array([[v.x * (right-left) + left, v.y, v.z * (right-left),
+                                       v.visibility or 0.] for v in pl], np.float32)
+                        if implausible(p[None], w, h)[0] or np.min(p[[11, 12, 23, 24], 3]) < .5:
+                            continue
+                        centre = p[[23, 24], :2].mean(0)
+                        if any(np.linalg.norm(centre - q[[23, 24], :2].mean(0)) < .06 for q in people):
+                            continue
+                        people.append(p)
+                        world_people.append(np.array([[v.x, v.y, v.z] for v in result.pose_world_landmarks[k]],
+                                                     np.float32))
                 arr = np.full((33, 4), np.nan, np.float32)
                 warr = np.full((33, 3), np.nan, np.float32)
-                if res.pose_landmarks:
-                    best, best_score = 0, -1e9
-                    for k, pl in enumerate(res.pose_landmarks):
-                        xy = np.array([[p.x, p.y] for p in pl])
-                        size = (xy[:, 1].max() - xy[:, 1].min())
-                        c = xy.mean(0)
-                        score = size - (np.linalg.norm(c - prev_c) * 0.8 if prev_c is not None else 0)
-                        if score > best_score:
-                            best, best_score = k, score
-                    pl = res.pose_landmarks[best]
-                    arr = np.array([[p.x, p.y, p.z, p.visibility or 0.0] for p in pl], np.float32)
-                    prev_c = arr[:, :2].mean(0)
-                    if res.pose_world_landmarks:
-                        warr = np.array([[p.x, p.y, p.z] for p in res.pose_world_landmarks[best]],
-                                        np.float32)
+                scene = cv2.resize(frame, (32, 18)).astype(float) / 255
+                cut = previous_scene is not None and np.mean(np.abs(scene - previous_scene)) > .25
+                previous_scene = scene
+                looks = [appearance(frame, p) for p in people]
+                best = tracker.select(people, looks, cut=cut)
+                if best is not None:
+                    arr = people[best]
+                    warr = world_people[best]
                 times.append(t)
                 lms.append(arr)
                 worlds.append(warr)
@@ -151,7 +163,15 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
     w_arr[bad] = np.nan
     return PoseTrack(fps=fps / stride, width=w, height=h, times=np.array(times),
                      lm=lm_arr, world=w_arr,
-                     meta={"source_fps": fps, "stride": stride, "rejected": int(bad.sum())})
+                     meta={"source_fps": fps, "stride": stride, "rejected": int(bad.sum()),
+                           "player_id": 1, "identity": tracker.reference.tolist() if tracker.reference is not None else None})
+
+
+def initial_identity(video: str | Path) -> np.ndarray | None:
+    """Seed a cropped analysis window with the original video's selected player."""
+    track = extract_pose(video, max_frames=5)
+    reference = track.meta.get("identity")
+    return np.array(reference) if reference is not None else None
 
 
 def save_track(track: PoseTrack, path: str | Path) -> None:
@@ -215,12 +235,20 @@ def wrist_speeds(track: PoseTrack) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     sh = (xy[:, L_SHOULDER] + xy[:, R_SHOULDER]) / 2
     hp = (xy[:, L_HIP] + xy[:, R_HIP]) / 2
     torso = np.median(np.linalg.norm(sh - hp, axis=1)) + 1e-6
+    reliable = track.valid.copy()
+    reliable[1:] &= track.valid[:-1]
+    reliable[:-1] &= track.valid[1:]
+    jumps = np.linalg.norm(np.diff(hp, axis=0), axis=1) > torso
+    reliable[1:] &= ~jumps
+    reliable[:-1] &= ~jumps
     out = []
     for wi in (L_WRIST, R_WRIST):
         # wrist relative to body centre, so walking doesn't count as swinging
         rel = xy[:, wi] - (sh + hp) / 2
         v = np.linalg.norm(np.gradient(rel, axis=0), axis=1) * track.fps / torso
-        out.append(uniform_filter1d(np.nan_to_num(v), size=max(1, int(track.fps * 0.1))))
+        v = uniform_filter1d(np.nan_to_num(v), size=max(1, int(track.fps * 0.1)))
+        v[~reliable | (track.lm[:, wi, 3] < .5)] = 0
+        out.append(v)
     return out[0], out[1], np.full(len(xy), torso)
 
 
@@ -264,14 +292,37 @@ def paddle_scores(video: str | Path, track: PoseTrack, every: int = 4) -> dict:
     return scores
 
 
+def contact_side(track: PoseTrack, hit_times: list[float]) -> str:
+    """Vote for the visible wrist moving faster just before/around audio contacts."""
+    left, right, _ = wrist_speeds(track)
+    votes = []
+    for t in hit_times:
+        indices = np.flatnonzero((track.times >= t - .12) & (track.times <= t + .06))
+        indices = indices[(indices > 0) & (indices < len(track.times) - 1)]
+        good = [i for i in indices if track.valid[i-1:i+2].all()
+                and np.min(track.lm[i-1:i+2, [L_WRIST, R_WRIST], 3]) >= .5]
+        if not good:
+            continue
+        l, r = float(np.max(left[good])), float(np.max(right[good]))
+        if max(l, r) >= 1. and max(l, r) > 1.35 * max(min(l, r), .1):
+            votes.append(1 if r > l else -1)
+    if len(votes) < 2 or abs(sum(votes)) / len(votes) < .5:
+        return "unknown"
+    return "right" if sum(votes) > 0 else "left"
+
+
 def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
-             trust_hand: bool = False) -> tuple[str, str]:
+             trust_hand: bool = False, hit_times: list[float] | None = None) -> tuple[str, str]:
     """Pick the bat arm (as a MediaPipe side label). Returns (side, how).
     Order: paddle colour near a wrist (when clearly one-sided) > the user's --hand > the
     faster wrist. trust_hand: `hand` is known (a roster pro), so it wins outright; red
     arena furniture next to the free hand can fool the paddle colour."""
     if trust_hand and hand in ("left", "right"):
         return hand, "known"
+    if hand == "auto" and hit_times:
+        contact = contact_side(track, hit_times)
+        if contact != "unknown":
+            return contact, "wrist motion near audio contacts"
     sc = paddle_scores(video, track)
     lo, hi = sorted(sc.values())
     if hi > 2000 and hi > 1.8 * max(lo, 1):
@@ -279,7 +330,9 @@ def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
     if hand in ("left", "right"):
         return hand, "user"
     side = dominant_side(track)
-    return (side if side != "unknown" else "right"), "faster wrist"
+    if side == "unknown":
+        raise NoPlayer("We couldn't tell your hitting hand. Choose left or right, or upload a clearer swing.")
+    return side, "faster wrist (no decisive contact evidence)"
 
 
 def swing_peaks(track: PoseTrack, side: str | None = None, min_gap_s: float = 0.5) -> np.ndarray:

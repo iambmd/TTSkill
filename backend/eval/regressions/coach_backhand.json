@@ -1,0 +1,13 @@
+{
+  "video": "samples/coach_demo.mp4",
+  "window": [41.5, 45.5],
+  "contact_s": 43.3,
+  "contact_tolerance_s": 0.15,
+  "player": "teal shirt (provisional user identity)",
+  "hand": "right",
+  "wing": "backhand",
+  "confidence": "medium",
+  "method": "Visual review of 10 fps crops at 43.1-43.8 s: elbow in front, forearm extends across the front of the body. Timing is approximate, not an individual audio-contact label.",
+  "split": "development regression; not held-out",
+  "remaining": "Automatic wing and hand inference remain unreliable under occluded wrists. Do not assign a spin subtype from this label."
+}

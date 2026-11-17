@@ -98,7 +98,7 @@ def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict
     return {"video": "highlights.mp4", "rallies": [r.to_dict() for r in rallies], "length_s": round(length, 1)}
 
 
-def extract_pose(s: Session, stroke: str = "forehand") -> dict:
+def extract_pose(s: Session, stroke: str = "auto") -> dict:
     """Pose on the best ~8 s: bat hand, stroke type, key moments, joint angles at contact,
     body proportions."""
     from players.body import body_ratios
@@ -111,13 +111,13 @@ def extract_pose(s: Session, stroke: str = "forehand") -> dict:
     info = media.probe(video)
     win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
-    track = pose.extract_pose(clip)
+    track = pose.extract_pose(clip, identity=pose.initial_identity(video))
     try:
         pose.require_player(track)
     except pose.NoPlayer as e:
         raise ToolError(str(e)) from e
-    side, how = pose.bat_side(clip, track, "auto")
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
+    side, how = pose.bat_side(clip, track, "auto", hit_times=hits)
     _, p0 = key_moments(track, side, hits, direction="any")
     wing = stroke if stroke in ("forehand", "backhand") else None
     stype, feats = strokes.detect(track, side, p0, wing=wing)
@@ -224,9 +224,9 @@ def make_tools(s: Session) -> dict:
         return run(TOOLS["cut_highlights"], mode=mode, top_n=top_n)
 
     @tool
-    def extract_pose(stroke: str = "forehand") -> str:
+    def extract_pose(stroke: str = "auto") -> str:
         """Run MediaPipe pose on the best ~8 s of play. Returns bat hand, detected stroke type,
-        key moments, joint angles at contact and body proportions. stroke: forehand or backhand."""
+        key moments, joint angles at contact and body proportions. stroke: auto (default), forehand or backhand."""
         return run(TOOLS["extract_pose"], stroke=stroke)
 
     @tool

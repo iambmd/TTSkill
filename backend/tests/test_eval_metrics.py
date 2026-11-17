@@ -54,3 +54,16 @@ def test_evaluations_have_isolated_workdirs(tmp_path, monkeypatch):
         assert run.evaluate({'name': 'same_clip'}, tmp_path, False) == {'ok': True}
     assert paths[0] != paths[1]
     assert all(not p.exists() for p in paths)
+
+
+def test_player_audit_counts_wrong_identity_and_abstention_separately():
+    import numpy as np
+    from eval.audit_player import audit
+    from technique.pose import PoseTrack
+    lm = np.full((3,33,4), .8)
+    lm[0,:,0] = .2
+    lm[2] = np.nan
+    tr = PoseTrack(1,100,100,np.arange(3),lm,np.zeros((3,33,3)))
+    labels = {'frames': [{'time': i, 'box': [0,0,.5,1]} for i in range(3)]}
+    result = audit(tr, labels)
+    assert (result['correct'], result['wrong'], result['abstained']) == (1,1,1)

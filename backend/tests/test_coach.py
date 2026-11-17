@@ -109,3 +109,9 @@ def test_coach_rallies_use_non_play_filter(tmp_path, monkeypatch):
     monkeypatch.setattr('app.floor_bounce.drop_non_play', lambda path, rs: ([], rs))
     assert tools.detect_rallies(session)['count'] == 0
     assert session.rallies == []
+
+
+def test_unspecified_coaching_request_does_not_force_forehand():
+    from agent.coach import plan_from_request
+    assert plan_from_request('Improve my technique', False)[1] == 'auto'
+    assert plan_from_request('Improve my backhand', False)[1] == 'backhand'

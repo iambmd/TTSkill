@@ -141,7 +141,7 @@ def run_agent(s: Session, request: str, model=None) -> None:
 
 def plan_from_request(request: str, has_link: bool) -> tuple[list[tuple[str, str]], str]:
     t = request.lower()
-    stroke = "backhand" if "backhand" in t else "forehand"
+    stroke = "backhand" if "backhand" in t else "forehand" if "forehand" in t else "auto"
     rallies = any(w in t for w in ("rall", "highlight", "best point", "best shot", "dead time", "cut ", "points"))
     tech = any(w in t for w in ("fix", "technique", "form", "forehand", "backhand", "stroke", "swing",
                                 "improve", "coach", "breakdown", "serve", "loop"))
@@ -187,6 +187,11 @@ def run_fallback(s: Session, request: str, why: str) -> None:
                 results[key] = TOOLS[key](s) if results.get("detect_rallies", {}).get("count") else None
             elif key in ("extract_pose", "match_players"):
                 results[key] = TOOLS[key](s, stroke=stroke)
+                if key == "extract_pose" and stroke == "auto":
+                    from technique.strokes import STROKE_TYPES
+                    detected = STROKE_TYPES.get(results[key].get("stroke_type", ""))
+                    if detected and detected.stroke in ("forehand", "backhand"):
+                        stroke = detected.stroke
                 files["/pose_summary.json" if key == "extract_pose" else "/matches.json"] = json.dumps(
                     results[key], indent=2, default=str)
             elif key == "render_breakdown":

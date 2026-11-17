@@ -124,3 +124,69 @@ Its cached `test_2.mp4` is visual-only. Use those annotations for visual timing 
 The earlier statement that swift_TT is licensed for training/reference was a user constraint,
 not a verified license grant. Do not treat it as permission for new downloads. No new
 TTStroke-21/P2ANet access was obtained; gated datasets remain unavailable here.
+
+## Identity and hand continuation
+
+`extract_pose` now selects a torso appearance once and keeps that identity across
+side switches/cuts. It abstains on missing or ambiguous matches. Analysis windows
+are seeded from the original video's first frames so a later near opponent cannot
+become the coached player. Wide-frame MediaPipe initially hallucinated a high-confidence
+body on the table; overlapping half-frame crops plus upright/visibility checks recover
+real players. The torso template is fixed to avoid identity drift. Colour-bin smoothing
+reduces sensitivity to lighting. Similar shirts, occlusions and unseen clothing remain hard.
+
+The unsmoothed montage experiment retained 113/351 sampled frames (32.2%); a visual
+12-frame audit at 1,8,23,30,45,63,70,83,102,109,125,134 s showed 4 correct selections and
+8 abstentions. This is sparse visual auditing, **not identity accuracy on the full video**.
+No user confirmation of the teal-shirt identity has been received.
+
+Hand estimation now votes from visible wrist speeds in [-.12,+.06] s around audio
+onsets, preferring contact evidence in auto mode, retaining colour/motion fallbacks.
+Missing neighbours, low-visibility wrists and large body jumps do not supply speed peaks.
+If no hand cue is decisive, it asks the user to choose a hand instead of defaulting right.
+No contact-hand accuracy claim is possible with the original span-only labels.
+
+A generic Coach request previously forced `forehand`; it now uses `auto`, propagating
+the detected wing through the fixed plan. Explicit backhand requests still win.
+`eval/regressions/coach_backhand.json` adds a medium-confidence visual wing label near
+43.3 s (±.15 s), with no claimed spin subtype or exact audio-contact label. The real-sample
+regression verifies player identity and requested-backhand handling. Automatic classification
+is a strict expected failure: the pose-derived shoulder projection still calls it forehand.
+The label is a development regression, not a held-out evaluation.
+
+```bash
+cd backend
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m pytest technique/tests/test_identity.py technique/tests/test_coach_sample.py -q
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -m pytest tests technique/tests -q
+cd ../frontend
+npm test
+npm run build
+DEMO_MODE=1 npm run start -- --hostname 127.0.0.1 --port 3107
+```
+
+Backend verification before the temporal experiment: **285 passed, 5 skipped, 1 xfailed**.
+The skips require IMG_8782.MOV or explicit network opt-in. FastAPI TestClient hung under
+the execution sandbox even for `/health`; the same test and full suite pass outside it.
+Frontend: **111 tests passed**, production build passed. HTTP smoke checks: `/`, `/coach`,
+`/breakdown`, `/match`, `/autocut` return 200; cached `demo-breakdown` and `demo-autocut`
+job/page flows pass, and their videos plus all nine existing `/examples/*.mp4` return
+206 for byte ranges. There are no `demo-coach` or `demo-match` cached job fixtures.
+
+Colour smoothing improved montage retention to **183/351 frames (52.1%)**. Repeating the
+same 12-frame visual audit yielded **8 correct selections, 4 abstentions, 0 observed switches**,
+including near/far switches at 63/70 s and later gyms at 83/109/125 s. These are tuning
+observations on this montage, not a population identity-accuracy claim.
+
+For the **same 12 manually reviewed identity frames**, the baseline track has **4 correct,
+7 wrong, 1 abstention**, versus current **8 correct, 0 wrong, 4 abstentions**. Hip boxes
+and provisional identity are in `eval/regressions/match_b_identity.json`. These counts
+measure identity on the audit frames, not landmark accuracy. Reproduce scoring with:
+
+```bash
+cd backend
+MPLCONFIGDIR=/tmp/tt-mpl .venv/bin/python -c "from technique import pose; pose.save_track(pose.extract_pose('../samples/match_b.mp4', stride=12), 'eval/work/montage.npz')"
+.venv/bin/python -m eval.audit_player --track eval/work/montage.npz
+```
+
+Baseline uses `extract_pose`/`save_track` loaded from `git show 30a204d:backend/technique/pose.py`
+on the same source at stride 12; the saved track is scored with the same audit command.

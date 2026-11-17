@@ -1,0 +1,116 @@
+{
+  "video": "samples/match_b.mp4",
+  "player": "teal shirt, provisional user identity",
+  "split": "development audit, not held-out",
+  "method": "Manually reviewed frames; boxes contain the selected player's hips. A valid pose outside the box counts as wrong. Nearby sampled frame within 0.25 s is accepted.",
+  "frames": [
+    {
+      "time": 1,
+      "box": [
+        0.05,
+        0.3,
+        0.4,
+        1.0
+      ]
+    },
+    {
+      "time": 8,
+      "box": [
+        0.65,
+        0.2,
+        0.95,
+        0.85
+      ]
+    },
+    {
+      "time": 23,
+      "box": [
+        0.05,
+        0.3,
+        0.4,
+        1.0
+      ]
+    },
+    {
+      "time": 30,
+      "box": [
+        0.65,
+        0.2,
+        0.98,
+        0.85
+      ]
+    },
+    {
+      "time": 45,
+      "box": [
+        0.0,
+        0.15,
+        0.3,
+        1.0
+      ]
+    },
+    {
+      "time": 63,
+      "box": [
+        0.65,
+        0.2,
+        0.92,
+        0.85
+      ]
+    },
+    {
+      "time": 70,
+      "box": [
+        0.3,
+        0.3,
+        0.65,
+        1.0
+      ]
+    },
+    {
+      "time": 83,
+      "box": [
+        0.6,
+        0.2,
+        1.0,
+        0.9
+      ]
+    },
+    {
+      "time": 102,
+      "box": [
+        0.0,
+        0.25,
+        0.4,
+        1.0
+      ]
+    },
+    {
+      "time": 109,
+      "box": [
+        0.45,
+        0.15,
+        0.9,
+        0.9
+      ]
+    },
+    {
+      "time": 125,
+      "box": [
+        0.6,
+        0.15,
+        0.9,
+        0.9
+      ]
+    },
+    {
+      "time": 134,
+      "box": [
+        0.6,
+        0.15,
+        0.95,
+        0.9
+      ]
+    }
+  ]
+}

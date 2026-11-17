@@ -147,12 +147,12 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     clip = str(media.make_proxy(src, out / "clip.mp4", height=720, fps=30,
                                 start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
-    track = pose.extract_pose(clip)
+    track = pose.extract_pose(clip, identity=pose.initial_identity(src))
     pose.require_player(track)
-    side, how = pose.bat_side(clip, track, hand, trust_hand)
-    _log(progress, f"bat hand: {side} ({how})")
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
+    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits)
+    _log(progress, f"bat hand: {side} ({how})")
     stroke_type, detected = _stroke_plan(track, side, hits, stroke, stroke_type)
     st = strokes.STROKE_TYPES.get(stroke_type or "")
     if st:
