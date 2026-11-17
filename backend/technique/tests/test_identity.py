@@ -58,3 +58,29 @@ def test_torso_colour_match_tolerates_nearby_lighting_bins():
     b = appearance(cv2.cvtColor(hsv_b, cv2.COLOR_HSV2BGR), p)
     tracker = PlayerIdentity(a)
     assert tracker.select([p], [b], cut=True) == 0
+
+
+def _look(distance: float) -> np.ndarray:
+    """A histogram at a chosen colour distance from TEAL (distance = sqrt(1 - sqrt(a)))."""
+    a = (1 - distance ** 2) ** 2
+    return np.array([a, 1 - a, 0.])
+
+
+def test_loose_match_accepted_when_clearly_closest_in_frame():
+    # Lighting changed: the player scores .7, the opponent 1.0. Abstaining here starved Coach.
+    tr = PlayerIdentity(TEAL)
+    assert tr.select([person(.2), person(.8)], [_look(.7), BLACK]) == 0
+
+
+def test_loose_match_rejected_when_another_person_is_close():
+    tr = PlayerIdentity(TEAL)
+    assert tr.select([person(.2), person(.8)], [_look(.7), _look(.8)]) is None
+
+
+def test_lone_loose_match_needs_continuity():
+    tr = PlayerIdentity(TEAL)
+    assert tr.select([person(.2)], [_look(.7)], cut=True) is None
+    assert tr.select([person(.2)], [_look(.3)]) == 0
+    assert tr.select([person(.21)], [_look(.7)]) == 0      # same place, next frame
+    assert tr.select([person(.8)], [_look(.7)]) is None     # somebody else, elsewhere
+    assert tr.select([person(.2)], [_look(.7)], cut=True) is None
