@@ -85,19 +85,28 @@ def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
     return ratio
 
 
-def _pose_candidates(frame: np.ndarray, landmarker, mp) -> tuple[list[np.ndarray], list[np.ndarray]]:
-    """Detect visible upright people consistently during seed selection and tracking."""
+# Four overlapping quarters of the frame. A far-side player is too small for the detector in
+# the full or half frame (IMG_8782's opponent: found in 1 of 6 frames); in a quarter he is
+# twice the size. Used to find players for the picker, not on every tracked frame (4x cost).
+QUARTERS = [(0., 0., .55, .6), (.45, 0., 1., .6), (0., .4, .55, 1.), (.45, .4, 1., 1.)]
+
+
+def _pose_candidates(frame: np.ndarray, landmarker, mp,
+                     extra: list[tuple[float, float, float, float]] | None = None
+                     ) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Detect visible upright people consistently during seed selection and tracking.
+    extra: more (left, top, right, bottom) crops to search, e.g. QUARTERS for small players."""
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     # Wide gym views can hallucinate a body on the table. Half-frame
     # crops give each player enough pixels; the full view covers centre crossings.
-    regions = [(0., 1.)] if w / h < 1.5 else [(0., .6), (.4, 1.), (0., 1.)]
+    regions = [(0., 0., 1., 1.)] if w / h < 1.5 else [(0., 0., .6, 1.), (.4, 0., 1., 1.), (0., 0., 1., 1.)]
     people, world_people = [], []
-    for left, right in regions:
-        crop = np.ascontiguousarray(rgb[:, int(left * w):int(right * w)])
+    for left, top, right, bottom in regions + (extra or []):
+        crop = np.ascontiguousarray(rgb[int(top * h):int(bottom * h), int(left * w):int(right * w)])
         result = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
         for k, pl in enumerate(result.pose_landmarks):
-            p = np.array([[v.x * (right-left) + left, v.y, v.z * (right-left),
+            p = np.array([[v.x * (right-left) + left, v.y * (bottom-top) + top, v.z * (right-left),
                            v.visibility or 0.] for v in pl], np.float32)
             if implausible(p[None], w, h)[0] or np.min(p[[11, 12, 23, 24], 3]) < .5:
                 continue
@@ -225,10 +234,10 @@ def load_track(path: str | Path) -> PoseTrack:
                      times=d["times"], lm=d["lm"], world=d["world"], meta={"stride": int(d["stride"])})
 
 
-# Head-to-feet height in torso lengths. A standing player is ~3, a crouched or leaning
-# one 2+. The table-base phantom on the 720p coaching demo is 0.87 with full visibility
-# and a torso longer than the real player's, so it won the seed vote's first frame.
-MIN_BODY_SPAN = 1.5
+# Head-to-feet height in torso lengths. Real players measured 2.7-3.2 on the sample frames
+# (standing ~3, crouched or leaning 2+). Table-base phantoms on the 720p coaching demo: 0.87
+# (it won the seed vote's first frame), 1.5 and 1.7, all with full visibility.
+MIN_BODY_SPAN = 2.0
 
 
 def implausible(lm: np.ndarray, w: int, h: int) -> np.ndarray:

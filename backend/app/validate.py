@@ -123,3 +123,24 @@ def video_file(path: Path) -> dict:
         raise Invalid(f"That video is only {info['width']}x{info['height']}, too small to see the stroke. "
                       "Re-record it at 480p or higher (your phone's normal video setting is fine).")
     return info
+
+
+def player_frames(frames: list[tuple[str | None, bytes]], times: str) -> list[tuple[float, bytes]]:
+    """Still frames the browser grabbed from the chosen video, for finding the players: 1 to
+    max_frames JPEG/PNG images of at most max_frame_kb, with one time (s) each in `times`."""
+    lim = LIMITS["players"]
+    if not frames:
+        raise Invalid("Send at least one frame of the video, or a YouTube link.")
+    if len(frames) > lim["max_frames"]:
+        raise Invalid(f"Send at most {lim['max_frames']} frames.")
+    stamps = [t for t in times.split(",") if t.strip()]
+    if len(stamps) != len(frames) or not all(_NUMBER.fullmatch(t.strip()) for t in stamps):
+        raise Invalid("Each frame needs its time in the video, in seconds.")
+    out = []
+    for (name, data), stamp in zip(frames, stamps):
+        if len(data) > lim["max_frame_kb"] * 1024:
+            raise Invalid(f"Each frame must be under {lim['max_frame_kb']} KB.")
+        if not (data[:3] == b"\xff\xd8\xff" or data[:8] == b"\x89PNG\r\n\x1a\n"):
+            raise Invalid("Frames must be JPEG or PNG images.")
+        out.append((float(stamp), data))
+    return out

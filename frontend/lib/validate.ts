@@ -109,3 +109,22 @@ export function videoInputProblem(form: FormData, missing: string): string | nul
   const url = String(form.get("url") ?? "").trim();
   return url ? linkProblem(url) : missing;
 }
+
+/** Frames for "Which one is you?" (POST /api/players/detect): JPEG or PNG stills the browser drew
+ * from the chosen video, each with its time, or a YouTube link instead. Same rules as the API. */
+export function playerFramesProblem(form: FormData): string | null {
+  const P = LIMITS.players;
+  const frames = form.getAll("frames").filter((f): f is File => f instanceof File && f.size > 0);
+  if (!frames.length) {
+    const url = String(form.get("url") ?? "").trim();
+    return url ? linkProblem(url) : "Send at least one frame of the video, or a YouTube link.";
+  }
+  if (frames.length > P.max_frames) return `Send at most ${P.max_frames} frames.`;
+  const times = String(form.get("times") ?? "").split(",").filter((t) => t.trim());
+  if (times.length !== frames.length || !times.every((t) => NUMBER.test(t.trim()))) {
+    return "Each frame needs its time in the video, in seconds.";
+  }
+  if (frames.some((f) => f.size > P.max_frame_kb * 1024)) return `Each frame must be under ${P.max_frame_kb} KB.`;
+  if (frames.some((f) => !["image/jpeg", "image/png"].includes(f.type))) return "Frames must be JPEG or PNG images.";
+  return null;
+}

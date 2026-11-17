@@ -25,6 +25,7 @@ const ROUTES = {
   result: "@/app/api/jobs/[id]/result/route",
   files: "@/app/api/jobs/[id]/files/[name]/route",
   rubbers: "@/app/api/rubbers/route",
+  players: "@/app/api/players/detect/route",
 } as const;
 
 const SHORT = "https://youtube.com/shorts/g3n9jVP0fMU";
@@ -51,6 +52,7 @@ async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
     result: () => import("@/app/api/jobs/[id]/result/route"),
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
     rubbers: () => import("@/app/api/rubbers/route"),
+    players: () => import("@/app/api/players/detect/route"),
   };
   return imports[name]();
 }
@@ -381,6 +383,45 @@ describe("GET /api/rubbers", () => {
     const body = await (await GET!(url("style=speed&rubber_type=anti_spin&level=advanced&budget=40"), ctx({}))).json();
     expect(body.thickness).toBe("from backend");
     expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("/equipment/rubbers?style=speed&rubber_type=anti_spin&level=advanced&budget=40");
+  });
+});
+
+// ------------------------------------------------------------------ players
+
+describe("POST /api/players/detect", () => {
+  const frame = (type = "image/jpeg", bytes = 3) => new File([new Uint8Array(bytes)], "f.jpg", { type });
+  const frames = (n: number, times: string) => {
+    const form = new FormData();
+    for (let i = 0; i < n; i++) form.append("frames", frame());
+    form.append("times", times);
+    return new Request("http://test/api", { method: "POST", body: form });
+  };
+
+  it("checks the frames like the backend", async () => {
+    const { POST } = await route("players");
+    await expectError(await POST!(post({})), 422, "at least one frame");
+    await expectError(await POST!(frames(9, "1,2,3,4,5,6,7,8,9")), 422, "at most 8 frames");
+    await expectError(await POST!(frames(2, "1")), 422, "its time");
+    await expectError(await POST!(post({ frames: frame("text/plain"), times: "1" })), 422, "JPEG or PNG");
+    await expectError(await POST!(post({ url: "https://example.com/v" })), 422, "YouTube");
+  });
+
+  it("skips the picker without a backend", async () => {
+    const { POST } = await route("players");
+    const res = await POST!(frames(2, "1.5,30"));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ candidates: [], decisive: true });
+  });
+
+  it("passes the frames to the backend and its errors back as {error}", async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(Response.json({ candidates: [{ id: 0 }], frame: null, suggested: 0, decisive: false }))
+      .mockResolvedValueOnce(Response.json({ detail: "A frame couldn't be read as an image." }, { status: 422 }));
+    vi.stubGlobal("fetch", fetch);
+    const { POST } = await route("players", { BACKEND_URL: "http://backend" });
+    expect(await (await POST!(frames(2, "1.5,30"))).json()).toMatchObject({ decisive: false, suggested: 0 });
+    expect(fetch.mock.calls[0][0]).toBe("http://backend/players/detect");
+    await expectError(await POST!(frames(1, "2")), 422, "couldn't be read");
   });
 });
 

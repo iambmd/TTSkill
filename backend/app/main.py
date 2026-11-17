@@ -222,6 +222,41 @@ def create_coach(
     return job
 
 
+@app.post("/players/detect")
+def detect_players(
+    frames: list[UploadFile] | None = File(None),
+    times: str = Form(""),
+    url: str = Form(""),
+    kind: str = Form("breakdown"),
+) -> dict:
+    """The players in a few frames of the chosen video, for "Which one is you?". The browser
+    sends frames it drew from the file (no second upload of the video); for a pasted link we
+    download it and sample frames ourselves. `decisive` means no question is needed."""
+    import cv2
+    import numpy as np
+
+    from technique import people
+
+    if kind not in ("breakdown", "match", "coach"):
+        raise validate.Invalid("kind must be breakdown, match or coach.")
+    sent = [(f.filename, f.file.read()) for f in (frames or []) if has_file(f)]
+    if sent or not url.strip():
+        images = []
+        for t, data in validate.player_frames(sent, times):
+            image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+            if image is None:
+                raise validate.Invalid("A frame couldn't be read as an image.")
+            images.append((t, image))
+        return people.detect(images)
+    link = check_link(url, kind)
+    folder = jobs.DATA_DIR / ".players" / uuid.uuid4().hex
+    folder.mkdir(parents=True, exist_ok=True)
+    try:
+        return people.detect(people.sample_frames(str(download.download(link["url"], folder))))
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)   # the download is only for finding players
+
+
 @app.get("/jobs/{job_id}/files/{name}")
 def get_file(job_id: str, name: str) -> FileResponse:
     """Videos the coach agent made (highlights.mp4, breakdown.mp4, pro_matches.mp4)."""

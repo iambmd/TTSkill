@@ -476,3 +476,34 @@ def test_autocut_with_one_rally_cuts_it_and_warns(api, monkeypatch, media):
     got = api.get(f"/jobs/{job['id']}").json()
     assert got["status"] == "done" and got["resultUrl"] and "only heard 1 rally" in got["warning"]
     assert api.get(f"/jobs/{job['id']}/result").status_code == 200
+
+
+# ------------------------------------------------------------------ players
+
+def _jpeg() -> bytes:
+    return cv2.imencode(".jpg", np.zeros((90, 160, 3), np.uint8))[1].tobytes()
+
+
+def test_detect_players_validates_frames(api):
+    assert "at least one frame" in _error(api.post("/players/detect", data={"times": ""}))
+    many = [("frames", (f"f{i}.jpg", _jpeg(), "image/jpeg")) for i in range(9)]
+    assert "at most 8 frames" in _error(api.post("/players/detect", files=many, data={"times": ",".join("1" * 9)}))
+    one = [("frames", ("f.jpg", _jpeg(), "image/jpeg"))]
+    assert "its time" in _error(api.post("/players/detect", files=one, data={"times": ""}))
+    text = [("frames", ("f.jpg", b"not an image", "image/jpeg"))]
+    assert "JPEG or PNG" in _error(api.post("/players/detect", files=text, data={"times": "1.5"}))
+    assert "kind must be" in _error(api.post("/players/detect", files=one, data={"times": "1", "kind": "autocut"}))
+
+
+def test_detect_players_runs_on_the_sent_frames(api, monkeypatch):
+    from technique import people
+    seen = {}
+
+    def fake(frames):
+        seen["frames"] = [(t, img.shape) for t, img in frames]
+        return {"candidates": [], "frame": None, "suggested": None, "decisive": True}
+    monkeypatch.setattr(people, "detect", fake)
+    files = [("frames", ("a.jpg", _jpeg(), "image/jpeg")), ("frames", ("b.jpg", _jpeg(), "image/jpeg"))]
+    r = api.post("/players/detect", files=files, data={"times": "1.5,30"})
+    assert r.status_code == 200 and r.json()["decisive"]
+    assert seen["frames"] == [(1.5, (90, 160, 3)), (30.0, (90, 160, 3))]

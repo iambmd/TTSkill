@@ -5,10 +5,11 @@ import cv2
 import numpy as np
 
 
-def appearance(frame: np.ndarray, lm: np.ndarray) -> np.ndarray:
-    """HSV torso histogram, excluding the background outside the shoulder/hip polygon."""
+def appearance(frame: np.ndarray, lm: np.ndarray, joints: tuple[int, ...] = (11, 12, 24, 23)) -> np.ndarray:
+    """HSV histogram inside the polygon of `joints` (default the torso: shoulders and hips),
+    excluding the background around it."""
     h, w = frame.shape[:2]
-    polygon = (lm[[11, 12, 24, 23], :2] * [w, h]).astype(np.int32)
+    polygon = (lm[list(joints), :2] * [w, h]).astype(np.int32)
     mask = np.zeros((h, w), np.uint8)
     cv2.fillConvexPoly(mask, polygon, 255)
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
@@ -25,6 +26,28 @@ STRICT = .55     # accepted outright
 LOOSE = .8       # accepted only when clearly the best match in frame, or continuing in place
 MARGIN = .15     # a loose match must beat every other person by this much
 NEAR = .1        # normalized hip movement that still counts as the same place
+
+
+THIGHS = (23, 24, 26, 25)   # hips to knees: shorts or trousers, the second colour that tells players apart
+
+
+def signature(frame: np.ndarray, lm: np.ndarray) -> np.ndarray:
+    """Torso and thigh colour histograms side by side; the thigh half is zero when the knees
+    aren't visible (cut off by the frame or the table)."""
+    torso = appearance(frame, lm)
+    legs = (appearance(frame, lm, THIGHS) if np.min(lm[[25, 26], 3]) >= .5
+            else np.zeros_like(torso))
+    return np.concatenate([torso, legs])
+
+
+def signature_distance(a: np.ndarray, b: np.ndarray) -> float:
+    """0 (same colours) to 1: the worse of the parts seen in both signatures. The same person
+    matches on both; teal and black shirts over the same black shorts must not average out."""
+    half = len(a) // 2
+    parts = [(a[:half], b[:half]), (a[half:], b[half:])]
+    seen = [float(np.linalg.norm(np.sqrt(x) - np.sqrt(y)) / np.sqrt(2)) for x, y in parts
+            if x.sum() > 0 and y.sum() > 0]
+    return float(max(seen)) if seen else 1.0
 
 
 def dominant_appearance(looks: list[np.ndarray]) -> np.ndarray | None:

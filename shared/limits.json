@@ -23,5 +23,6 @@
     "match_stroke": ["forehand", "backhand"],
     "autocut_mode": ["highlights", "full"]
   },
-  "pose": { "min_visible_ratio": 0.4 }
+  "pose": { "min_visible_ratio": 0.4 },
+  "players": { "max_frames": 8, "max_frame_kb": 1500 }
 }
