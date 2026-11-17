@@ -148,15 +148,16 @@ def plan_from_request(request: str, has_link: bool) -> tuple[list[tuple[str, str
     pros = any(w in t for w in (" pro", "pros", "who do i", "play like", "similar", "compare"))
     if not (rallies or tech or pros):
         rallies = tech = True
+    noun = "stroke" if stroke == "auto" else stroke  # "auto" is a setting, not something to say
     steps = [("download_url", "Download the video")] if has_link else []
     if rallies:
         steps += [("detect_rallies", "Find the rallies"), ("cut_highlights", "Cut the best rallies")]
     if tech or pros:
-        steps.append(("extract_pose", f"Measure your {stroke} with MediaPipe"))
+        steps.append(("extract_pose", f"Measure your {noun} with MediaPipe"))
     if pros:
-        steps.append(("match_players", f"Find the pros closest to your {stroke}"))
+        steps.append(("match_players", f"Find the pros closest to your {noun}"))
     if tech:
-        steps.append(("render_breakdown", f"Write the coaching cards and render your {stroke}"))
+        steps.append(("render_breakdown", f"Write the coaching cards and render your {noun}"))
     steps.append(("summary", "Sum up what to work on"))
     return steps, stroke
 
@@ -237,7 +238,7 @@ def _summary(r: dict, stroke: str) -> str:
     errs = [f"{k}: {v['error']}" for k, v in r.items() if isinstance(v, dict) and "error" in v]
     if errs:
         lines.append("Some steps failed: " + "; ".join(errs))
-    return " ".join(lines) or f"I couldn't analyse the {stroke} in this video."
+    return " ".join(lines) or f"I couldn't analyse the {'stroke' if stroke == 'auto' else stroke} in this video."
 
 
 # ------------------------------------------------------------------ entry point

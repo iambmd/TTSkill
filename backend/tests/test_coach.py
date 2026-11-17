@@ -115,3 +115,10 @@ def test_unspecified_coaching_request_does_not_force_forehand():
     from agent.coach import plan_from_request
     assert plan_from_request('Improve my technique', False)[1] == 'auto'
     assert plan_from_request('Improve my backhand', False)[1] == 'backhand'
+
+
+def test_auto_stroke_never_shows_as_a_word():
+    from agent.coach import _summary, plan_from_request
+    steps, stroke = plan_from_request('Coach my technique', False)
+    assert stroke == 'auto' and not any('auto' in label for _, label in steps)
+    assert 'auto' not in _summary({}, 'auto')
