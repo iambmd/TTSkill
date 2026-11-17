@@ -34,6 +34,7 @@ class Session:
     url: Optional[str] = None
     rallies: list = field(default_factory=list)
     pose: Optional[dict] = None
+    hand: str = "auto"  # from the request ("left-handed"); Coach has no hand field to ask with
 
     @property
     def dir(self) -> Path:
@@ -118,7 +119,8 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     except pose.NoPlayer as e:
         raise ToolError(str(e)) from e
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, "auto", hit_times=hits)
+    # Coach can't ask which hand: with no decisive cue, state an assumption instead of failing.
+    side, how = pose.bat_side(clip, track, s.hand, hit_times=hits, assume="right")
     _, p0 = key_moments(track, side, hits, direction="any")
     wing = stroke if stroke in ("forehand", "backhand") else None
     stype, feats = strokes.detect(track, side, p0, wing=wing)
@@ -153,8 +155,11 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
 
     video = s.need_video()
     out = s.dir / "technique"
+    # Reuse the hand extract_pose decided, so the video and the summary can't disagree.
+    known = (s.pose or {}).get("bat_hand")
     res = run_video(str(video), str(out), stroke or "", player or None, progress=lambda m: s.update(message=m),
-                    stroke_type=stroke_type or (s.pose or {}).get("stroke_type"))
+                    stroke_type=stroke_type or (s.pose or {}).get("stroke_type"),
+                    hand=known or s.hand, trust_hand=bool(known), assume_hand="right")
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
     if cards:
         for step, card in zip(b.steps, cards):
@@ -180,7 +185,7 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
 def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[float] = None) -> dict:
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
-                      report=lambda p, m: s.update(message=m))
+                      hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m))
     if res["video"]:
         top = res["matches"][0]
         s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",

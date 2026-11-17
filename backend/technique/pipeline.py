@@ -158,7 +158,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
               analyzer: str = "auto", window: Optional[tuple[float, float]] = None,
               window_s: float = 8.0, t2v_provider: str = "none",
               progress: Optional[Progress] = None, hand: str = "auto",
-              stroke_type: Optional[str] = None, trust_hand: bool = False) -> dict:
+              stroke_type: Optional[str] = None, trust_hand: bool = False,
+              assume_hand: Optional[str] = None) -> dict:
     """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible;
     with trust_hand, always used).
     stroke: a broad stroke, or "" / "auto" to read it from the swing.
@@ -186,7 +187,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     pose.require_player(track)
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits)
+    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand)
     _log(progress, f"bat hand: {side} ({how})")
     stroke_type, detected = _stroke_plan(track, side, hits, stroke, stroke_type)
     st = strokes.STROKE_TYPES.get(stroke_type or "")

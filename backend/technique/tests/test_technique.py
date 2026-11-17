@@ -151,3 +151,20 @@ def test_stance_uses_world_points_when_seen_edge_on():
     tr.world = w
     m = pose.pose_metrics(tr, 45, "right")
     assert m["stance_width_x_shoulders"] == 1.0   # ankles .4 m apart, shoulders .4 m
+
+
+def test_unclear_hand_is_asked_for_or_stated_as_an_assumption(tmp_path):
+    import cv2
+    from technique.pose import NoPlayer, bat_side
+    tr = _fake_track(n=30)
+    tr.lm[:, 16, 0] = tr.lm[0, 16, 0]   # neither wrist moves: no speed cue
+    vid = str(tmp_path / "v.mp4")
+    wr = cv2.VideoWriter(vid, cv2.VideoWriter_fourcc(*"mp4v"), 30, (1280, 720))
+    for _ in range(30):
+        wr.write(np.full((720, 1280, 3), 90, np.uint8))  # no paddle colour either
+    wr.release()
+    with pytest.raises(NoPlayer):
+        bat_side(vid, tr)
+    side, how = bat_side(vid, tr, assume="right")
+    assert side == "right" and how.startswith("assumed right-handed")
+    assert bat_side(vid, tr, "left", assume="right") == ("left", "user")

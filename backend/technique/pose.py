@@ -360,11 +360,14 @@ def contact_side(track: PoseTrack, hit_times: list[float]) -> str:
 
 
 def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
-             trust_hand: bool = False, hit_times: list[float] | None = None) -> tuple[str, str]:
+             trust_hand: bool = False, hit_times: list[float] | None = None,
+             assume: str | None = None) -> tuple[str, str]:
     """Pick the bat arm (as a MediaPipe side label). Returns (side, how).
     Order: paddle colour near a wrist (when clearly one-sided) > the user's --hand > the
     faster wrist. trust_hand: `hand` is known (a roster pro), so it wins outright; red
-    arena furniture next to the free hand can fool the paddle colour."""
+    arena furniture next to the free hand can fool the paddle colour.
+    assume: the hand to state as an assumption when no cue is decisive, for callers that
+    can't ask the user (Coach has no hand field). Without it, the user is asked to choose."""
     if trust_hand and hand in ("left", "right"):
         return hand, "known"
     if hand == "auto" and hit_times:
@@ -378,6 +381,8 @@ def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
     if hand in ("left", "right"):
         return hand, "user"
     side = dominant_side(track)
+    if side == "unknown" and assume in ("left", "right"):
+        return assume, f"assumed {assume}-handed: no clear bat-hand cue in this clip"
     if side == "unknown":
         raise NoPlayer("We couldn't tell your hitting hand. Choose left or right, or upload a clearer swing.")
     return side, "faster wrist (no decisive contact evidence)"

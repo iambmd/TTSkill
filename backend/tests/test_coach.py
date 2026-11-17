@@ -133,3 +133,23 @@ def test_summary_omits_unseen_joints():
                                                           "stance_width_x_shoulders": None}}
     text = _summary({"extract_pose": pz}, "forehand")
     assert "elbow about 169" in text and "knees" not in text and "None" not in text
+
+
+def test_hand_comes_from_the_request_when_stated():
+    from agent.coach import hand_from_request
+    assert hand_from_request("I'm left-handed, fix my forehand") == "left"
+    assert hand_from_request("lefty here, show my rallies") == "left"
+    assert hand_from_request("Right handed player, coach my backhand") == "right"
+    assert hand_from_request("Fix my forehand, the left side of the table") == "auto"
+    assert hand_from_request("Coach my technique") == "auto"
+
+
+def test_summary_states_an_assumed_hand():
+    from agent.coach import _summary
+    pz = {"stroke_label": "Forehand drive", "bat_hand": "right",
+          "bat_hand_how": "assumed right-handed: no clear bat-hand cue in this clip",
+          "at_contact": {"elbow_angle_deg": 150, "knee_angle_deg": None, "stance_width_x_shoulders": None}}
+    text = _summary({"extract_pose": pz}, "forehand")
+    assert "assumed right-handed" in text and "left-handed" in text
+    pz["bat_hand_how"] = "paddle colour near wrist"
+    assert "assumed" not in _summary({"extract_pose": pz}, "forehand")

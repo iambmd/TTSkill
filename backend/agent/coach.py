@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import traceback
 from pathlib import Path
 from typing import Optional
@@ -139,6 +140,16 @@ def run_agent(s: Session, request: str, model=None) -> None:
 
 # ------------------------------------------------------------------ fallback
 
+def hand_from_request(request: str) -> str:
+    """The bat hand when the user states it ("I'm left-handed", "lefty"); otherwise auto."""
+    t = request.lower()
+    if re.search(r"\bleft[- ]?hand(ed|er)?\b|\blefty\b|\bleftie\b", t):
+        return "left"
+    if re.search(r"\bright[- ]?hand(ed|er)?\b|\brighty\b", t):
+        return "right"
+    return "auto"
+
+
 def plan_from_request(request: str, has_link: bool) -> tuple[list[tuple[str, str]], str]:
     t = request.lower()
     stroke = "backhand" if "backhand" in t else "forehand" if "forehand" in t else "auto"
@@ -232,6 +243,11 @@ def _summary(r: dict, stroke: str) -> str:
         lines.append(f"Your {pz['stroke_label'].lower()}: " + (" and ".join(seen) + " at contact" if seen
                      else "your joints weren't all in frame at contact")
                      + (f", stance {stance}x shoulder width." if stance is not None else "."))
+        if str(pz.get("bat_hand_how", "")).startswith("assumed"):
+            hand = pz.get("bat_hand", "right")
+            other = "left" if hand == "right" else "right"
+            lines.append(f"I couldn't see which hand holds your bat, so I assumed {hand}-handed. "
+                         f"If you play {other}-handed, say so in your request.")
     mp = r.get("match_players")
     if mp and mp.get("matches"):
         top = mp["matches"][0]
@@ -250,7 +266,7 @@ def _summary(r: dict, stroke: str) -> str:
 
 def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: str) -> None:
     """Background job: the deep agent when a key is set, the fixed plan otherwise or on failure."""
-    s = Session(job_id, video=video, url=url)
+    s = Session(job_id, video=video, url=url, hand=hand_from_request(request))
     s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[])
     if os.environ.get("ANTHROPIC_API_KEY"):
         try:
