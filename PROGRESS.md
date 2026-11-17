@@ -227,3 +227,16 @@ Verifying the video-wide seed end to end found two problems, both fixed before c
 
 Backend: **335 passed, 2 network skips, 1 known automatic-backhand xfail** (with
 `TTSKILL_SAMPLE` = IMG_8782). The seed is chosen on all demo inputs and samples.
+
+### Bat hand pooled across rallies; Coach scans once (ed8dade and the following commit)
+
+The bat hand was decided from one 8 s window. `choose_window` already scans the six busiest
+rallies with the player's identity; it now sums bat colour over them, and `bat_side` uses that
+before falling back to the faster wrist or a stated assumption. On 8 videos (IMG_8782,
+coach_demo, both montage encodes, and mirrored copies that look left-handed) pooled colour
+named the true hand every time (ratios 1.72-2.86); at the unchanged 1.8x rule 6/8 decide and
+none is wrong. Coach on IMG_8782 now reports right by bat colour instead of an assumption.
+
+Coach also chose its window three times (pose, render, pro match). It now chooses once:
+coach_demo 111 -> 88 s, IMG_8782 with rallies 220 -> 170 s, same window, hand and stroke.
+Backend: **336 passed, 2 network skips, 1 known xfail**.
