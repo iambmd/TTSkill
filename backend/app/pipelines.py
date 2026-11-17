@@ -157,13 +157,16 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     out.mkdir(parents=True, exist_ok=True)
     report(0.1, "Finding your best swings...")
     info = media.probe(video)
-    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None)
+    # Same player selection as Breakdown and Coach: the person nearest at the start, kept
+    # by appearance, so a bigger opponent later in the clip is never measured instead.
+    identity = pose.initial_identity(video)
+    win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=identity)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     report(0.3, "Reading your body and swing with MediaPipe...")
-    track = pose.extract_pose(clip)
+    track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track)
-    side, how = pose.bat_side(clip, track, hand)
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
+    side, how = pose.bat_side(clip, track, hand, hit_times=hits)
     _, contact = key_moments(track, side, hits, direction="up")
     body = body_ratios(track)
     curves = angle_curves(track, side, contact)
