@@ -158,8 +158,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     out.mkdir(parents=True, exist_ok=True)
     report(0.1, "Finding your best swings...")
     info = media.probe(video)
-    # Same player selection as Breakdown and Coach: the person nearest at the start, kept
-    # by appearance, so a bigger opponent later in the clip is never measured instead.
+    # Same video-wide player seed as Breakdown and Coach, then fixed appearance tracking.
     identity = pose.initial_identity(video)
     win = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=identity)
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])

@@ -85,6 +85,31 @@ def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
     return ratio
 
 
+def _pose_candidates(frame: np.ndarray, landmarker, mp) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Detect visible upright people consistently during seed selection and tracking."""
+    h, w = frame.shape[:2]
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    # Wide gym views can hallucinate a body on the table. Half-frame
+    # crops give each player enough pixels; the full view covers centre crossings.
+    regions = [(0., 1.)] if w / h < 1.5 else [(0., .6), (.4, 1.), (0., 1.)]
+    people, world_people = [], []
+    for left, right in regions:
+        crop = np.ascontiguousarray(rgb[:, int(left * w):int(right * w)])
+        result = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
+        for k, pl in enumerate(result.pose_landmarks):
+            p = np.array([[v.x * (right-left) + left, v.y, v.z * (right-left),
+                           v.visibility or 0.] for v in pl], np.float32)
+            if implausible(p[None], w, h)[0] or np.min(p[[11, 12, 23, 24], 3]) < .5:
+                continue
+            centre = p[[23, 24], :2].mean(0)
+            if any(np.linalg.norm(centre - q[[23, 24], :2].mean(0)) < .06 for q in people):
+                continue
+            people.append(p)
+            world_people.append(np.array([[v.x, v.y, v.z] for v in result.pose_world_landmarks[k]],
+                                         np.float32))
+    return people, world_people
+
+
 def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                  max_frames: int | None = None,
                  identity: np.ndarray | None = None) -> PoseTrack:
@@ -120,25 +145,7 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                 break
             if idx % stride == 0:
                 t = idx / fps
-                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                # Wide gym views can hallucinate a body on the table. Half-frame
-                # crops give each player enough pixels; the full view covers centre crossings.
-                regions = [(0., 1.)] if w / h < 1.5 else [(0., .6), (.4, 1.), (0., 1.)]
-                people, world_people = [], []
-                for left, right in regions:
-                    crop = np.ascontiguousarray(rgb[:, int(left * w):int(right * w)])
-                    result = lmk.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
-                    for k, pl in enumerate(result.pose_landmarks):
-                        p = np.array([[v.x * (right-left) + left, v.y, v.z * (right-left),
-                                       v.visibility or 0.] for v in pl], np.float32)
-                        if implausible(p[None], w, h)[0] or np.min(p[[11, 12, 23, 24], 3]) < .5:
-                            continue
-                        centre = p[[23, 24], :2].mean(0)
-                        if any(np.linalg.norm(centre - q[[23, 24], :2].mean(0)) < .06 for q in people):
-                            continue
-                        people.append(p)
-                        world_people.append(np.array([[v.x, v.y, v.z] for v in result.pose_world_landmarks[k]],
-                                                     np.float32))
+                people, world_people = _pose_candidates(frame, lmk, mp)
                 arr = np.full((33, 4), np.nan, np.float32)
                 warr = np.full((33, 3), np.nan, np.float32)
                 scene = cv2.resize(frame, (32, 18)).astype(float) / 255
@@ -168,10 +175,42 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
 
 
 def initial_identity(video: str | Path) -> np.ndarray | None:
-    """Seed a cropped analysis window with the original video's selected player."""
-    track = extract_pose(video, max_frames=5)
-    reference = track.meta.get("identity")
-    return np.array(reference) if reference is not None else None
+    """Select the person nearest the camera most often across the whole video (see
+    identity.choose_seed for the fallback when that vote is ambiguous)."""
+    import mediapipe as mp
+    from mediapipe.tasks.python import BaseOptions, vision
+    from .identity import appearance, choose_seed
+
+    cap = cv2.VideoCapture(str(video))
+    if not cap.isOpened():
+        raise RuntimeError(f"cannot open {video}")
+    count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    looks = []
+    opts = vision.PoseLandmarkerOptions(
+        base_options=BaseOptions(model_asset_path=str(model_path())),
+        running_mode=vision.RunningMode.IMAGE, num_poses=3,
+        min_pose_detection_confidence=0.4, min_tracking_confidence=0.4,
+    )
+    try:
+        with vision.PoseLandmarker.create_from_options(opts) as landmarker:
+            for index in np.linspace(0, max(0, count - 1), min(24, count), dtype=int):
+                cap.set(cv2.CAP_PROP_POS_FRAMES, int(index))
+                ok, frame = cap.read()
+                if not ok:
+                    continue
+                h, w = frame.shape[:2]
+                if h > 720:
+                    frame = cv2.resize(frame, (round(w * 720 / h), 720))
+                people, _ = _pose_candidates(frame, landmarker, mp)
+                if people:
+                    h, w = frame.shape[:2]
+                    near = max(people, key=lambda p: np.linalg.norm(
+                        (p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
+                    looks.append(appearance(frame, near))
+    finally:
+        cap.release()
+    # None when nobody was seen: the existing require_player check gives the no-player message.
+    return choose_seed(looks)
 
 
 def save_track(track: PoseTrack, path: str | Path) -> None:
@@ -186,9 +225,16 @@ def load_track(path: str | Path) -> PoseTrack:
                      times=d["times"], lm=d["lm"], world=d["world"], meta={"stride": int(d["stride"])})
 
 
+# Head-to-feet height in torso lengths. A standing player is ~3, a crouched or leaning
+# one 2+. The table-base phantom on the 720p coaching demo is 0.87 with full visibility
+# and a torso longer than the real player's, so it won the seed vote's first frame.
+MIN_BODY_SPAN = 1.5
+
+
 def implausible(lm: np.ndarray, w: int, h: int) -> np.ndarray:
     """Flag garbage detections (e.g. a 'lying down' skeleton on a table edge): the torso
-    must be roughly upright and not tiny compared with the median torso."""
+    must be roughly upright, not tiny compared with the median torso, and carry a body
+    that is taller than the torso alone."""
     if len(lm) == 0:
         return np.zeros(0, bool)
     xy = lm[:, :, :2] * np.array([w, h])
@@ -199,7 +245,9 @@ def implausible(lm: np.ndarray, w: int, h: int) -> np.ndarray:
     upright = v[:, 1] > 0.5 * length            # hips below shoulders, < ~60 deg lean
     med = np.nanmedian(length) if np.isfinite(length).any() else 0
     big_enough = length > 0.4 * med
-    ok = upright & big_enough
+    span = xy[:, :, 1].max(axis=1) - xy[:, :, 1].min(axis=1)
+    whole = span >= MIN_BODY_SPAN * length
+    ok = upright & big_enough & whole
     return ~ok & np.isfinite(length)
 
 

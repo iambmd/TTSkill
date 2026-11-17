@@ -84,3 +84,41 @@ def test_lone_loose_match_needs_continuity():
     assert tr.select([person(.21)], [_look(.7)]) == 0      # same place, next frame
     assert tr.select([person(.8)], [_look(.7)]) is None     # somebody else, elsewhere
     assert tr.select([person(.2)], [_look(.7)], cut=True) is None
+
+
+def test_seed_uses_repeated_near_player_instead_of_first_arrival():
+    from technique.identity import dominant_appearance
+    looks = [BLACK, BLACK, TEAL, TEAL, TEAL, TEAL, TEAL, TEAL]
+    np.testing.assert_allclose(dominant_appearance(looks), TEAL)
+
+
+def test_seed_is_an_observed_medoid_and_rejects_a_tied_vote():
+    from technique.identity import dominant_appearance
+    looks = [TEAL, np.array([.9, .1, 0]), np.array([.8, .2, 0]), BLACK]
+    chosen = dominant_appearance(looks)
+    assert any(np.array_equal(chosen, h) for h in looks)
+    assert dominant_appearance([TEAL, BLACK, TEAL, BLACK]) is None
+    assert dominant_appearance([TEAL]) is None
+    assert dominant_appearance([np.zeros(3), np.zeros(3)]) is None
+
+
+def test_ambiguous_vote_falls_back_to_the_first_frame_instead_of_failing():
+    # 720p coaching demo: the user's cluster and a mixed partner cluster tie 7 v 7.
+    from technique.identity import choose_seed
+    np.testing.assert_allclose(choose_seed([TEAL, BLACK, TEAL, BLACK]), TEAL)
+    np.testing.assert_allclose(choose_seed([BLACK, BLACK, TEAL, TEAL, TEAL, TEAL, TEAL, TEAL]), TEAL)
+    assert choose_seed([]) is None
+
+
+def test_table_phantom_is_not_a_person():
+    # 720p coaching demo, frame 0: a skeleton on the table base had full visibility and a
+    # longer torso than the real player, but a body only 0.87 torsos tall.
+    from technique.pose import implausible
+    real = person(.16)
+    real[:, 1] = np.linspace(.12, .86, 33)          # head to feet
+    real[[11, 12], 1], real[[23, 24], 1] = .3, .52
+    phantom = person(.49)
+    phantom[:, 1] = .7
+    phantom[[11, 12], 1], phantom[[23, 24], 1] = .62, .78
+    phantom[[11, 23], 0], phantom[[12, 24], 0] = .44, .54
+    assert implausible(np.stack([real, phantom]), 1280, 720).tolist() == [False, True]
