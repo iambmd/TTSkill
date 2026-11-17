@@ -30,7 +30,7 @@ validation videos are in ignored `data/openttgames/` (about 1.9 GB of the 10 GB 
 | fd4598c | `pose.bat_side(assume=...)`; Coach reads the hand from the request (`coach.hand_from_request`), states "assumed right-handed" otherwise, and reuses one hand decision in render and match (`tools.Session.hand`) | Coach on IMG_8782 failed with "couldn't tell your hitting hand" and has no hand field |
 | f16f93f | `eval/geometry.py`, `extract_strokes.py`, `score_geometry.py`, `geometry_protocol.json` | Codex's frozen wing experiment; failed validation, kept reproducible, not in production |
 | ed8dade | `choose_window` sums bat colour over its six scans (`win["paddle"]`); `bat_side(pooled=...)` uses it after the window's cues and a stated hand, before the faster wrist | IMG_8782 hand was assumed; pooled colour named the true hand on 8/8 videos (4 samples + mirrored copies), 6/8 decided at the unchanged 1.8x rule, none wrong |
-| (next commit) | Coach chooses the window and seed once (`Session.window/identity`); `run_video`/`match_video` take `chosen`, `identity` | Each step rescanned; Coach 111 -> 88 s (coach_demo), 220 -> 170 s (IMG_8782) |
+| db54937 | Coach chooses the window and seed once (`Session.window/identity`); `run_video`/`match_video` take `chosen`, `identity` | Each step rescanned; Coach 111 -> 88 s (coach_demo), 220 -> 170 s (IMG_8782) |
 
 Decisions: an ambiguous seed vote falls back rather than failing (failing killed Coach on
 the main demo video). Breakdown and Match still ask for the hand (their forms can). A
