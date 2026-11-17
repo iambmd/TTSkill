@@ -166,7 +166,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track)
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, hand, hit_times=hits)
+    side, how = pose.bat_side(clip, track, hand, hit_times=hits, pooled=win.get("paddle"))
     _, contact = key_moments(track, side, hits, direction="up")
     body = body_ratios(track)
     curves = angle_curves(track, side, contact)

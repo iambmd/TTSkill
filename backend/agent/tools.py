@@ -120,7 +120,7 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
         raise ToolError(str(e)) from e
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
     # Coach can't ask which hand: with no decisive cue, state an assumption instead of failing.
-    side, how = pose.bat_side(clip, track, s.hand, hit_times=hits, assume="right")
+    side, how = pose.bat_side(clip, track, s.hand, hit_times=hits, assume="right", pooled=win.get("paddle"))
     _, p0 = key_moments(track, side, hits, direction="any")
     wing = stroke if stroke in ("forehand", "backhand") else None
     stype, feats = strokes.detect(track, side, p0, wing=wing)

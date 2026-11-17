@@ -113,14 +113,16 @@ def test_window_prefers_busy_rally_where_the_player_is_visible(tmp_path, monkeyp
                {"start": 40, "end": 47, "hits": 20, "hit_times": [41.]},
                {"start": 10, "end": 15, "hits": 12, "hit_times": [11.]}]
     # (whole-body share, height): far player, near player, near but cut off at the waist
-    shares = {79.4: (.44, .28), 39.4: (.56, .57), 9.4: (.06, .56)}
+    paddle = {"left": 100, "right": 900}
+    shares = {79.4: (.44, .28, paddle), 39.4: (.56, .57, paddle), 9.4: (.06, .56, paddle)}
     monkeypatch.setattr(pipeline.audio, "find_rallies", lambda src: rallies)
     monkeypatch.setattr(pipeline, "player_view", lambda src, s, e, ident, path: shares[round(s, 1)])
     win = pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None, identity=np.ones(3))
     assert win["rally"]["start"] == 40 and win["visible"] == .56
+    assert win["paddle"] == {"left": 300, "right": 2700}   # summed over every scanned rally
     # Without an identity (or nobody visible anywhere) the loudest rally still wins.
     assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None)["rally"]["start"] == 80
-    shares.update({79.4: (.1, .3), 39.4: (.1, .6)})
+    shares.update({79.4: (.1, .3, paddle), 39.4: (.1, .6, paddle)})
     assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None, identity=np.ones(3))["rally"]["start"] == 80
 
 
@@ -168,3 +170,8 @@ def test_unclear_hand_is_asked_for_or_stated_as_an_assumption(tmp_path):
     side, how = bat_side(vid, tr, assume="right")
     assert side == "right" and how.startswith("assumed right-handed")
     assert bat_side(vid, tr, "left", assume="right") == ("left", "user")
+    # Bat colour pooled over several rallies decides before the assumption (IMG_8782: 1.82x).
+    side, how = bat_side(vid, tr, assume="right", pooled={"left": 21602, "right": 12561 // 2})
+    assert side == "left" and how.startswith("paddle colour over several rallies")
+    assert bat_side(vid, tr, assume="right", pooled={"left": 21602, "right": 12561})[1].startswith("assumed")
+    assert bat_side(vid, tr, "right", pooled={"left": 50000, "right": 10})[1] == "user"

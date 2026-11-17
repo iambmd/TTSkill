@@ -30,17 +30,20 @@ def _log(progress: Optional[Progress], msg: str):
 CANDIDATE_RALLIES = 6   # busiest rallies checked for how well the player is seen
 
 
-def player_view(src: str, start: float, end: float, identity: np.ndarray, path: Path) -> tuple[float, float]:
-    """(share of frames showing the identified player head to ankles, their median height as a
-    fraction of the frame) over [start, end], from a 4 fps scan. A close camera that cuts the
-    player at the waist gives guessed knee and stance numbers; a far player gives coarse ones."""
+def player_view(src: str, start: float, end: float, identity: np.ndarray,
+                path: Path) -> tuple[float, float, dict]:
+    """From a 4 fps scan of [start, end]: the share of frames showing the identified player
+    head to ankles, their median height as a fraction of the frame, and red-rubber pixels near
+    each wrist. A close camera that cuts the player at the waist gives guessed knee and stance
+    numbers; a far player gives coarse ones."""
     scan = media.make_proxy(src, path, height=480, fps=4, start=start, end=end)
     track = pose.extract_pose(scan, identity=identity)
     if not len(track.times):
-        return 0.0, 0.0
+        return 0.0, 0.0, {"left": 0, "right": 0}
     whole = pose.whole_body(track)
     heights = track.lm[whole, :, 1].max(axis=1) - track.lm[whole, :, 1].min(axis=1)
-    return float(whole.mean()), float(np.median(heights)) if whole.any() else 0.0
+    return (float(whole.mean()), float(np.median(heights)) if whole.any() else 0.0,
+            pose.paddle_scores(scan, track, every=1))
 
 
 def choose_window(src: str, duration: float, window_s: float, workdir: Path,
@@ -60,21 +63,25 @@ def choose_window(src: str, duration: float, window_s: float, workdir: Path,
             start = max(0.0, r["start"] - 0.6)
             return start, min(duration, start + window_s, r["end"] + 0.8)
 
-        best, reason, seen = ranked[0], "longest rally by ball-contact sound", None
+        best, reason, seen, paddle = ranked[0], "longest rally by ball-contact sound", None, None
         if identity is not None and len(ranked) > 1:
             views = [player_view(src, *span(r), identity, Path(workdir) / f"scan_{i}.mp4")
                      for i, r in enumerate(ranked[:CANDIDATE_RALLIES])]
             # How much of you there is to measure: seen whole often, and big in the frame.
             # Below the pose floor (require_player) a rally can't be analysed at all.
-            usable = [k for k, (share, _) in enumerate(views) if share >= pose.MIN_VISIBLE]
+            usable = [k for k, (share, _, _) in enumerate(views) if share >= pose.MIN_VISIBLE]
             i = max(usable, key=lambda k: views[k][0] * views[k][1]) if usable else 0
             best, seen = ranked[i], round(views[i][0], 2)
             reason = "busy rally where you're seen best" if i else reason
+            # The bat hand doesn't change between rallies: pooled over every scan, bat colour
+            # named the right hand on 8/8 sample and mirrored-sample videos where single
+            # windows often disagreed.
+            paddle = {side: sum(v[2][side] for v in views) for side in ("left", "right")}
             _log(progress, f"player (visible, height) in candidate rallies: "
-                           f"{[(round(a, 2), round(b, 2)) for a, b in views]}")
+                           f"{[(round(a, 2), round(b, 2)) for a, b, _ in views]}")
         start, end = span(best)
         _log(progress, f"rally {best['start']:.1f}-{best['end']:.1f}s ({best['hits']} hits)")
-        return {"start": start, "end": end, "reason": reason, "visible": seen,
+        return {"start": start, "end": end, "reason": reason, "visible": seen, "paddle": paddle,
                 "rally": {k: best[k] for k in ("start", "end", "hits")},
                 "hit_times": best["hit_times"]}
     _log(progress, "no rallies heard; scanning pose motion at 5 fps")
@@ -187,7 +194,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     pose.require_player(track)
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand)
+    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand,
+                              pooled=win.get("paddle"))
     _log(progress, f"bat hand: {side} ({how})")
     stroke_type, detected = _stroke_plan(track, side, hits, stroke, stroke_type)
     st = strokes.STROKE_TYPES.get(stroke_type or "")
