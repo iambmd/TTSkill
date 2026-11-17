@@ -14,7 +14,7 @@ conventions). Last updated 2026-11-17 after Tasks 1a, 2 and 3 of the user's brie
 | Coached stroke selection (8 peaks labelled from frames) | 5/5 real strokes kept, 3/3 post-point turns/walks rejected |
 | Coach end to end | coaches the user on IMG_8782, coach_demo, both montage encodes (frame-checked) |
 | Forehand/backhand auto-detection | fails its one labelled case (strict xfail); geometry candidate rejected |
-| Tests | backend 342 pass, 2 network skips, 1 xfail; frontend 122 pass; build passes |
+| Tests | backend 351+ pass, 2 network skips, 1 xfail; frontend 136 pass; build passes |
 
 Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone far back),
 `coach_demo.mp4` (640x360 drill), `match_b.mp4` (480p montage, 18 clips, crossfades),
@@ -38,29 +38,31 @@ left this clip's top 3.
 
 ## Next steps (ordered)
 
-1. **"Tap the player to analyze"** (user request, 2026-11-17). Proposed design, pending the
-   user's approval:
-   - A. `POST /players/detect` (FastAPI) and `/api/players/detect` (Next.js). Input: 4-8 JPEG
-     frames the browser draws from the chosen file at times spread over the clip (no second
-     upload of a large video), or `url` (backend downloads <=720p and samples). Per frame:
-     `pose._pose_candidates` (existing torso and 1.5x body-span rules); per person an
-     appearance (torso + legs colour histograms, body height ratio); cluster across frames.
-     Returns `candidates[{id, time, box, thumb, seen, near}]`, `frame`, `suggested`,
-     `decisive` (one candidate, or a clear appearance-vote winner). Tests: synthetic frames
-     with 1 and 2 people; a phantom on a table is not a candidate.
-   - B. Forms (Breakdown, Coach, Match): `PlayerPicker` ("Which one is you?": frame with
-     tappable boxes plus thumbnails) only when `decisive` is false; job params `player_time`,
-     `player_box` validated on both sides (`shared/limits.json`).
-   - C. `pose.identity_from_box(video, time, box)` seeds the tracker from the selected person
-     instead of `initial_identity`, in `run_video`, Coach `extract_pose` and `match_video`.
-   - D. Tracker: appearance = torso + legs histograms + height ratio; cost = appearance +
-     box IoU + motion, never near/far position; crop and upscale around the last box when the
-     selected player is small or keypoints are weak.
-   - E. Selected player visible < 40%: fail with "We lost the player you picked..." (no switch).
-   - F. Result shows a thumbnail of who was analysed (`job.player.thumb`) and a "Change
-     player" link that re-runs the job with the stored upload and a new selection.
-   - Acceptance: 6-8 s two-player clips from IMG_8782 and the 720p coaching demo, each player
-     selected in turn, skeleton checked on frames; cached demos unchanged; all tests pass.
+1. **"Tap the player to analyze"** (approved 2026-11-17: browser frames, picker before 1b/1c).
+   Done and pushed:
+   - A `dd3d502`: `POST /players/detect` + `/api/players/detect` (`technique/people.py`):
+     6 browser frames -> players (torso+thigh colour groups, passers-by and other courts
+     dropped, zoomed `pose.QUARTERS` pass for small far players), one frame with boxes,
+     thumbnails, `suggested`, `decisive`. Body-span floor 1.5 -> 2.0 (table phantoms 0.87-1.7,
+     real 2.7-3.2; audits unchanged).
+   - C `e332896`: Breakdown/Match/Coach take `player_time` + `player_box` (validated both
+     sides); `pose.identity_from_box` seeds the tracker; `technique/tests/test_pick_player.py`
+     taps each player of 6 s IMG_8782 and coaching-demo clips. Checked on frames: never the
+     other player. Far players mostly lost by the tracker (IMG opponent 3%, user far on the
+     montage 28% of frames).
+   - B `3d9be25`: `frontend/app/player-picker.tsx` inside `VideoPicker findPlayer`; asks only
+     when not decisive; hidden fields go with the job. Browser frame drawing not run here.
+   Next, in order:
+   - D. Tracker (`pose.extract_pose`, `identity.PlayerIdentity`): seeds and per-frame looks
+     as `identity.signature` (torso + thighs) with thighs as a veto, box IoU with a
+     constant-velocity prediction instead of hip distance, and a zoomed crop (2.5x the last
+     box, upscaled to >= 256 px) when the selected player is missing or small/weak (torso
+     < 60 px or visibility < .6). Measure far-player coverage on the two test clips (3% / 28%
+     now) and re-run both identity audits (must stay 0 wrong).
+   - E. Selected player visible < 40%: "We lost the player you picked..." instead of the
+     generic visibility message (`pose.require_player`, when a pick was made).
+   - F. `job.player.thumb` (crop at the pick) on the result page plus "Change player", which
+     re-runs the job on the stored upload with a new pick.
 2. **1b: learned forehand/backhand classifier.** Train a small model (logistic regression or
    gradient boosting on resampled wrist/elbow trajectories in the body frame) on OpenTTGames
    test_7 plus `train/` game strokes; freeze; score once on test_6/test_3 with the gates in
@@ -77,7 +79,7 @@ left this clip's top 3.
 - Same-camera hard cuts are not detected; relative figure size can then misfire.
 - Real-stroke rules rest on 8 labelled peaks; the knee margin is thin (166 real vs 174 turn).
 - An ambiguous montage whose first frame shows the partner nearest still seeds the partner
-  (step 1 fixes this).
+  when no pick is made; the picker asks in that case.
 - A left-hander whose pooled bat colour stays under 1.8x gets "assumed right-handed" unless
   the request says otherwise.
 - Contact-level hit precision/recall is unmeasurable without per-contact labels.
