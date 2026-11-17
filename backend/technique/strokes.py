@@ -111,16 +111,18 @@ def features(track: PoseTrack, side: str, contact_i: int) -> dict:
 
 
 def classify(f: dict, wing: Optional[str] = None) -> str:
-    """Pick a stroke type from `features()`. `wing` forces forehand/backhand when known."""
+    """Pick a stroke type from `features()`. `wing` forces forehand/backhand when known, and
+    then only that wing's types are returned: a chop is its own stroke, not a backhand."""
+    forced = wing in ("forehand", "backhand")
     wing = wing or ("forehand" if f["side_score"] > 0.15 else "backhand")
     rise, path = f["rise"], f["path"]
     if wing == "backhand":
         if rise < -0.1:
-            return "backhand_push" if path < 1.5 else "chop"
+            return "backhand_push" if forced or path < 1.5 else "chop"
         if rise < 0.3 and path < 1.2:
             return "backhand_flick"
         return "backhand_topspin"
-    if rise < -0.3:
+    if rise < -0.3 and not forced:
         return "chop"
     if rise > 0.8 and f["low_start"] > 0.2:
         return "forehand_loop_backspin"

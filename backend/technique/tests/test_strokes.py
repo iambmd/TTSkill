@@ -59,6 +59,13 @@ def test_forced_wing_overrides_side():
     assert strokes.detect(tr, "right", C, wing="backhand")[0].startswith("backhand")
 
 
+def test_requested_wing_never_becomes_a_chop():
+    # "Fix my backhand" rendered a Chop breakdown on the coach sample.
+    bat_side_big_down = _track(lambda t: np.full_like(t, 0.62), _sweep(0.30, 0.65))
+    assert strokes.detect(bat_side_big_down, "right", C, wing="backhand")[0] == "backhand_push"
+    assert strokes.STROKE_TYPES[strokes.detect(bat_side_big_down, "right", C, wing="forehand")[0]].stroke == "forehand"
+
+
 def test_key_moments_follow_the_swing_direction():
     down = _track(lambda t: np.full_like(t, 0.62), _sweep(0.30, 0.65))
     (prep, contact, fin), _ = key_moments(down, "right", direction="down")
