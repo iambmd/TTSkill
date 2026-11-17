@@ -1,5 +1,6 @@
 "use client";
 
+import demoAssets from "@/lib/demo-assets.json";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { submitJob } from "@/lib/submit";
@@ -157,7 +158,7 @@ export default function MatchPage() {
     </form>
       <ExampleSection
         before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player filming their forehand" }}
-        after={{ src: "/examples/match-after.mp4", label: "After", caption: "The pro matches video we made from it", vertical: true }}
+        after={{ src: demoAssets.match.url, label: "After", caption: "The pro matches video we made from it", vertical: true }}
         steps={[
           "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
           "If you don't give your height, we estimate it from the table in the frame, which is always 76 cm high and 274 cm long.",

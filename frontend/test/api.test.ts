@@ -5,6 +5,7 @@
  * NEXT_PUBLIC_API_URL (Vercel + tunnel), where uploads and videos skip our routes.
  * The env is read when lib/jobs.ts and lib/submit.ts load, so each test re-imports.
  */
+import demoJobs from "@/lib/demo-jobs.json";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -209,7 +210,7 @@ describe("GET /api/jobs/[id] and result in stub mode", () => {
   it("serves the cached demo jobs", async () => {
     const { GET } = await route("job");
     const job = await (await GET!(get(), ctx({ id: "demo-breakdown" }))).json();
-    expect(job).toMatchObject({ id: "demo-breakdown", status: "done", resultUrl: "/demo/breakdown.mp4" });
+    expect(job).toMatchObject({ id: "demo-breakdown", status: "done", resultUrl: demoJobs["demo-breakdown"].resultUrl });
   });
   it("has no result video in stub mode", async () => {
     const { GET } = await route("result");
@@ -336,23 +337,21 @@ describe("NEXT_PUBLIC_API_URL", () => {
   it("still serves the cached demo jobs", async () => {
     vi.stubGlobal("fetch", vi.fn());
     const { GET } = await route("job", tunnel);
-    expect((await (await GET!(get(), ctx({ id: "demo-breakdown" }))).json()).resultUrl).toBe("/demo/breakdown.mp4");
+    expect((await (await GET!(get(), ctx({ id: "demo-breakdown" }))).json()).resultUrl).toBe(demoJobs["demo-breakdown"].resultUrl);
   });
 });
 
 // ------------------------------------------------------------------ demo mode
 
 describe("DEMO_MODE", () => {
-  it("answers submissions with the cached demo job", async () => {
-    const { POST } = await route("breakdown", { DEMO_MODE: "1" });
-    const res = await POST!(post({ text: "anything" }));
+  it.each(["breakdown", "autocut", "match", "coach"] as const)("returns the refreshed %s result", async (kind) => {
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const { POST } = await route(kind, { DEMO_MODE: "1", BACKEND_URL: "http://backend" });
+    const res = await POST!(post({ video: video(), stroke: "forehand", request: "Fix my forehand" }));
     expect(res.status).toBe(201);
-    expect((await res.json()).id).toBe("demo-breakdown");
-  });
-  it("falls back to a normal job for kinds without a cached demo", async () => {
-    const { POST } = await route("match", { DEMO_MODE: "1" });
-    const job = await (await POST!(post({ video: video(), stroke: "forehand" }))).json();
-    expect(job).toMatchObject({ kind: "match", status: "queued" });
+    expect(await res.json()).toEqual(demoJobs[`demo-${kind}`]);
+    expect(fetch).not.toHaveBeenCalled();
   });
 });
 

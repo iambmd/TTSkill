@@ -1,5 +1,6 @@
 "use client";
 
+import demoAssets from "@/lib/demo-assets.json";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { submitJob } from "@/lib/submit";
@@ -123,7 +124,7 @@ export default function AutoCutPage() {
     </form>
       <ExampleSection
         before={{ src: "/examples/autocut-before.mp4", label: "Before", caption: "A 3.5-minute phone recording of a match" }}
-        after={{ src: "/examples/autocut-after.mp4", label: "After", caption: "Highlights: the top rallies, 42 s" }}
+        after={{ src: demoAssets.autocut.url, label: "After", caption: `Highlights: the top 4 rallies, ${Math.round(demoAssets.autocut.duration)} s` }}
         steps={[
           "We listen to the match. Ball contact makes a short, sharp click in the 2–6 kHz range, so we filter the sound to that band.",
           "Every spike well above the background noise counts as a hit. Long sounds like shoe squeaks are ignored.",

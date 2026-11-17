@@ -1,5 +1,6 @@
 "use client";
 
+import demoAssets from "@/lib/demo-assets.json";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import { submitJob } from "@/lib/submit";
@@ -113,7 +114,7 @@ export default function BreakdownPage() {
     </form>
       <ExampleSection
         before={{ src: "/examples/breakdown-before.mp4", label: "Before", caption: "Ma Long forehand practice, 15 s", vertical: true }}
-        after={{ src: "/examples/breakdown-after.mp4", label: "After", caption: "The coaching video we made from it", vertical: true }}
+        after={{ src: demoAssets.breakdown.url, label: "After", caption: "The coaching video we made from it", vertical: true }}
         steps={[
           "We find the few seconds where the swing happens and track the player's body with pose detection, frame by frame.",
           "We work out which hand holds the bat and which stroke it is, unless you picked one.",

@@ -92,14 +92,31 @@ In Vercel, set the root directory to `frontend` and the environment variable `NE
 
 ## Judging demo
 
-Cached results ship with the frontend, so the demo never waits on the pipeline:
+Cached results ship with the frontend. The homepage and each feature's Before/After example use the same refreshed videos as the job pages:
 
-- `/jobs/demo-breakdown`: a Ma Long forehand breakdown in the new coaching style.
-- `/jobs/demo-autocut`: the top 5 rallies of a 3:35 match, cut into a 49 s highlight reel.
-- `/jobs/demo-breakdown`: forehand breakdown video and steps from the technique pipeline, on a clip of Ma Long.
-- `/jobs/demo-autocut`: from IMG_8782.MOV, the top 4 rallies by shot count, cut into a 42 s highlight reel (a pre-serve floor-bounce routine is filtered out).
+- `/jobs/demo-breakdown`: Ma Long's 15-second input, reanalysed with the current pose, hand and stroke pipeline.
+- `/jobs/demo-autocut`: the top four rallies from the displayed 3:35 recording, a 43-second reel.
+- `/jobs/demo-match`: a fresh body/hand comparison and a compilation of the matched pros' existing cached breakdowns.
+- `/jobs/demo-coach`: the displayed montage, with a fresh rally reel, pose analysis, coaching cards and summary. The breakdown measures the teal-shirt player (the user) as the near player at 54–60 s, not the partner.
 
-Set `DEMO_MODE=1` for the frontend to make every submission return these results instantly. The files are `frontend/lib/demo-jobs.json` and `frontend/public/demo/*.mp4`.
+The November 17 refresh uses the local pose templates and Coach's fixed plan; no video frames are sent to an external analyzer. These are demonstration results, not held-out evaluation or verified stroke labels.
+
+Set `DEMO_MODE=1` for the frontend to return these cached results on submissions. If `NEXT_PUBLIC_API_URL` is set, browser uploads still go directly to that backend; the example videos and `/jobs/demo-*` pages always use the cache.
+
+To regenerate from the exact committed Before clips, run sequentially from the repository root (requires the backend environment, cached pose model and existing pro breakdowns):
+
+```bash
+MPLCONFIGDIR=/tmp/tt-mpl backend/.venv/bin/python scripts/refresh_demos.py --kind autocut
+MPLCONFIGDIR=/tmp/tt-mpl backend/.venv/bin/python scripts/refresh_demos.py --kind breakdown
+MPLCONFIGDIR=/tmp/tt-mpl backend/.venv/bin/python scripts/refresh_demos.py --kind match
+MPLCONFIGDIR=/tmp/tt-mpl backend/.venv/bin/python scripts/refresh_demos.py --kind coach
+backend/.venv/bin/python scripts/refresh_demos.py --export
+cd frontend
+npm test
+npm run build
+```
+
+The refresh script disables the external analyzer and records each job's source hash and code revision in ignored `backend/data/demo-refresh/manifest.json`. Export requires all four jobs to finish successfully. It updates `frontend/lib/demo-jobs.json`, `coach-example.json`, `demo-assets.json`, and the public result videos together. Content hashes in video URLs invalidate browser caches; the original `/demo/*.mp4` URLs are updated too. Only these intentional public demo assets are committed; intermediate jobs, pose tracks and raw research videos remain ignored. Push the verified changes to `main` to trigger the existing Vercel deployment, then check the live job JSON and video hashes.
 
 ## API
 

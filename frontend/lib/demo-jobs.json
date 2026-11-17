@@ -1,19 +1,67 @@
 {
+  "demo-autocut": {
+    "id": "demo-autocut",
+    "kind": "autocut",
+    "status": "done",
+    "progress": 1.0,
+    "message": "Top 4 rallies, 43 s cut from 20 detected.",
+    "params": {
+      "video": "autocut-before.mp4",
+      "mode": "highlights",
+      "top_n": 4,
+      "threshold": 3.0,
+      "gap": 1.6,
+      "min_hits": 4
+    },
+    "resultUrl": "/examples/autocut-after.mp4?v=296b78205bf7",
+    "rallies": [
+      {
+        "start": 55.38,
+        "end": 66.34,
+        "hits": 30,
+        "shots": 15
+      },
+      {
+        "start": 27.4,
+        "end": 35.05,
+        "hits": 20,
+        "shots": 10
+      },
+      {
+        "start": 81.15,
+        "end": 87.37,
+        "hits": 20,
+        "shots": 10
+      },
+      {
+        "start": 187.84,
+        "end": 193.97,
+        "hits": 18,
+        "shots": 9
+      }
+    ],
+    "warning": null,
+    "demoRefresh": {
+      "job_id": "85057706efce43378033f6a8350e1e56",
+      "source_sha256": "9fc6757cbb7d72e7b6f59e5295aace1a61909d7867b31d9ecbcd30ed098bd43c",
+      "revision": "11e7c23ff767899b3147515e9342f9bbd3cd0c84",
+      "generated_at": "2026-11-17T01:56:53.769080-05:00"
+    }
+  },
   "demo-breakdown": {
     "id": "demo-breakdown",
     "kind": "breakdown",
     "status": "done",
-    "progress": 1,
-    "message": "Cached run of the technique pipeline on Ma Long's forehand Short (youtube.com/shorts/g3n9jVP0fMU). Stroke type auto-detected from the swing: forehand loop vs backspin.",
+    "progress": 1.0,
+    "message": "Get low. Lift the backspin. (offline-pose-template analyzer)",
     "params": {
+      "video": "breakdown-before.mp4",
       "stroke": "",
       "stroke_type": "auto",
       "player": "Ma Long",
-      "hand": "auto",
-      "video": "Malong's Forehand Loop Breakdown",
-      "url": "https://www.youtube.com/watch?v=g3n9jVP0fMU"
+      "hand": "auto"
     },
-    "resultUrl": "/demo/breakdown.mp4",
+    "resultUrl": "/examples/breakdown-after.mp4?v=9a536021ffbc",
     "breakdown": {
       "player": "Ma Long",
       "stroke": "forehand",
@@ -21,9 +69,9 @@
       "handedness": "right",
       "headline": "Get low. Lift the backspin.",
       "grip": "Shakehand, loose in the backswing so the wrist can add brush.",
-      "stance": "Wide base with deep knee bend (knees ~123 deg).",
+      "stance": "Wide base with deep knee bend (knees ~139 deg).",
       "swing_path": "Start below the table edge and swing steeply up, brushing up the back of the ball.",
-      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~146 deg.",
+      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~114 deg.",
       "follow_through": "High finish above the head; the legs push you back up.",
       "steps": [
         {
@@ -36,7 +84,7 @@
             "below the table",
             "down"
           ],
-          "key_time_s": 1.1333333333333333,
+          "key_time_s": 5.766666666666667,
           "callouts": [
             "LOW START"
           ]
@@ -51,7 +99,7 @@
             "up the back",
             "after the peak"
           ],
-          "key_time_s": 1.4,
+          "key_time_s": 5.966666666666667,
           "callouts": [
             "STEEP UPWARD SWING"
           ]
@@ -66,7 +114,7 @@
             "above your head",
             "Legs"
           ],
-          "key_time_s": 1.6,
+          "key_time_s": 6.166666666666667,
           "callouts": [
             "FINISH HIGH"
           ]
@@ -76,52 +124,265 @@
       "drill": "Have a partner push long and loop 10 in a row.",
       "source": "offline-pose-template"
     },
+    "videoPrompt": {
+      "prompt": "Ma Long, a right-handed table tennis player performs a forehand loop vs backspin. Grip: Shakehand, loose in the backswing so the wrist can add brush. Stance: Wide base with deep knee bend (knees ~139 deg). Swing: Start below the table edge and swing steeply up, brushing up the back of the ball. Contact: Ball met low, near hip height, in front of the body, elbow open to ~114 deg. Finish: High finish above the head; the legs push you back up. Style: stylized grey wireframe 3D athlete on a dark studio.",
+      "prompt_long": "Ma Long, a right-handed table tennis player performs a forehand loop vs backspin. Grip: Shakehand, loose in the backswing so the wrist can add brush. Stance: Wide base with deep knee bend (knees ~139 deg). Swing: Start below the table edge and swing steeply up, brushing up the back of the ball. Contact: Ball met low, near hip height, in front of the body, elbow open to ~114 deg. Finish: High finish above the head; the legs push you back up. Style: stylized grey wireframe 3D athlete on a dark studio background, blue table tennis table, cinematic side-on camera, slow motion, glowing cyan trail on the bat, high detail.",
+      "negative_prompt": "text, captions, logos, watermark, extra limbs, distorted hands, crowd, blurry",
+      "shots": [
+        {
+          "step": 1,
+          "title": "Drop low",
+          "prompt": "Ma Long, a right-handed table tennis player, forehand loop vs backspin, moment: drop low - Knees bend, bat below the table. Backspin pulls the ball down. stylized grey wireframe 3D athlete on a dark studio background, blue table tennis table, cinematic side-on camera, slow motion, glowing cyan trail on the bat, high detail.",
+          "duration_s": 3
+        },
+        {
+          "step": 2,
+          "title": "Lift steep",
+          "prompt": "Ma Long, a right-handed table tennis player, forehand loop vs backspin, moment: lift steep - Swing up the back of the ball. Let it drop after the peak. stylized grey wireframe 3D athlete on a dark studio background, blue table tennis table, cinematic side-on camera, slow motion, glowing cyan trail on the bat, high detail.",
+          "duration_s": 3
+        },
+        {
+          "step": 3,
+          "title": "End above",
+          "prompt": "Ma Long, a right-handed table tennis player, forehand loop vs backspin, moment: end above - Bat finishes above your head. Legs push you back to ready. stylized grey wireframe 3D athlete on a dark studio background, blue table tennis table, cinematic side-on camera, slow motion, glowing cyan trail on the bat, high detail.",
+          "duration_s": 3
+        }
+      ],
+      "aspect_ratio": "9:16"
+    },
+    "analyzer": "offline-pose-template",
+    "batHand": {
+      "side": "right",
+      "how": "wrist motion near audio contacts"
+    },
+    "window": {
+      "start": 0.0,
+      "end": 15.000091,
+      "reason": "whole clip"
+    },
     "strokeType": {
       "key": "forehand_loop_backspin",
       "label": "Forehand loop vs backspin",
-      "detected": true
+      "detected": true,
+      "features": {
+        "side_score": 0.76,
+        "rise": 1.24,
+        "low_start": 0.35,
+        "path": 8.17
+      }
+    },
+    "demoRefresh": {
+      "job_id": "768f25192ffd4333ac8f3852fafa3ccb",
+      "source_sha256": "d6f1799cce49768e13e2c38b17592d7fc5bc32c16787e20e479d638eec109d14",
+      "revision": "11e7c23ff767899b3147515e9342f9bbd3cd0c84",
+      "generated_at": "2026-11-17T01:57:38.520178-05:00"
     }
   },
-  "demo-autocut": {
-    "id": "demo-autocut",
-    "kind": "autocut",
+  "demo-match": {
+    "id": "demo-match",
+    "kind": "match",
     "status": "done",
-    "progress": 1,
-    "message": "Cached run on the sample clip (IMG_8782.MOV, 3:35). Found 18 rallies after dropping one pre-serve floor-bounce routine; these are the top 4 by shot count, best first, padded 1.5 s each side.",
+    "progress": 1.0,
+    "message": "You play most like Dimitrij Ovtcharov (59% body match).",
     "params": {
-      "video": "IMG_8782.MOV",
-      "mode": "highlights",
-      "top_n": 4,
-      "threshold": 3.0,
-      "gap": 1.6,
-      "min_hits": 4
+      "video": "match-before.mp4",
+      "stroke": "forehand",
+      "hand": "auto",
+      "grip": "shakehand",
+      "height_cm": null
     },
-    "resultUrl": "/demo/highlights.mp4",
-    "rallies": [
+    "resultUrl": "/examples/match-after.mp4?v=1994ae3b9772",
+    "matches": [
       {
-        "start": 55.51,
-        "end": 66.28,
-        "hits": 15,
-        "shots": 8
+        "id": "dimitrij-ovtcharov",
+        "name": "Dimitrij Ovtcharov",
+        "country": "GER",
+        "gender": "M",
+        "height_cm": 186,
+        "bat_hand": "right",
+        "grip": "shakehand",
+        "warnings": [],
+        "score": 59,
+        "body_distance": 1.06,
+        "form_score": null,
+        "differences": [],
+        "breakdown": null,
+        "source_url": null
       },
       {
-        "start": 186.67,
-        "end": 194.41,
-        "hits": 14,
-        "shots": 7
+        "id": "tomokazu-harimoto",
+        "name": "Tomokazu Harimoto",
+        "country": "JPN",
+        "gender": "M",
+        "height_cm": 178,
+        "bat_hand": "right",
+        "grip": "shakehand",
+        "warnings": [],
+        "score": 54,
+        "body_distance": 1.22,
+        "form_score": 41,
+        "differences": [
+          "Your bat arm is 67\u00b0 lower at the finish than Tomokazu Harimoto's.",
+          "Your legs are 51\u00b0 straighter (less knee bend) at the finish than Tomokazu Harimoto's."
+        ],
+        "breakdown": "tomokazu-harimoto/forehand_RyaTg3GB_Wk/breakdown.mp4",
+        "source_url": "https://www.youtube.com/watch?v=RyaTg3GB_Wk"
       },
       {
-        "start": 27.46,
-        "end": 34.3,
-        "hits": 12,
-        "shots": 6
-      },
-      {
-        "start": 145.78,
-        "end": 149.97,
-        "hits": 9,
-        "shots": 4
+        "id": "ma-long",
+        "name": "Ma Long",
+        "country": "CHN",
+        "gender": "M",
+        "height_cm": 175,
+        "bat_hand": "right",
+        "grip": "shakehand",
+        "warnings": [],
+        "score": 51,
+        "body_distance": 1.34,
+        "form_score": 52,
+        "differences": [
+          "Your legs are 32\u00b0 straighter (less knee bend) at the finish than Ma Long's.",
+          "Your elbow is 21\u00b0 more bent at contact than Ma Long's."
+        ],
+        "breakdown": "ma-long/forehand_g3n9jVP0fMU/breakdown.mp4",
+        "source_url": "https://www.youtube.com/watch?v=g3n9jVP0fMU"
       }
-    ]
+    ],
+    "you": {
+      "bat_hand": "right",
+      "bat_hand_how": "paddle colour near wrist {'left': 22639, 'right': 76195}",
+      "height": null,
+      "body": {
+        "arm_span_to_height": 0.722,
+        "leg_to_torso": 1.643,
+        "shoulder_width_to_height": 0.207,
+        "stance_width_to_shoulders": 1.168
+      }
+    },
+    "demoRefresh": {
+      "job_id": "69955da805564e9e967f039309ce27c9",
+      "source_sha256": "e1eacbddee2c42495fe475abb267c6117d51ed2e060e94c112f6abeb6999fd2b",
+      "revision": "11e7c23ff767899b3147515e9342f9bbd3cd0c84",
+      "generated_at": "2026-11-17T01:58:25.499445-05:00"
+    }
+  },
+  "demo-coach": {
+    "id": "demo-coach",
+    "kind": "coach",
+    "status": "done",
+    "progress": 1.0,
+    "message": "Done.",
+    "params": {
+      "video": "coach-before.mp4",
+      "request": "Here's my match, show my best rallies and fix my forehand"
+    },
+    "resultUrl": null,
+    "todos": [
+      {
+        "content": "Find the rallies",
+        "status": "completed"
+      },
+      {
+        "content": "Cut the best rallies",
+        "status": "completed"
+      },
+      {
+        "content": "Measure your forehand with MediaPipe",
+        "status": "completed"
+      },
+      {
+        "content": "Write the coaching cards and render your forehand",
+        "status": "completed"
+      },
+      {
+        "content": "Sum up what to work on",
+        "status": "completed"
+      }
+    ],
+    "outputs": [
+      {
+        "kind": "highlights",
+        "title": "Top 5 rallies",
+        "url": "/examples/coach-after-highlights.mp4?v=bc8fb4481d98",
+        "summary": "48 s, most shots first"
+      },
+      {
+        "kind": "breakdown",
+        "title": "Forehand drive breakdown",
+        "url": "/examples/coach-after-breakdown.mp4?v=960d529faf62",
+        "summary": "Stay short. Hit through it."
+      }
+    ],
+    "engine": "fallback",
+    "engineNote": "no ANTHROPIC_API_KEY",
+    "breakdown": {
+      "player": "Player",
+      "stroke": "forehand",
+      "stroke_type": "forehand_drive",
+      "handedness": "right",
+      "headline": "Stay short. Hit through it.",
+      "grip": "Shakehand, firm at contact; bat face slightly closed.",
+      "stance": "Legs out of frame, so the stance isn't measured.",
+      "swing_path": "Short backswing to the hip, then a flatter forward swing straight through the ball.",
+      "contact_point": "Ball met low, near hip height, in front of the body, elbow open to ~161 deg.",
+      "follow_through": "Compact finish in front of the face; recover quickly.",
+      "steps": [
+        {
+          "title": "Stay short",
+          "lines": [
+            "Small backswing to the hip.",
+            "A big swing arrives late."
+          ],
+          "highlight_words": [
+            "Small backswing",
+            "late"
+          ],
+          "key_time_s": 3.8666666666666667,
+          "callouts": [
+            "SHORT BACKSWING"
+          ]
+        },
+        {
+          "title": "Hit through",
+          "lines": [
+            "Meet the ball at the peak.",
+            "Drive forward, not upward."
+          ],
+          "highlight_words": [
+            "peak",
+            "forward"
+          ],
+          "key_time_s": 3.966666666666667,
+          "callouts": [
+            "BAT SLIGHTLY CLOSED"
+          ]
+        },
+        {
+          "title": "Snap back",
+          "lines": [
+            "Bat stops in front of your nose.",
+            "You are ready for the counter."
+          ],
+          "highlight_words": [
+            "nose",
+            "counter"
+          ],
+          "key_time_s": 4.133333333333334,
+          "callouts": [
+            "STAY COMPACT"
+          ]
+        }
+      ],
+      "recap": "Stay short, hit through, snap back.",
+      "drill": "Rally forehand to forehand for 2 minutes, flat and steady.",
+      "source": "offline-pose-template"
+    },
+    "summary": "I found 17 rallies and cut the best 5 into a 48 s reel. Your forehand drive: elbow about 161\u00b0 at contact. Work on: Stay short, hit through, snap back. Then: Rally forehand to forehand for 2 minutes, flat and steady.",
+    "demoRefresh": {
+      "job_id": "96be67c80db84ec396507fee24cd40c7",
+      "source_sha256": "703de3cb23af44823470aaece36fd7ef9c0dfe9e5ee92249290eb2cf833d0c3a",
+      "revision": "11e7c23ff767899b3147515e9342f9bbd3cd0c84",
+      "generated_at": "2026-11-17T01:58:55.550420-05:00"
+    }
   }
 }

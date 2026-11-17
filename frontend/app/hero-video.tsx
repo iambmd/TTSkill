@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import demoAssets from "@/lib/demo-assets.json";
 import { useEffect, useRef, useState } from "react";
 import { ArrowIcon, PauseIcon, PlayIcon } from "./ui";
 
@@ -24,7 +25,7 @@ export function HeroVideo() {
     <figure className="mx-auto w-[min(100%,calc(62svh*9/16))] lg:w-[22rem]">
       <div className="relative overflow-hidden rounded-[2rem] border border-line bg-black shadow-[0_30px_80px_-30px_rgb(255_107_44/0.5)]">
         <video
-          ref={ref} src="/demo/breakdown.mp4#t=0.001" muted loop playsInline preload="auto"
+          ref={ref} src={`${demoAssets.breakdown.url}#t=0.001`} muted loop playsInline preload="auto"
           onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
           className="block aspect-[9/16] w-full object-cover"
         />

@@ -77,6 +77,8 @@ Tests: backend 303 passed, 2 skipped (network), 1 strict xfail (automatic backha
 3. **Montage rallies merge across crossfades.** Scene-cut detection doesn't see dissolves (scene score ≈ 0 except the outro card).
 4. **Contact-level hit precision/recall** (floor bounces and shoe squeaks inside a rally) needs per-contact labels. Full rally-span labels for IMG_8782 would also let it join `eval.run`.
 5. **Coach runs the window scan twice** (pose tool and render), about a minute per job. Reuse the first window.
-6. **Uncommitted demo refresh** (`scripts/refresh_demos.py`, README section, 5 frontend files, tests). Decide whether to finish it or drop it.
-   - It replaces every public demo with offline-template results.
-   - The current Coach example is a Claude-written run that measured the 80–88 s rally, where you are the far player.
+6. ~~Uncommitted demo refresh~~ **done 2026-11-17**: all four demos re-run with the fixed pipeline
+   (`scripts/refresh_demos.py`). The Coach example now measures the user (teal shirt, near
+   player, 54.0–60.2 s, right hand from bat colour, 84% visible), checked against source
+   frames; before, it measured the 80–88 s rally where the user is the far player. Results
+   come from the offline templates and Coach's fixed plan, not Claude-written text.

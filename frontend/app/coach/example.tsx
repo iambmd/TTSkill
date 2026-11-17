@@ -14,7 +14,7 @@ function After() {
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-3">
         <span className="headline text-2xl">After</span>
-        <span className="text-right text-xs text-muted">The coach&apos;s plan, reply and videos</span>
+        <span className="text-right text-xs text-muted">{saved.engine === "fallback" ? "Local coaching plan, reply and videos" : "The coach’s plan, reply and videos"}</span>
       </div>
       {!ready ? (
         <div className="stripes grid aspect-video place-items-center rounded-3xl border border-line bg-panel text-sm text-muted">

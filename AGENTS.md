@@ -67,6 +67,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `frontend/lib/validate.ts` | The same checks for the forms' inline errors and the Next.js routes' 422s. Link-shape checks are in `lib/youtube.ts`. |
 | `backend/agent/` | TT Coach. `coach.py` builds the deepagents agent (Claude, `write_todos` planning, virtual file system, subagents `clip_analyst`, `player_matcher`, `coach_writer`), streams its todos and files into the job, and falls back to a fixed plan without a key. `tools.py` holds the six tools, bound to one job, wrapping the existing pipelines. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
+| `scripts/refresh_demos.py` | Re-runs the four demo jobs on the committed Before clips (`frontend/public/examples/*-before.mp4`) and exports `lib/demo-jobs.json`, `coach-example.json`, `demo-assets.json` and the After videos together. Don't hand-edit those; `frontend/test/demo.test.ts` checks they come from one refresh. |
 | `samples/` | Local test videos. Git-ignored. |
 
 ### API
