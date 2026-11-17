@@ -122,3 +122,11 @@ def test_auto_stroke_never_shows_as_a_word():
     steps, stroke = plan_from_request('Coach my technique', False)
     assert stroke == 'auto' and not any('auto' in label for _, label in steps)
     assert 'auto' not in _summary({}, 'auto')
+
+
+def test_summary_omits_unseen_joints():
+    from agent.coach import _summary
+    pz = {"stroke_label": "Forehand drive", "at_contact": {"elbow_angle_deg": 169, "knee_angle_deg": None,
+                                                          "stance_width_x_shoulders": None}}
+    text = _summary({"extract_pose": pz}, "forehand")
+    assert "elbow about 169" in text and "knees" not in text and "None" not in text

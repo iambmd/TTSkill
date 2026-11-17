@@ -225,8 +225,13 @@ def _summary(r: dict, stroke: str) -> str:
     pz = r.get("extract_pose")
     if pz and "at_contact" in pz:
         c = pz["at_contact"]
-        lines.append(f"Your {pz['stroke_label'].lower()}: elbow about {c['elbow_angle_deg']}° and knees about "
-                     f"{c['knee_angle_deg']}° at contact, stance {c['stance_width_x_shoulders']}x shoulder width.")
+        seen = [f"elbow about {c['elbow_angle_deg']}°" if c.get("elbow_angle_deg") is not None else "",
+                f"knees about {c['knee_angle_deg']}°" if c.get("knee_angle_deg") is not None else ""]
+        seen = [x for x in seen if x]
+        stance = c.get("stance_width_x_shoulders")
+        lines.append(f"Your {pz['stroke_label'].lower()}: " + (" and ".join(seen) + " at contact" if seen
+                     else "your joints weren't all in frame at contact")
+                     + (f", stance {stance}x shoulder width." if stance is not None else "."))
     mp = r.get("match_players")
     if mp and mp.get("matches"):
         top = mp["matches"][0]

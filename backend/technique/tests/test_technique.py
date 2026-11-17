@@ -121,3 +121,32 @@ def test_window_prefers_busy_rally_where_the_player_is_visible(tmp_path, monkeyp
     assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None)["rally"]["start"] == 80
     shares.update({39.4: .1, 9.4: .1})
     assert pipeline.choose_window("v.mp4", 140, 8.0, tmp_path, lambda m: None, identity=np.ones(3))["rally"]["start"] == 80
+
+
+def test_no_leg_metrics_when_legs_are_out_of_frame():
+    from technique import pose
+    from technique.analyze import OfflineAnalyzer
+    tr = _fake_track()
+    full = pose.pose_metrics(tr, 45, "right")
+    assert full["knee_angle_deg"] is not None and full["stance_width_x_shoulders"] is not None
+    tr.lm[:, 25:29, 3] = .05   # close camera cuts the player at the waist
+    cut = pose.pose_metrics(tr, 45, "right")
+    assert cut["knee_angle_deg"] is None and cut["stance_width_x_shoulders"] is None
+    assert cut["elbow_angle_deg"] is not None
+    assert not pose.whole_body(tr).any() and pose.whole_body(_fake_track()).all()
+    b = OfflineAnalyzer().from_video("v.mp4", "forehand", [], {}, [1., 1.5, 2.], contact_metrics=cut)
+    assert "deg" not in b.stance and "out of frame" in b.stance
+
+
+def test_stance_uses_world_points_when_seen_edge_on():
+    from technique import pose
+    tr = _fake_track()
+    tr.lm[:, [11, 12], 0] = .5          # side view: shoulders overlap in the image
+    w = np.zeros((len(tr.times), 33, 3), np.float32)
+    for j, (x, y) in {11: (-.2, -.5), 12: (.2, -.5), 13: (-.25, -.25), 14: (.25, -.25), 15: (-.25, 0),
+                      16: (.25, 0), 23: (-.1, 0), 24: (.1, 0), 25: (-.15, .45), 26: (.15, .45),
+                      27: (-.2, .9), 28: (.2, .9)}.items():
+        w[:, j, 0], w[:, j, 1] = x, y
+    tr.world = w
+    m = pose.pose_metrics(tr, 45, "right")
+    assert m["stance_width_x_shoulders"] == 1.0   # ankles .4 m apart, shoulders .4 m

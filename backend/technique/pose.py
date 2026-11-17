@@ -364,24 +364,42 @@ def best_window(track: PoseTrack, seconds: float = 6.0) -> tuple[float, float]:
 
 def pose_metrics(track: PoseTrack, i: int, side: str) -> dict:
     """Human-readable body metrics at frame i (used by the offline analyzer and as LLM context)."""
+    from .strokes import _points
+
     xy = _interp_nan(track.lm[:, :, :2])[i] * np.array([track.width, track.height])
+    # Angles and widths from 3D world points when MediaPipe gives them (like players/body.py):
+    # in pixels, shoulders seen edge-on made a stance read as 6.4x shoulder width.
+    p = _points(track)[i]
     s = (R_SHOULDER, R_ELBOW, R_WRIST) if side != "left" else (L_SHOULDER, L_ELBOW, L_WRIST)
-    elbow = float(_angle(xy[s[0]], xy[s[1]], xy[s[2]]))
-    knee = float(np.mean([_angle(xy[L_HIP], xy[L_KNEE], xy[L_ANKLE]),
-                          _angle(xy[R_HIP], xy[R_KNEE], xy[R_ANKLE])]))
-    sh_w = np.linalg.norm(xy[L_SHOULDER] - xy[R_SHOULDER]) + 1e-6
-    ft_w = np.linalg.norm(xy[L_ANKLE] - xy[R_ANKLE])
+    elbow = float(_angle(p[s[0]], p[s[1]], p[s[2]]))
+    knee = float(np.mean([_angle(p[L_HIP], p[L_KNEE], p[L_ANKLE]),
+                          _angle(p[R_HIP], p[R_KNEE], p[R_ANKLE])]))
+    sh_w = np.linalg.norm(p[L_SHOULDER] - p[R_SHOULDER]) + 1e-6
+    ft_w = np.linalg.norm(p[L_ANKLE] - p[R_ANKLE])
     sh_y = (xy[L_SHOULDER, 1] + xy[R_SHOULDER, 1]) / 2
     hp_y = (xy[L_HIP, 1] + xy[R_HIP, 1]) / 2
     wy = xy[s[2], 1]
     rel_h = (hp_y - wy) / (hp_y - sh_y + 1e-6)  # 0 = hip height, 1 = shoulder height
+    # Out-of-frame joints are guessed by MediaPipe (a close camera cut at the waist read as
+    # "knees 79 deg"); say nothing about joints we cannot see.
+    seen = lambda *j: bool(np.nan_to_num(track.lm[i, list(j), 3]).min() >= MIN_JOINT_VIS)
+    legs = seen(L_KNEE, R_KNEE, L_ANKLE, R_ANKLE)
     return {
         "t": round(float(track.times[i]), 2),
-        "elbow_angle_deg": round(elbow),
-        "knee_angle_deg": round(knee),
-        "stance_width_x_shoulders": round(float(ft_w / sh_w), 2),
-        "wrist_height_hip0_shoulder1": round(float(rel_h), 2),
+        "elbow_angle_deg": round(elbow) if seen(*s) else None,
+        "knee_angle_deg": round(knee) if legs else None,
+        "stance_width_x_shoulders": round(float(ft_w / sh_w), 2) if legs else None,
+        "wrist_height_hip0_shoulder1": round(float(rel_h), 2) if seen(s[2]) else None,
     }
+
+
+MIN_JOINT_VIS = 0.5
+
+
+def whole_body(track: PoseTrack) -> np.ndarray:
+    """Frames with the selected player and their knees and ankles in frame."""
+    legs = np.nan_to_num(track.lm[:, [L_KNEE, R_KNEE, L_ANKLE, R_ANKLE], 3]).min(axis=1)
+    return track.valid & (legs >= MIN_JOINT_VIS)
 
 
 def summarize(track: PoseTrack, side: str | None = None) -> dict:

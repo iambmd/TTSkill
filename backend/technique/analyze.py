@@ -304,11 +304,14 @@ class OfflineAnalyzer:
         width = m.get("stance_width_x_shoulders")
         elbow = m.get("elbow_angle_deg")
         wh = m.get("wrist_height_hip0_shoulder1")
-        bend = ("deep knee bend" if knee and knee < 140 else
-                "moderate knee bend" if knee and knee < 160 else "fairly upright legs")
-        wide = ("wide base" if width and width > 1.6 else
-                "shoulder-width base" if width and width > 0.9 else "narrow base")
-        b["stance"] = f"{wide.capitalize()} with {bend}" + (f" (knees ~{knee} deg)." if knee else ".")
+        if knee is None or width is None:
+            b["stance"] = "Legs out of frame, so the stance isn't measured."
+        else:
+            bend = ("deep knee bend" if knee < 140 else
+                    "moderate knee bend" if knee < 160 else "fairly upright legs")
+            wide = ("wide base" if width > 1.6 else
+                    "shoulder-width base" if width > 0.9 else "narrow base")
+            b["stance"] = f"{wide.capitalize()} with {bend} (knees ~{knee} deg)."
         if wh is None:
             height = "in front of the body"
         elif wh > 0.8:
