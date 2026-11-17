@@ -185,10 +185,12 @@ def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, v
                     seen.append((t, [np.array([[p.x, p.y] for p in person]) for person in people]))
     times = np.array([t for t, _ in seen])
     if joins:
-        # An edited video: also look for joins in the short gaps, where a merge is on the table.
-        for a, b in zip(rallies, rallies[1:]):
-            if 2 * JOIN_MARGIN < b.start - a.end <= clips.MERGE_GAP:
-                joins += clips.find_joins(clips.gray(_frames(video, a.end, b.start)), a.end)
+        # An edited video: look for joins in every gap between candidates, not only short
+        # ones. Clip membership drives the court check below, and a crossfade in a 4.0 s gap
+        # (129.2 s on the montage) put a rally into the previous gym's clip, where the near
+        # player is bigger, so it was dropped as "another court".
+        for a, b in gaps_to_scan(rallies):
+            joins += scan_joins(video, a, b)
         joins = clips.merge_joins(joins)
         # Do this before merging: a retrieval/pre-serve candidate otherwise joins two
         # rallies through a chain of short gaps, and its non-play gets averaged away.
@@ -220,6 +222,32 @@ def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, v
     dropped += [r for r in kept if r.note]
     kept = [r for r in kept if not r.note]
     return Refined(kept, sorted(dropped, key=lambda r: r.start), joins)
+
+
+def gaps_to_scan(rallies: list[Rally]) -> list[tuple[float, float]]:
+    """Gaps between consecutive candidates not already covered by their join margins."""
+    return [(a.end, b.start) for a, b in zip(rallies, rallies[1:]) if b.start - a.end > 2 * JOIN_MARGIN]
+
+
+def chunks(start: float, end: float, size: float = 20.0) -> list[tuple[float, float]]:
+    """[start, end] in pieces of at most `size` s that overlap by one crossfade test window,
+    so a join on a boundary is still seen; decoding a long gap at once would hold ~70 MB/10 s."""
+    overlap = 2 * clips.HALF / SAMPLE_FPS
+    out, t = [], start
+    while t < end:
+        stop = min(end, t + size)
+        out.append((t, stop))
+        if stop >= end:
+            break
+        t = stop - overlap
+    return out
+
+
+def scan_joins(video: Path, start: float, end: float) -> list[float]:
+    joins: list[float] = []
+    for a, b in chunks(start, end):
+        joins += clips.find_joins(clips.gray(_frames(video, a, b)), a)
+    return joins
 
 
 def drop_floor_bounces(video: Path, rallies: list[Rally]) -> tuple[list[Rally], list[Rally]]:

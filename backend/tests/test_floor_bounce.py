@@ -124,3 +124,23 @@ def test_quiet_gap_between_merged_candidates_is_not_a_fast_swing():
     swing[16, 0] += .1
     assert swing_fraction([[STANDING], [swing]], times=np.array([1.0, 3.5])) == 0
     assert swing_fraction([[STANDING], [swing]], times=np.array([1.0, 1.1])) == 1
+
+
+def test_every_long_gap_is_scanned_for_joins():
+    # Montage: 125.4-127.4 then 131.4-133.3 s, a 4.0 s gap with a crossfade at 129.2 s that the
+    # old "gap <= MERGE_GAP" rule skipped; short gaps are already covered by the join margins.
+    from app.floor_bounce import JOIN_MARGIN, gaps_to_scan
+    from app.rally import Rally
+    rallies = [Rally(107.0, 112.2, 13), Rally(119.7, 123.7, 10), Rally(125.4, 127.4, 4),
+               Rally(131.4, 133.3, 5), Rally(133.4, 135.0, 4)]
+    assert gaps_to_scan(rallies) == [(112.2, 119.7), (123.7, 125.4), (127.4, 131.4)]
+    assert all(b - a > 2 * JOIN_MARGIN for a, b in gaps_to_scan(rallies))
+
+
+def test_gap_chunks_overlap_by_one_crossfade_window():
+    from app.floor_bounce import chunks
+    assert chunks(0, 10) == [(0, 10)]
+    parts = chunks(100.0, 145.0)
+    assert parts[0][0] == 100.0 and parts[-1][1] == 145.0
+    assert all(b[0] < a[1] for a, b in zip(parts, parts[1:]))   # overlapping, no hole
+    assert all(b - a <= 20.0 for a, b in parts)
