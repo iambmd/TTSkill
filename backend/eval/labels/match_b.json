@@ -1,0 +1,36 @@
+{
+  "video": "samples/match_b.mp4",
+  "duration_s": 140.25,
+  "notes": "CapCut highlights montage of ~18 rally clips across 4 gyms, hard cuts between clips, ends with a CapCut outro card (music, no play). The teal 'CHINA' shirt player (assumed to be the user) appears in every scene but is the FAR player in several clips. Labeled visually like coach_demo (298 onsets reviewed).",
+  "scene_cuts": [60.5, 79.8, 106.5, 128.9, 133.0, 138.5],
+  "rallies": [
+    {"start": 0.0, "end": 4.4, "near": "user", "confidence": "high", "note": "video cuts in mid-rally"},
+    {"start": 6.2, "end": 12.9, "near": "partner", "confidence": "high"},
+    {"start": 13.4, "end": 20.4, "near": "partner", "confidence": "medium"},
+    {"start": 21.5, "end": 25.5, "near": "user", "confidence": "medium"},
+    {"start": 27.5, "end": 33.4, "near": "partner", "confidence": "medium"},
+    {"start": 34.7, "end": 37.3, "near": "user", "confidence": "medium"},
+    {"start": 39.8, "end": 43.4, "near": "user", "confidence": "high", "note": "close over-the-shoulder camera"},
+    {"start": 44.2, "end": 52.4, "near": "user", "confidence": "medium"},
+    {"start": 54.3, "end": 59.8, "near": "user", "confidence": "high"},
+    {"start": 61.3, "end": 67.5, "near": "partner", "confidence": "high", "note": "scene 2, different gym"},
+    {"start": 68.0, "end": 72.6, "near": "user", "confidence": "high"},
+    {"start": 75.8, "end": 78.0, "near": "user", "confidence": "medium"},
+    {"start": 80.0, "end": 95.9, "near": "partner", "confidence": "medium", "note": "scene 3; user is the FAR player; possibly two rallies"},
+    {"start": 100.2, "end": 105.3, "near": "user", "confidence": "high"},
+    {"start": 107.0, "end": 112.5, "near": "partner", "confidence": "high", "note": "scene 4; user far"},
+    {"start": 121.3, "end": 126.7, "near": "partner", "confidence": "medium"},
+    {"start": 129.5, "end": 132.9, "near": "user", "confidence": "medium"},
+    {"start": 133.2, "end": 137.6, "near": "partner", "confidence": "medium"}
+  ],
+  "prep": [
+    [96.0, 100.2], [113.0, 121.3]
+  ],
+  "dead": [
+    [4.4, 6.2], [25.5, 27.5], [33.4, 34.7], [37.3, 39.8], [43.4, 44.2],
+    [52.4, 54.3], [59.8, 61.3], [67.5, 68.0], [72.6, 75.8], [78.0, 80.0],
+    [105.3, 107.0], [112.5, 113.0], [126.7, 129.5], [132.9, 133.2],
+    [137.6, 140.25]
+  ],
+  "dead_notes": "137.6-140.25 includes the CapCut outro card: its music produces onsets with no table tennis at all. 113-121.3 is ball pickup in scene 4 (floor bounces, footsteps)."
+}

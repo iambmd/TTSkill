@@ -1,0 +1,29 @@
+{
+  "video": "samples/coach_demo.mp4",
+  "duration_s": 148.27,
+  "notes": "Continuous training session, one scene. Near player = teal 'CHINA' shirt (assumed to be the user). Labeled by frame-by-frame visual review of 2fps contact sheets plus per-onset spectrogram+frame sheets (317 onsets at threshold 2.0). Rally bounds are serve to last ball contact, about +/-0.4 s.",
+  "near_player": "user",
+  "rallies": [
+    {"start": 1.9, "end": 9.3, "confidence": "high"},
+    {"start": 16.5, "end": 26.5, "confidence": "medium", "note": "soft drill play 17-22 sits under the default onset threshold"},
+    {"start": 36.2, "end": 46.6, "confidence": "high"},
+    {"start": 51.7, "end": 56.0, "confidence": "high"},
+    {"start": 61.4, "end": 73.5, "confidence": "high"},
+    {"start": 78.1, "end": 80.8, "confidence": "medium"},
+    {"start": 86.0, "end": 93.4, "confidence": "high"},
+    {"start": 97.7, "end": 104.5, "confidence": "medium"},
+    {"start": 106.4, "end": 109.1, "confidence": "low", "note": "soft play, boundary with prep unclear"},
+    {"start": 116.7, "end": 121.8, "confidence": "high"},
+    {"start": 128.2, "end": 133.7, "confidence": "high"}
+  ],
+  "prep": [
+    [0.0, 1.1], [14.1, 16.5], [34.4, 36.2], [48.6, 51.6], [58.7, 61.3],
+    [76.2, 78.0], [84.6, 86.0], [104.6, 106.3], [112.5, 116.6], [126.1, 128.2]
+  ],
+  "dead": [
+    [9.3, 14.1], [26.5, 34.4], [46.6, 48.6], [56.0, 58.7], [73.5, 76.2],
+    [80.8, 84.6], [93.4, 97.7], [109.1, 112.5], [121.8, 126.1],
+    [133.7, 148.27]
+  ],
+  "dead_notes": "133.7-148.3 is an empty table (both players walked away); every onset there is far-court play or background noise. 9.3-14.1 is ball retrieval with floor bounces and footsteps."
+}
