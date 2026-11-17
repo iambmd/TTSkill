@@ -23,10 +23,12 @@ L_ANKLE, R_ANKLE = 27, 28
 BENT_TORSO = 0.55    # shoulder-to-hip height / hip-to-ankle height; ~0.75 standing in a rally
 MAX_CROUCH = 0.25    # share of sampled frames a rally may spend crouched
 MIN_PRESENCE = 0.5   # share of sampled frames that must show a player-sized person
-MIN_SWING = 0.15     # share of sampled steps with a fast wrist (someone is striking)
+MIN_SWING = 0.10     # share of sampled steps with a fast wrist (someone is striking)
 SWING_SPEED = 2.5    # wrist speed that counts as a swing, in torso-lengths per second
 MIN_TORSO = 0.07    # normalized torso length; smaller people are neighbouring courts
-SAMPLE_FPS = 5
+# A stroke lasts ~0.2 s: at 5 fps a wide phone shot of a player seen from behind showed
+# 0.04-0.13 swing on real rallies (IMG_8782), the same as pre-serve. 10 fps separates them.
+SAMPLE_FPS = 10
 WIDTH, HEIGHT = 640, 360  # pose only needs a small frame; letterboxed to a fixed size for the raw pipe
 
 

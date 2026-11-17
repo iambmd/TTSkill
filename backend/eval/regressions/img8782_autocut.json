@@ -1,0 +1,23 @@
+{
+  "video": "samples/IMG_8782.MOV",
+  "split": "development regression; not held-out (it informed the 10 fps / 0.10 swing setting)",
+  "method": "Visual review of 1 fps contact sheets of the whole match, plus 3 fps sheets of 104-114 s and 118-128 s. Spans are the audio detector's candidates, judged play or not. Only confident verdicts are listed; other candidates (5-8, 36-39, 116-119, 133-137, 146-155, 203-215 s) were not judged.",
+  "play": [
+    {"start": 21.3, "end": 26.1, "note": "serve at 21, rally"},
+    {"start": 27.4, "end": 34.9, "note": "serve, rally; player steps far back at 31-33"},
+    {"start": 45.7, "end": 50.4},
+    {"start": 53.6, "end": 66.3, "note": "longest rally"},
+    {"start": 81.2, "end": 87.3},
+    {"start": 95.5, "end": 99.4},
+    {"start": 123.8, "end": 128.9, "note": "rally after the 122.7 s serve, wide footwork"},
+    {"start": 161.4, "end": 164.3},
+    {"start": 168.5, "end": 175.0},
+    {"start": 187.5, "end": 194.0}
+  ],
+  "not_play": [
+    {"start": 0.2, "end": 2.6, "note": "walking in past the camera"},
+    {"start": 14.4, "end": 19.8, "note": "bent over bouncing the ball before the serve"},
+    {"start": 106.6, "end": 108.9, "note": "walking back toward the camera"},
+    {"start": 120.0, "end": 122.9, "note": "standing at the table before the serve"}
+  ]
+}

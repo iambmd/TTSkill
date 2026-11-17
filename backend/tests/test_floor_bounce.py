@@ -77,3 +77,24 @@ def test_background_players_and_pre_serve_bounces_are_rejected():
     assert not shows_play([[p * .1 for p in frame] for frame in [[STANDING], [swing]]])
     assert not shows_play([[BOUNCING], [BOUNCING], [BOUNCING], [STANDING]])
     assert not shows_play([[], []])
+
+
+REGRESSION = Path(__file__).resolve().parents[1] / "eval" / "regressions" / "img8782_autocut.json"
+
+
+@pytest.mark.skipif(not SAMPLE.exists(), reason="put IMG_8782.MOV in samples/")
+def test_wide_shot_keeps_real_rallies_and_drops_non_play(tmp_path):
+    """A far phone camera sees the near player from behind; real rallies must survive."""
+    import json
+    from app.floor_bounce import drop_non_play
+    from app.rally import detect_rallies
+    from eval.metrics import overlap
+
+    labels = json.loads(REGRESSION.read_text())
+    kept, _ = drop_non_play(SAMPLE, detect_rallies(SAMPLE, tmp_path))
+    spans = [(r.start, r.end) for r in kept]
+    missed = [p for p in labels["play"]
+              if not any(overlap(k, (p["start"], p["end"])) > .5 * (p["end"] - p["start"]) for k in spans)]
+    wrong = [n for n in labels["not_play"]
+             if any(overlap(k, (n["start"], n["end"])) > .5 * (k[1] - k[0]) for k in spans)]
+    assert not missed and not wrong, (missed, wrong)
