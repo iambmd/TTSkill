@@ -227,6 +227,11 @@ Adding things
 - **A new limit:** add it to `shared/limits.json`, check it in `backend/app/validate.py` and `frontend/lib/validate.ts` with the same message, and test both sides.
 - **A new stroke type:** add it to `STROKE_TYPES` in `backend/technique/strokes.py` (label, swing direction, phases, coaching focus), give it an offline template in `technique/analyze.py`, extend `classify()`/`from_text()` if it can be auto-detected, and add it to `frontend/lib/strokes.ts`.
 - **A new pipeline step for agents:** expose it as a plain function in `technique/tools.py` and add it to `TOOLS`.
+- **A new dependency, model, dataset or media file:** add it to `THIRD_PARTY_LICENSES.md` with its license. TTSkill is licensed for sale under BSL 1.1 (`LICENSE`), so the shipped app must not contain:
+  - AGPL code, or GPL code that runs in the app's own process
+  - non-commercial or share-alike data, or models trained on it
+  - YouTube footage
+  Keep such things in `eval/` and git-ignored. The open items are flagged at the top of that file.
 
 ## UI style
 
