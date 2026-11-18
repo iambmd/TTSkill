@@ -69,11 +69,19 @@ export function jobEndpoint(kind: Job["kind"]): string {
   return PUBLIC_API_URL ? `${PUBLIC_API_URL}/jobs/${kind}` : `/api/jobs/${kind}`;
 }
 
+/** The picker already sent this video to the server (the browser couldn't read its frames):
+ * the job takes it by its `staged` token, so a big phone video goes up once. */
+export function withoutStagedFile(form: FormData): FormData {
+  if (String(form.get("staged") ?? "")) form.delete("video");
+  return form;
+}
+
 /**
  * Posts a form for a new job and returns the created job.
  * Uses XHR rather than fetch because only XHR reports upload progress, which matters for big phone videos.
  */
 export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fraction: number) => void): Promise<Job> {
+  form = withoutStagedFile(form);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.open("POST", jobEndpoint(kind));
@@ -92,4 +100,10 @@ export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fract
       : "Upload failed. Check your connection and try again."));
     xhr.send(form);
   });
+}
+
+/** Where "Which one is you?" sends a whole video the browser couldn't read: straight to the
+ * public backend when there is one (Vercel caps function bodies at 4.5 MB), else our route. */
+export function playersEndpoint(): string {
+  return PUBLIC_API_URL ? `${PUBLIC_API_URL}/players/detect` : "/api/players/detect";
 }

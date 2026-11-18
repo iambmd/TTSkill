@@ -4,6 +4,7 @@ queued/running forever (the "breakdown just sits there" bug). Pipelines are repl
 recorders except in the end-to-end tests at the end."""
 import os
 import threading
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -683,3 +684,72 @@ def test_a_tapped_player_wins_over_only_me(api, ran, upload):
 def test_only_me_must_be_ticked_or_not(api, ran, upload):
     r = api.post("/jobs/breakdown", files=upload(), data={"only_me": "yes"})
     assert r.status_code == 422 and "Only me in the video" in _error(r) and not ran
+
+
+
+# ------------------------------------------------------------------ the browser can't read the video
+
+@pytest.fixture(scope="module")
+def hevc(tmp_path_factory) -> Path:
+    """An iPhone-like HEVC .mov (Chrome without an HEVC decoder can't draw its frames)."""
+    import subprocess
+    out = tmp_path_factory.mktemp("hevc") / "IMG_0001.MOV"
+    try:
+        subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "testsrc=size=640x360:rate=30:duration=4",
+                        "-f", "lavfi", "-i", "sine=frequency=3000:duration=4", "-c:v", "libx265", "-tag:v", "hvc1",
+                        "-x265-params", "log-level=error", "-c:a", "aac", "-shortest", str(out)], check=True)
+    except subprocess.CalledProcessError:
+        pytest.skip("ffmpeg has no libx265")
+    return out
+
+
+def test_a_video_the_browser_cant_read_is_read_on_the_server_and_kept_for_the_job(api, ran, hevc, monkeypatch):
+    from technique import people
+    seen = {}
+
+    def fake(frames, cancel=None):
+        seen["frames"] = [(t, img.shape) for t, img in frames]
+        return {"candidates": [{"id": 0}], "others": [], "frame": None, "timing": {"seconds": 0.1}}
+    monkeypatch.setattr(people, "detect", fake)
+    r = api.post("/players/detect", files={"video": ("IMG_0001.MOV", hevc.read_bytes(), "video/quicktime")},
+                 data={"kind": "breakdown"})
+    assert r.status_code == 200, r.text
+    # ffmpeg decoded the HEVC frames: 12 spread over the 4 s.
+    assert len(seen["frames"]) == 12 and seen["frames"][0][1] == (360, 640, 3)
+    assert seen["frames"][0][0] < .5 and seen["frames"][-1][0] > 3.5
+    token = r.json()["staged"]
+    assert "stage_s" in r.json()["timing"]
+    # The job takes the kept upload: no second upload of the file.
+    pick = {"player_time": "1", "player_box": "0.1,0.1,0.5,0.9"}
+    job = api.post("/jobs/breakdown", data={"staged": token, **pick})
+    assert job.status_code == 201, job.text
+    assert job.json()["params"]["video"] == "IMG_0001.MOV"
+    path = ran["run_breakdown"][-1][0]
+    assert path.name == "input.mov" and path.read_bytes() == hevc.read_bytes()
+    # It is used once.
+    again = api.post("/jobs/coach", data={"staged": token, "request": "fix my forehand"})
+    assert again.status_code == 422 and "expired" in _error(again)
+
+
+def test_a_kept_upload_needs_a_real_token(api, ran):
+    assert "Choose the video again" in _error(api.post("/jobs/match", data={"staged": "../../etc/passwd"}))
+    assert "expired" in _error(api.post("/jobs/match", data={"staged": "0" * 32 + ".mov"}))
+    assert not ran
+
+
+def test_kept_uploads_are_deleted_after_two_hours(tmp_path, monkeypatch):
+    monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
+    staging = tmp_path / ".uploads"
+    staging.mkdir()
+    old, new = staging / ("a" * 32 + ".mov"), staging / ("b" * 32 + ".mov")
+    old.write_bytes(b"x")
+    new.write_bytes(b"y")
+    os.utime(old, (0, 0))
+    assert main.keep_for_job(new, "clip.mov") == new.name
+    assert not old.exists() and new.exists()
+    assert main.staged_input(new.name) == (new, "clip.mov")
+
+
+def test_detect_checks_an_uploaded_video_like_a_job_upload(api, upload):
+    r = api.post("/players/detect", files={"video": ("notes.txt", b"hello", "text/plain")}, data={"kind": "coach"})
+    assert r.status_code == 422

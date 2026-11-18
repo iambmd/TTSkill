@@ -185,6 +185,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
       {findPlayer && !onlyMe && kind !== "autocut" && !fileError && !linkError && (
         <PlayerPicker
           previewUrl={file && meta ? url : null} duration={file && meta ? meta.duration : null}
+          file={file} unreadable={!!file && !canPreview}
           link={!file && ytId ? link.trim() : null} kind={kind} onProblem={setPlayerProblem}
         />
       )}

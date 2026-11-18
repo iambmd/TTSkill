@@ -102,8 +102,14 @@ export function rangeProblem(raw: string, key: RangeKey, label: string, whole = 
   return n < min || n > max ? `${label} must be between ${min} and ${max}.` : null;
 }
 
-/** The video part of a submitted form: a non-empty file wins over a link. */
+/** An upload already on the server (the picker sent it because the browser couldn't read it). */
+export const STAGED = /^[0-9a-f]{32}\.(mp4|mov|webm|mkv)$/;
+
+/** The video part of a submitted form: an upload already on the server, then a non-empty
+ * file, then a link. */
 export function videoInputProblem(form: FormData, missing: string): string | null {
+  const staged = String(form.get("staged") ?? "").trim();
+  if (staged) return STAGED.test(staged) ? null : "Choose the video again.";
   const video = form.get("video");
   if (video instanceof File && video.size > 0) return fileProblem(video);
   const url = String(form.get("url") ?? "").trim();
@@ -116,6 +122,8 @@ export function playerFramesProblem(form: FormData): string | null {
   const P = LIMITS.players;
   const job = String(form.get("job") ?? "");
   if (job) return /^[0-9a-f]{32}$/.test(job) ? null : "Unknown job.";   // "Change player" on a result
+  const video = form.get("video");
+  if (video instanceof File && video.size > 0) return fileProblem(video);   // the browser couldn't read its frames
   const frames = form.getAll("frames").filter((f): f is File => f instanceof File && f.size > 0);
   if (!frames.length) {
     const url = String(form.get("url") ?? "").trim();

@@ -81,7 +81,9 @@ export async function detectPlayers(form: FormData, signal?: AbortSignal): Promi
 export function detectLog(form: FormData, status: number, ms: number, data: { timing?: Record<string, number>; candidates?: unknown[] }): string {
   const frames = form.getAll("frames").filter((f): f is File => f instanceof File);
   const kb = Math.round(frames.reduce((n, f) => n + f.size, 0) / 1024);
+  const video = form.get("video");
   const sent = frames.length ? `${frames.length} frames, ${kb} KB, drawn in ${form.get("grab_ms") ?? "?"} ms`
+    : video instanceof File && video.size ? `the whole video (${Math.round(video.size / 1e6)} MB; the browser couldn't read it)`
     : form.get("job") ? "a past job's video" : "a link";
   const t = data.timing;
   const backendPart = t ? `backend ${t.total_s ?? t.seconds} s (detect ${t.seconds} s)` : "no timing";

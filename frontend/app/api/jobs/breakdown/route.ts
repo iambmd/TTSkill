@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   // A missing field takes the backend's default; a blank one is checked as sent.
   const field = (k: string, missing = "") => String(form.get(k) ?? missing);
   const video = form.get("video");
-  const hasInput = (video instanceof File && video.size > 0) || !!field("url").trim();
+  const hasInput = (video instanceof File && video.size > 0) || !!field("url").trim() || !!field("staged").trim();
   const text = field("text").trim();
   const stroke = field("stroke");
   const strokeType = field("stroke_type");

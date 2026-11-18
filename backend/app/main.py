@@ -75,6 +75,9 @@ def has_file(upload: UploadFile | None) -> bool:
     return upload is not None and bool(upload.filename) and upload.size != 0
 
 
+STAGED_HOURS = 2   # an upload kept for its job after "Which one is you?" (see staged_input)
+
+
 def stage_upload(upload: UploadFile) -> Path:
     """Saves an upload outside any job and checks it (type, size, tracks, length,
     resolution), so a bad file is a 422 on the form and never creates a job."""
@@ -88,6 +91,40 @@ def stage_upload(upload: UploadFile) -> Path:
         path.unlink(missing_ok=True)
         raise
     return path
+
+
+def keep_for_job(path: Path, filename: str) -> str:
+    """Keep a staged upload for the job that follows ("Which one is you?" read its frames on
+    the server because the browser couldn't): the form sends this token instead of the file,
+    so a big phone video goes up once. Older kept uploads are deleted here."""
+    cutoff = time.time() - STAGED_HOURS * 3600
+    for old in path.parent.glob("*"):
+        if old.stat().st_mtime < cutoff:
+            old.unlink(missing_ok=True)
+    path.with_name(path.name + ".name").write_text(filename or path.name)
+    return path.name
+
+
+def staged_input(token: str) -> tuple[Path, str]:
+    """The upload a `staged` token names, and its original file name."""
+    if not re.fullmatch(r"[0-9a-f]{32}\.(mp4|mov|webm|mkv)", token):
+        raise validate.Invalid("Choose the video again.")
+    path = jobs.DATA_DIR / ".uploads" / token
+    if not path.exists():
+        raise validate.Invalid("Your upload expired. Choose the video again.")
+    name = path.with_name(token + ".name")
+    filename = name.read_text() if name.exists() else token
+    name.unlink(missing_ok=True)
+    return path, filename
+
+
+def take_video(video: UploadFile | None, staged: str) -> tuple[Path | None, str | None]:
+    """The job's upload: one already on the server (`staged`), else the file sent now."""
+    if staged.strip():
+        return staged_input(staged.strip())
+    if has_file(video):
+        return stage_upload(video), video.filename
+    return None, None
 
 
 def adopt(staged: Path, job_id: str) -> Path:
@@ -164,6 +201,7 @@ def create_breakdown(
     player_time: str = Form(""),
     player_box: str = Form(""),
     only_me: str = Form(""),
+    staged: str = Form(""),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
@@ -174,12 +212,12 @@ def create_breakdown(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     player = validate.text(player, "player", "The player's name")
     text = validate.text(text, "training_text", "The training description")
-    staged = stage_upload(video) if has_file(video) else None
+    staged, filename = take_video(video, staged)
     link = check_link(url, "breakdown") if staged is None else None
     if staged is None and link is None and not text:
         raise validate.Invalid("Upload a clip, paste a YouTube link, or describe the training.")
     params = {"stroke": stroke, "stroke_type": stroke_type or "auto", "player": player, "text": text, "hand": hand,
-              "video": video.filename if staged else (link["title"] if link else None),
+              "video": filename if staged else (link["title"] if link else None),
               "url": link and link["url"]}
     if selection and (staged or link):
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
@@ -209,17 +247,18 @@ def create_match(
     url: str = Form(""),
     player_time: str = Form(""),
     player_box: str = Form(""),
+    staged: str = Form(""),
 ) -> dict:
     validate.choice(stroke, "match_stroke", "Stroke")
     selection = validate.player_selection(player_time, player_box)
     validate.choice(hand, "hand", "Bat hand")
     validate.choice(grip, "grip", "Grip")
     height = validate.height_cm(height_cm)
-    staged = stage_upload(video) if has_file(video) else None
+    staged, filename = take_video(video, staged)
     link = None if staged else check_link(url, "match")
     if not staged and link is None:
         raise validate.Invalid("Upload a clip of yourself or paste a YouTube link.")
-    params = {"video": video.filename if staged else link["title"], "url": link and link["url"],
+    params = {"video": filename if staged else link["title"], "url": link and link["url"],
               "stroke": stroke, "hand": hand, "grip": grip, "height_cm": height}
     if selection:
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
@@ -241,6 +280,7 @@ def create_coach(
     player_time: str = Form(""),
     player_box: str = Form(""),
     only_me: str = Form(""),
+    staged: str = Form(""),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
@@ -251,11 +291,11 @@ def create_coach(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
         raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
-    staged = stage_upload(video) if has_file(video) else None
+    staged, filename = take_video(video, staged)
     link = None if staged else check_link(url, "coach")
     if not staged and link is None:
         raise validate.Invalid("Add a video: upload a clip or paste a YouTube link.")
-    params = {"request": request, "video": video.filename if staged else link["title"],
+    params = {"request": request, "video": filename if staged else link["title"],
               "url": link and link["url"]}
     if selection:
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
@@ -366,8 +406,8 @@ def _detect_video(path: Path | None, url: str | None, queued: float, cancel: thr
 def _detect_summary(source: str, r: dict) -> str:
     """One log line per lookup: what came in, who was found in each frame, where the time went."""
     t = r.get("timing", {})
-    phases = " + ".join(f"{k[:-2]} {t[k]:.2f}" for k in ("probe_s", "read_s", "wait_s", "download_s", "sample_s",
-                                                          "decode_s") if k in t)
+    phases = " + ".join(f"{k[:-2]} {t[k]:.2f}" for k in ("probe_s", "read_s", "stage_s", "wait_s", "download_s",
+                                                          "sample_s", "decode_s") if k in t)
     per_frame = " ".join(f"{f['time']:.1f}s:{f['people']}" for f in r.get("frames", []))
     return (f"players/detect {source}: {t.get('frames', 0)} frames [{per_frame}] -> "
             f"{len(r.get('candidates', []))} players; {t.get('total_s', 0):.2f} s = {phases} + "
@@ -382,10 +422,12 @@ async def detect_players(
     url: str = Form(""),
     kind: str = Form("breakdown"),
     job: str = Form(""),
+    video: UploadFile | None = File(None),
 ):
-    """The players in a few frames of the chosen video, for "Which one is you?". The browser
-    sends frames it drew from the file (no second upload of the video); for a pasted link we
-    download it and sample frames ourselves. `decisive` means no question is needed."""
+    """The players in frames of the chosen video, for "Which one is you?". The browser sends
+    frames it drew from the file (no upload of the video). When it can't read the file (Chrome
+    without an HEVC decoder and an iPhone .MOV), it sends the video: we read the frames with
+    ffmpeg and keep the upload for the job (`staged`). For a pasted link we download it."""
     from technique.people import Cancelled
 
     if kind not in ("breakdown", "match", "coach"):
@@ -401,6 +443,13 @@ async def detect_players(
                 raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
             source = "job video" if stored else "job link"
             result = await run_while_connected(request, _detect_video, stored, link_url, time.monotonic())
+        elif has_file(video):
+            # Saving and checking a phone video (ffprobe) blocks: off the event loop.
+            path = await run_in_threadpool(stage_upload, video)
+            extra["stage_s"] = round(time.monotonic() - t0, 2)
+            source = f"uploaded video ({path.stat().st_size // 1_000_000} MB)"
+            result = await run_while_connected(request, _detect_video, path, None, time.monotonic())
+            result["staged"] = keep_for_job(path, video.filename)
         else:
             sent = [(f.filename, await f.read()) for f in (frames or []) if has_file(f)]
             extra["read_s"] = round(time.monotonic() - t0, 2)

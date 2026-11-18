@@ -8,7 +8,8 @@
  * - two or more: ask which one.
  * The choice goes with the job as hidden player_time and player_box fields.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { playersEndpoint } from "@/lib/submit";
 
 type Box = [number, number, number, number];
 type Candidate = { id: number; time: number; box: Box; thumb: string; seen: number; near?: number; background?: string };
@@ -25,6 +26,8 @@ type Found = {
   timing?: Record<string, number>;
   /** false when nothing could look (no backend: stub or demo mode), so the picker stays out of the way. */
   available?: boolean;
+  /** The video, kept on the server after the browser couldn't read it: the job takes it by this token. */
+  staged?: string;
 };
 type Choice = { id: number; time: number; box: Box };
 
@@ -44,6 +47,7 @@ const LOAD_MS = 10_000;   // a playable file decodes its first frame well within
 const SEEK_MS = 6_000;
 export const TOO_LONG = "Finding the players took too long.";
 export const CANT_READ = "Your browser can't read frames from this video (often an iPhone HEVC file).";
+const SENDING = "Your browser can't read this video, so we're sending it to find the players";
 export const CHOOSE = "Choose “Analyse anyway” or try again.";
 export const NOBODY = "We couldn't spot a player in your video.";
 export const NOBODY_CHOOSE = "Choose “Analyse anyway” or pick another video.";
@@ -114,6 +118,44 @@ async function drawFrames(src: string, duration: number, signal: AbortSignal, co
   }
 }
 
+/** Whether a frame-grab failure means "this browser can't decode the file", which the
+ * server can still read with ffmpeg (an iPhone HEVC .MOV in Chrome without an HEVC decoder). */
+export function serverCanRead(error: Error): boolean {
+  return error.message === CANT_READ;
+}
+
+/** Send the whole video for the server to read its frames (XHR, for upload progress). The
+ * 30 s answer limit starts once the upload is done; the upload itself can take a while. */
+export function uploadForPlayers(file: File, kind: string, signal: AbortSignal, onProgress: (f: number) => void): Promise<Found> {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const stop = () => { clearTimeout(timer); xhr.abort(); reject(signal.reason ?? new Error(TOO_LONG)); };
+    if (signal.aborted) return stop();
+    signal.addEventListener("abort", stop, { once: true });
+    xhr.open("POST", playersEndpoint());
+    xhr.responseType = "json";
+    xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
+    xhr.upload.onload = () => {
+      onProgress(1);
+      timer = setTimeout(() => { xhr.abort(); reject(new Error(TOO_LONG)); }, LOOKUP_TIMEOUT_MS);
+    };
+    xhr.onload = () => {
+      clearTimeout(timer);
+      signal.removeEventListener("abort", stop);
+      const data = xhr.response ?? {};
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Found);
+      // Our route answers {error}; FastAPI, reached directly, answers {detail}.
+      reject(new Error(data.error ?? (typeof data.detail === "string" ? data.detail : "Couldn't look for players.")));
+    };
+    xhr.onerror = () => { clearTimeout(timer); reject(new Error("The upload failed. Check your connection and try again.")); };
+    const body = new FormData();
+    body.append("kind", kind);
+    body.append("video", file);
+    xhr.send(body);
+  });
+}
+
 async function findPlayers(body: FormData, signal: AbortSignal): Promise<Found> {
   const res = await fetch("/api/players/detect", { method: "POST", body, signal });
   const data = await res.json().catch(() => ({}));
@@ -160,10 +202,14 @@ export function needsChoice(found: Pick<Found, "candidates" | "others" | "availa
 
 const WHY: Record<string, string> = { still: "barely moves", far: "far from the table", small: "far away", more: "also seen" };
 
-export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobId, onChoice }: {
+export function PlayerPicker({ previewUrl, duration, file = null, unreadable = false, link, kind, onProblem, jobId, onChoice }: {
   /** The chosen file's object URL and length, once the preview has loaded. */
   previewUrl: string | null;
   duration: number | null;
+  /** The chosen file, sent whole when the browser can't read its frames (`unreadable`: the
+   * preview itself failed to load). */
+  file?: File | null;
+  unreadable?: boolean;
   /** A valid YouTube link, when that is the input instead. */
   link: string | null;
   kind: "breakdown" | "match" | "coach";
@@ -180,6 +226,10 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
   const [choice, setChoice] = useState<Choice | null>(null);
   const [open, setOpen] = useState(false);
   const [everyone, setEveryone] = useState(false);
+  const [sending, setSending] = useState<number | null>(null);   // upload progress, 0-1
+  // The video kept on the server for the job; survives "Analyse anyway", so it isn't sent twice.
+  const [staged, setStaged] = useState<string | null>(null);
+  const lookupRef = useRef<AbortController | null>(null);
 
   // Look for players whenever the video changes (or on "Try again"). Every step has a time
   // limit; leaving, changing the video or giving up aborts the request, and the backend stops.
@@ -191,38 +241,65 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     setFailed(null);
     setSkipped(false);
     setFinding(false);
-    if (!(previewUrl && duration) && !link && !jobId) return;
+    setSending(null);
+    setStaged(null);
+    if (!(previewUrl && duration) && !(file && unreadable) && !link && !jobId) return;
     const controller = new AbortController();
+    lookupRef.current = controller;
     let stale = false;
     setFinding(true);
-    const run = async () => {
-      const body = new FormData();
+    const lookup = async (body: FormData, grabMs: number | null, sent = { frames: 0, bytes: 0 }) => {
       body.append("kind", kind);
-      let grabMs: number | null = null;
-      let sent = { frames: 0, bytes: 0 };
-      if (jobId) {
-        body.append("job", jobId);
-      } else if (previewUrl && duration) {
-        const started = performance.now();
-        const frames = await drawFrames(previewUrl, duration, controller.signal);
-        grabMs = performance.now() - started;
-        frames.forEach((f, i) => body.append("frames", new File([f.blob], `frame${i}.jpg`, { type: "image/jpeg" })));
-        body.append("times", frames.map((f) => f.time).join(","));
-        body.append("grab_ms", String(Math.round(grabMs)));
-        sent = { frames: frames.length, bytes: frames.reduce((n, f) => n + f.blob.size, 0) };
-      } else {
-        body.append("url", link!);
-      }
       const asked = performance.now();
       const found = await findPlayers(body, controller.signal);
       console.info(lookupLog({ grabMs, ...sent, requestMs: performance.now() - asked, found }));
       return found;
     };
+    const fromFrames = async () => {
+      const started = performance.now();
+      const frames = await drawFrames(previewUrl!, duration!, controller.signal);
+      const grabMs = performance.now() - started;
+      const body = new FormData();
+      frames.forEach((f, i) => body.append("frames", new File([f.blob], `frame${i}.jpg`, { type: "image/jpeg" })));
+      body.append("times", frames.map((f) => f.time).join(","));
+      body.append("grab_ms", String(Math.round(grabMs)));
+      return lookup(body, grabMs, { frames: frames.length, bytes: frames.reduce((n, f) => n + f.blob.size, 0) });
+    };
+    const upload = async () => {
+      // The server reads the frames with ffmpeg instead, and keeps the video for the job.
+      // Its own limits apply (uploadForPlayers): a big video can take a while to go up.
+      setSending(0);
+      const asked = performance.now();
+      const found = await uploadForPlayers(file!, kind, controller.signal, setSending);
+      console.info(`[players] sent the whole video (${Math.round(file!.size / 1e6)} MB): `
+        + lookupLog({ grabMs: null, frames: 0, bytes: 0, requestMs: performance.now() - asked, found }).slice(10));
+      return found;
+    };
+    const run = async (): Promise<Found> => {
+      if (jobId) {
+        const body = new FormData();
+        body.append("job", jobId);
+        return withTimeout(lookup(body, null), LOOKUP_TIMEOUT_MS, TOO_LONG);
+      }
+      if (file && unreadable) return upload();   // the preview itself failed to load
+      if (previewUrl && duration) {
+        try {
+          return await withTimeout(fromFrames(), LOOKUP_TIMEOUT_MS, TOO_LONG);
+        } catch (e) {
+          if (file && serverCanRead(e as Error)) return upload();
+          throw e;
+        }
+      }
+      const body = new FormData();
+      body.append("url", link!);
+      return withTimeout(lookup(body, null), LINK_TIMEOUT_MS, TOO_LONG);
+    };
     const timer = setTimeout(() => {
-      withTimeout(run(), link && !jobId ? LINK_TIMEOUT_MS : LOOKUP_TIMEOUT_MS, TOO_LONG)
+      run()
         .then((r) => {
           if (stale) return;
           setFound(r);
+          setStaged(r.staged ?? null);
           // One player: theirs is the only answer. Two or more: always ask (being nearest the
           // camera most often picked the partner on montages).
           const only = r.candidates.length === 1 ? r.candidates[0] : null;
@@ -233,10 +310,10 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
           controller.abort();   // a timeout: stop the request so the backend stops too
           setFailed(e.name === "AbortError" ? TOO_LONG : e.message || "Couldn't look for players.");
         })
-        .finally(() => { if (!stale) setFinding(false); });
+        .finally(() => { if (!stale) { setFinding(false); setSending(null); } });
     }, link ? 600 : 0);   // let a pasted link settle before downloading it
     return () => { stale = true; clearTimeout(timer); controller.abort(); };
-  }, [previewUrl, duration, link, kind, jobId, attempt]);
+  }, [previewUrl, duration, file, unreadable, link, kind, jobId, attempt]);
 
   const view = pickerView(found, open || !!jobId);
   const asking = view === "pick";
@@ -244,7 +321,8 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
   useEffect(() => { onProblem(problem); }, [problem, onProblem]);
   useEffect(() => () => onProblem(null), [onProblem]);   // unmounted: nothing to wait for
 
-  const giveUp = () => { setSkipped(true); setFinding(false); setFailed(null); setFound(null); setChoice(null); };
+  // Stop whatever is still running (a whole video going up, say) before the form sends its own.
+  const giveUp = () => { lookupRef.current?.abort(); setSkipped(true); setFinding(false); setFailed(null); setFound(null); setChoice(null); };
   // A result page's "Change player" has no form to submit, so nothing to analyse anyway.
   const anyway = jobId ? null : (
     <button type="button" onClick={giveUp} className="text-sm font-bold text-accent hover:text-accent-hot">
@@ -252,15 +330,18 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     </button>
   );
 
-  const hidden = choice && (
+  const keep = staged && <input type="hidden" name="staged" value={staged} />;
+  const hidden = (
     <>
-      <input type="hidden" name="player_time" value={choice.time} />
-      <input type="hidden" name="player_box" value={choice.box.join(",")} />
+      {choice && <input type="hidden" name="player_time" value={choice.time} />}
+      {choice && <input type="hidden" name="player_box" value={choice.box.join(",")} />}
+      {keep}
     </>
   );
   if (skipped) {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
+        {keep}
         <p className="flex-1 text-sm text-muted">We&apos;ll pick the player automatically.</p>
         <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-accent hover:text-accent-hot">
           Pick a player
@@ -269,10 +350,21 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     );
   }
   if (finding) {
+    const what = sending !== null
+      ? (sending < 1 ? `${SENDING}... ${Math.round(sending * 100)}%` : `${FINDING}`)
+      : link && !previewUrl && !jobId ? FETCHING : FINDING;
     return (
-      <div className="stripes flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
-        <p aria-live="polite" className="flex-1 text-sm text-muted">{link && !previewUrl && !jobId ? FETCHING : FINDING}</p>
-        {anyway}
+      <div className="stripes space-y-2 rounded-xl border border-line bg-panel px-4 py-3">
+        <div className="flex items-center gap-3">
+          <p aria-live="polite" className="flex-1 text-sm text-muted">{what}</p>
+          {anyway}
+        </div>
+        {sending !== null && sending < 1 && (
+          <div role="progressbar" aria-label="Sending the video" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(sending * 100)}
+               className="h-1.5 overflow-hidden rounded-full bg-white/10">
+            <div className="h-full rounded-full bg-accent" style={{ width: `${sending * 100}%` }} />
+          </div>
+        )}
       </div>
     );
   }
@@ -299,6 +391,7 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
   if (view === "nobody") {
     return (
       <div role="alert" className="space-y-2 rounded-xl border border-line bg-panel px-4 py-3">
+        {hidden}
         <p className="text-sm">
           {NOBODY} <span className="text-muted">Film with your whole body in view, or analyse anyway and we&apos;ll look through the whole video.</span>
         </p>

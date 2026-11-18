@@ -477,6 +477,22 @@ describe("POST /api/jobs/[id]/rerun (Change player)", () => {
   });
 });
 
+describe("POST /api/players/detect with the whole video (the browser couldn't read it)", () => {
+  it("checks the file like an upload and passes it on", async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ candidates: [], staged: "0123456789abcdef0123456789abcdef.mov" }));
+    vi.stubGlobal("fetch", fetch);
+    const { POST } = await route("players", { BACKEND_URL: "http://backend" });
+    const ok = await POST!(post({ video: new File([new Uint8Array(8)], "IMG_0001.MOV", { type: "video/quicktime" }) }));
+    expect((await ok.json()).staged).toMatch(/\.mov$/);
+    await expectError(await POST!(post({ video: new File([new Uint8Array(8)], "notes.txt", { type: "text/plain" }) })), 422, "MP4");
+  });
+  it("lets a job take the kept upload instead of a file", async () => {
+    const { POST } = await route("coach");
+    expect((await POST!(post({ request: "fix my forehand", staged: "0123456789abcdef0123456789abcdef.mov" }))).status).toBe(201);
+    await expectError(await POST!(post({ request: "fix my forehand", staged: "../x" })), 422, "Choose the video again");
+  });
+});
+
 describe("POST /api/players/detect for a past job", () => {
   it("accepts a job id instead of frames", async () => {
     const { POST } = await route("players");

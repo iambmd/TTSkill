@@ -2,8 +2,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CANT_READ, CHOOSE, FRAMES, NOBODY_CHOOSE, pickerView, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
-  pickerProblem, withTimeout, frameTimes,
+  pickerProblem, withTimeout, frameTimes, serverCanRead,
 } from "@/app/player-picker";
+import { withoutStagedFile } from "@/lib/submit";
 
 const players = (n: number) => Array.from({ length: n }, (_, id) => ({ id }));
 const base = { finding: false, failed: null, skipped: false, asking: false, chosen: false };
@@ -101,5 +102,23 @@ describe("which frames the browser draws", () => {
     expect(times[0]).toBeLessThan(215 * 0.05);
     expect(times.at(-1)!).toBeGreaterThan(215 * 0.95);
     expect(times.filter((t) => t >= 215 * 0.75)).toHaveLength(3);   // in the last quarter alone
+  });
+});
+
+describe("a video the browser can't read (iPhone HEVC in Chrome)", () => {
+  it("is sent to the server instead of failing", () => {
+    expect(serverCanRead(new Error(CANT_READ))).toBe(true);
+    expect(serverCanRead(new Error(TOO_LONG))).toBe(false);
+  });
+  it("goes up once: the job takes the kept upload by its token", () => {
+    const form = new FormData();
+    form.append("video", new File([new Uint8Array(10)], "IMG_0001.MOV", { type: "video/quicktime" }));
+    form.append("staged", "0123456789abcdef0123456789abcdef.mov");
+    const sent = withoutStagedFile(form);
+    expect(sent.get("video")).toBeNull();
+    expect(sent.get("staged")).toBe("0123456789abcdef0123456789abcdef.mov");
+    const plain = new FormData();
+    plain.append("video", new File([new Uint8Array(10)], "a.mp4", { type: "video/mp4" }));
+    expect(withoutStagedFile(plain).get("video")).toBeInstanceOf(File);
   });
 });
