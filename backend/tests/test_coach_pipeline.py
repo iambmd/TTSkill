@@ -178,8 +178,8 @@ def test_a_warm_run_reuses_the_coached_clip_and_its_pose(tmp_path, monkeypatch):
         job = jobs.create("coach", {})
         video = tmp_path / "v.mp4"
         video.write_bytes(b"one video")
-        s = Session(job["id"], video=video, identity="seed")
-        monkeypatch.setattr(s, "seed", lambda v: "seed")
+        s = Session(job["id"], video=video)
+        monkeypatch.setattr(fixed, "find_seed", lambda v, sel, only: "seed")
         facts, clip, tr = fixed.analyse_stroke(s, video, cache.video_key(video), "forehand",
                                                [Rally(4.0, 6.0, 4, times=np.array([5.0]))])
         assert clip.read_bytes() == b"clip" and tr.lm.shape == track.lm.shape

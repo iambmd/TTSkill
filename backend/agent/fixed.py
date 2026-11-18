@@ -107,25 +107,14 @@ def run_fixed(s: Session, request: str) -> None:
             key = cache.video_key(video)
 
         mark("rallies", "in_progress", status="running", message="Listening for ball contacts...")
-        from app.floor_bounce import drop_non_play
-        from app.rally import detect_rallies as find_rallies
-
-        def heard():
-            found = find_rallies(video, s.dir, 3.0, 1.6, 4)
-            # A quiet video: the same retry the fixed plan made.
-            return (found, 4) if found else (find_rallies(video, s.dir, 2.5, 1.6, 3), 3)
-
         with timing.stage("audio hits -> rallies (cached per video)"):
-            (raw, min_hits), _ = cache.cached(key, "audio_rallies", heard)
+            (raw, min_hits), _ = cache.cached(key, "audio_rallies", lambda: heard(video, s.dir))
         s.rallies = raw   # until the play check below has run
 
         def play_check() -> list:
             """Keep the rallies that show this table's players in play (pose over every rally,
             39-65 s): only the reel needs it, so it runs beside the stroke analysis."""
-            def refine():
-                with timing.stage("drop non-play (floor bounce)"):
-                    return drop_non_play(video, raw, min_hits=min_hits)[0]
-            kept, _ = cache.cached(key, "rallies", refine)
+            kept, _ = cache.cached(key, "rallies", lambda: play_checked(video, raw, min_hits))
             s.rallies = kept
             if want_reel and kept:
                 # Its own job: the coaching call needs the rally count, not the reel (a warm
@@ -196,6 +185,69 @@ def run_fixed(s: Session, request: str) -> None:
         pool.shutdown(wait=False)
 
 
+# ------------------------------------------------------------------ steps shared with prepare
+
+def heard(video: Path, workdir: Path) -> tuple[list, int]:
+    """The audio rallies (and the min_hits they were found with)."""
+    from app.rally import detect_rallies as find_rallies
+
+    found = find_rallies(video, workdir, 3.0, 1.6, 4)
+    # A quiet video: the same retry the fixed plan made.
+    return (found, 4) if found else (find_rallies(video, workdir, 2.5, 1.6, 3), 3)
+
+
+def play_checked(video: Path, raw: list, min_hits: int) -> list:
+    from app.floor_bounce import drop_non_play
+
+    with timing.stage("drop non-play (floor bounce)"):
+        return drop_non_play(video, raw, min_hits=min_hits)[0]
+
+
+def who_key(selection: Optional[tuple], only_me: bool) -> str:
+    """The cache key part for whose pose it is."""
+    return (f"pick-{selection[0]:.2f}-" + "-".join(f"{v:.3f}" for v in selection[1]) if selection
+            else "only-me" if only_me else "auto")
+
+
+def find_seed(video: Path, selection: Optional[tuple], only_me: bool):
+    """The tracker seed: the tapped player; with "Only me", whoever plays the most; else the
+    video-wide vote (Session.seed's rule)."""
+    from technique import people, pose
+
+    with timing.stage("seed"):
+        if selection:
+            return pose.identity_from_box(video, *selection)
+        seed = people.most_active(str(video)) if only_me else None
+        return seed if seed is not None else pose.initial_identity(video)
+
+
+def prepare(job_id: str, video: str, selection: Optional[tuple] = None, only_me: bool = False,
+            who: bool = True) -> None:
+    """The worker's prepare lane: fill the per-video cache a Coach job will read, as soon as the
+    video is on disk (the job may still be waiting for a slot): audio rallies, seed and pose at
+    the strokes (who=False: not known yet, e.g. right after "Which one is you?" got the
+    upload), then the play check. The job waits on each entry's lock rather than redo it.
+    `video` is a hard link made for this task; it's removed at the end."""
+    import tempfile
+
+    from technique import hitpose
+
+    path = Path(video)
+    try:
+        key = cache.video_key(path)
+        with tempfile.TemporaryDirectory() as tmp:
+            (raw, min_hits), _ = cache.cached(key, "audio_rallies", lambda: heard(path, Path(tmp)))
+        if who:
+            w = who_key(selection, only_me)
+            seed, _ = cache.cached(key, f"seed-{w}", lambda: find_seed(path, selection, only_me))
+            if raw:
+                cache.cached(key, f"hitpose-{w}", lambda: hitpose.hit_pose(str(path), rally_dicts(raw), seed))
+        cache.cached(key, "rallies", lambda: play_checked(path, raw, min_hits))
+    finally:
+        if path.parent.name == ".prepare":
+            path.unlink(missing_ok=True)
+
+
 def _wait(fut: Future, errors: list[str], what: str):
     try:
         return fut.result()
@@ -212,9 +264,8 @@ def analyse_stroke(s: Session, video: Path, key: str, wing: Optional[str], raw: 
     from technique import hitpose, media, pose, strokes
     from technique.pipeline import key_moments
 
-    who = (f"pick-{s.selection[0]:.2f}-" + "-".join(f"{v:.3f}" for v in s.selection[1]) if s.selection
-           else "only-me" if s.only_me else "auto")
-    seed, _ = cache.cached(key, f"seed-{who}", lambda: s.seed(video))
+    who = who_key(s.selection, s.only_me)
+    seed, _ = cache.cached(key, f"seed-{who}", lambda: find_seed(video, s.selection, s.only_me))
     s.identity = seed
     rallies = rally_dicts(raw)   # the audio rallies: the probes skip any without swings
     if not rallies:
@@ -222,9 +273,7 @@ def analyse_stroke(s: Session, video: Path, key: str, wing: Optional[str], raw: 
     with timing.stage("pose at the hits (cached per video and player)"):
         hp, _ = cache.cached(key, f"hitpose-{who}", lambda: hitpose.hit_pose(str(video), rallies, seed))
     side, how = decide_side(hp, s.hand)
-    for w in hp.windows:
-        w.peak = hitpose.own_stroke(w.track, w.hit - w.start, side)
-        w.own = w.peak is not None
+    hitpose.find_own(hp, side)
     best = hitpose.coached(hp, side, wing)
     if best is None:
         raise ToolError("We couldn't see you hitting the ball clearly in the busiest rallies. "

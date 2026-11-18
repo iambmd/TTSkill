@@ -22,7 +22,7 @@ from starlette.concurrency import run_in_threadpool
 from equipment import recommend as rubbers
 from technique.strokes import STROKE_TYPES
 
-from . import download, jobs, validate
+from . import download, jobqueue, jobs, validate
 from .pipelines import fetch_then, run_autocut, run_breakdown, run_match
 
 log = logging.getLogger("uvicorn.error")   # configured by uvicorn, so INFO lines show in `make backend`
@@ -182,9 +182,9 @@ def create_autocut(
     job = jobs.create("autocut", params)
     args = (mode, top_n, threshold, gap, min_hits)
     if link:
-        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_autocut, *args)
+        jobqueue.submit(background, fetch_then, job["id"], link["url"], run_autocut, *args)
     else:
-        background.add_task(jobs.run, run_autocut, job["id"], adopt(staged, job["id"]), *args)
+        jobqueue.submit(background, run_autocut, job["id"], adopt(staged, job["id"]), *args)
     return job
 
 
@@ -229,10 +229,10 @@ def create_breakdown(
     args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
     kwargs = {"only_me": True} if solo else {}
     if link:
-        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_breakdown, *args, **kwargs)
+        jobqueue.submit(background, fetch_then, job["id"], link["url"], run_breakdown, *args, **kwargs)
     else:
         path = adopt(staged, job["id"]) if staged else None
-        background.add_task(jobs.run, run_breakdown, job["id"], path, *args, **kwargs)
+        jobqueue.submit(background, run_breakdown, job["id"], path, *args, **kwargs)
     return job
 
 
@@ -265,9 +265,9 @@ def create_match(
     job = jobs.create("match", params)
     args = (stroke, height, hand, grip) + ((selection,) if selection else ())
     if link:
-        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_match, *args)
+        jobqueue.submit(background, fetch_then, job["id"], link["url"], run_match, *args)
     else:
-        background.add_task(jobs.run, run_match, job["id"], adopt(staged, job["id"]), *args)
+        jobqueue.submit(background, run_match, job["id"], adopt(staged, job["id"]), *args)
     return job
 
 
@@ -303,7 +303,12 @@ def create_coach(
         params["only_me"] = True
     job = jobs.create("coach", params)
     path = adopt(staged, job["id"]) if staged else None
-    background.add_task(jobs.run, run_coach, job["id"], path, link and link["url"], request,
+    if path is not None and not jobqueue.inline():
+        # Start the analysis the job will need now, beside any job ahead of it in the queue.
+        from agent.fixed import prepare
+        jobqueue.submit(background, prepare, job["id"], jobqueue.prepare_link(path), selection, solo,
+                        lane="prepare", kind="prepare")
+    jobqueue.submit(background, run_coach, job["id"], path, link and link["url"], request,
                         *((selection,) if selection else ()), **({"only_me": True} if solo else {}))
     return job
 
@@ -450,6 +455,12 @@ async def detect_players(
             source = f"uploaded video ({path.stat().st_size // 1_000_000} MB)"
             result = await run_while_connected(request, _detect_video, path, None, time.monotonic())
             result["staged"] = keep_for_job(path, video.filename)
+            if not jobqueue.inline():
+                # The video is on the server now: start its rallies and play check (who isn't
+                # known until the user taps), so a Coach job on it starts ahead.
+                from agent.fixed import prepare
+                jobqueue.submit(BackgroundTasks(), prepare, "players", jobqueue.prepare_link(path), None, False,
+                                False, lane="prepare", kind="prepare")
         else:
             sent = [(f.filename, await f.read()) for f in (frames or []) if has_file(f)]
             extra["read_s"] = round(time.monotonic() - t0, 2)
@@ -510,12 +521,12 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
         fn, args = run_match, (p.get("stroke") or "forehand", p.get("height_cm"), p.get("hand") or "auto",
                                p.get("grip") or "shakehand", selection)
     else:
-        background.add_task(jobs.run, run_coach, job["id"], path, url, p.get("request") or "", selection)
+        jobqueue.submit(background, run_coach, job["id"], path, url, p.get("request") or "", selection)
         return job
     if url:
-        background.add_task(jobs.run, fetch_then, job["id"], url, fn, *args)
+        jobqueue.submit(background, fetch_then, job["id"], url, fn, *args)
     else:
-        background.add_task(jobs.run, fn, job["id"], path, *args)
+        jobqueue.submit(background, fn, job["id"], path, *args)
     return job
 
 

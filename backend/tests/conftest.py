@@ -2,10 +2,15 @@
 checks (backend/app/validate.py) to pass or fail for a real reason."""
 from __future__ import annotations
 
+import os
 import subprocess
 from pathlib import Path
 
 import pytest
+
+# Jobs run inside the API in tests (FastAPI background tasks), as before the worker; the queue
+# and worker tests switch this off themselves.
+os.environ.setdefault("TTSKILL_INLINE", "1")
 
 
 def make_media(path: Path, seconds: float = 3.0, size: str = "640x360", video: bool = True,

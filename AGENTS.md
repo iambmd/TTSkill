@@ -44,7 +44,7 @@ Without `ANTHROPIC_API_KEY` the offline cards are used. `COACH_ENGINE=agent` run
 ## Stack and layout
 
 ```
-Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background pipeline ──> backend/data/jobs/<id>/
+Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue ──> worker (a process per job) ──> backend/data/jobs/<id>/
 ```
 
 | Path | What |
@@ -58,7 +58,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `backend/app/pipelines.py` | `run_autocut` and `run_breakdown`. Plain functions that update the job record as they go. |
 | `backend/app/rally.py`, `cut.py` | Auto-Cut: hit and rally detection; padding, cutting and joining segments. |
 | `backend/app/download.py` | Pasted YouTube links (watch, youtu.be, Shorts) via yt-dlp: probed before the job starts (private, unavailable, over 3 min fail on the form), downloaded at <=720p into the job folder, deleted after the pipeline runs. |
-| `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json` (written atomically). Results go to `result.mp4` in the same folder. `run()` wraps every background pipeline; `get()` fails jobs orphaned by a restart. |
+| `backend/app/jobs.py` | Job records as JSON at `backend/data/jobs/<id>/job.json` (written atomically, under a file lock: the API and the worker both write). Results go to `result.mp4` in the same folder. `run()` wraps every pipeline; `get()` checks a queued/running job against the queue (waiting for the worker, or failed if its worker died). |
+| `backend/app/jobqueue.py`, `backend/app/worker.py` | The job queue (SQLite at `backend/data/queue.sqlite3`; Redis isn't installed and needs sudo) and `python -m app.worker`, which runs each job in a fresh spawned process with a time limit (15 min, Auto-Cut 30) and a `prepare` lane that fills the per-video cache as soon as a Coach video is on disk. Jobs survive API reloads. `TTSKILL_INLINE=1` runs jobs inside the API as before (the tests do). |
 | `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
 | `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
@@ -112,10 +113,10 @@ Requirements:
 sudo apt install -y ffmpeg libegl1 libgles2   # Linux / WSL, one time
 
 make install    # creates backend/.venv, pip installs, npm installs
-make dev        # frontend on :3000, backend on :8000 (Ctrl-C stops both)
+make dev        # frontend on :3000, API on :8000, and the job worker (Ctrl-C stops all three)
 ```
 
-To run the services one at a time, use `make backend` or `make frontend`. To work on the UI without Python, run `cd frontend && npm run dev`; the API routes then run in stub mode.
+To run the services one at a time, use `make backend`, `make worker` or `make frontend`. Without a worker, jobs stay queued and the job page says "Waiting for the worker"; `TTSKILL_INLINE=1 make backend` runs them in the API instead. To work on the UI without Python, run `cd frontend && npm run dev`; the API routes then run in stub mode.
 
 Data builders (all run from `backend/`):
 - `.venv/bin/python -m players.build` builds the pro profiles. It's resumable and stops when YouTube rate-limits; re-run it later. `--only ID ...` builds some players, `--local PLAYER STROKE FILE URL TITLE` adds one clip from a file.
@@ -139,6 +140,9 @@ Space YouTube requests out. Never work around its bot check by switching clients
 | `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer (default `claude-opus-5-5`). |
 | `POSE_MODEL_PATH` | backend | Local `pose_landmarker_full.task`. Otherwise it is downloaded once to `~/.cache/ttskill/`. |
 | `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |
+| `TTSKILL_INLINE` | backend | `1` runs jobs inside the API (FastAPI background tasks) instead of the worker. The tests set it. |
+| `TTSKILL_WORKERS` | worker | Jobs run at once (default 1: a job takes ~3 GB). |
+| `TTSKILL_DATA_DIR` | backend, worker | Where job folders live (default `backend/data/jobs`); the queue and cache sit beside it. |
 
 Frontend variables go in `frontend/.env.local`; see `frontend/.env.example`. Never commit secrets: `.env*.local` is git-ignored.
 
@@ -152,7 +156,7 @@ cloudflared tunnel --url http://localhost:8000  # prints https://<random>.tryclo
 On Vercel, set the root directory to `frontend` and `NEXT_PUBLIC_API_URL` to the tunnel URL, then redeploy.
 - The tunnel URL changes every time `cloudflared` restarts. Update the variable and redeploy, since it is baked into the build.
 - Submissions then go straight to the backend, so `DEMO_MODE` no longer answers them; the `/jobs/demo-*` pages still work.
-- `make backend` reloads on file saves, which fails running jobs. Don't edit backend code during a demo. A reload waits at most 5 s for running work (`--timeout-graceful-shutdown 5`); without it a reload waited for a running job (minutes) and every new request queued behind it.
+- `make backend` reloads on file saves. Jobs run in the worker, so a reload no longer fails them; the worker starts each job in a fresh process, so it runs the code as it was when the job started. A reload waits at most 5 s for running requests (`--timeout-graceful-shutdown 5`).
 
 ## Tests and checks
 
@@ -165,7 +169,7 @@ cd frontend && npm run build                           # production build (stop 
 ```
 
 - `backend/tests/test_api.py` covers every FastAPI endpoint: validation (422s, bad uploads on every endpoint), what each one schedules, job reads, result and file serving, the Auto-Cut warning, and the end-to-end text and video breakdowns. `backend/tests/test_validate.py` covers the checks themselves: height, choices, ranges, text, upload names, ffprobe, link shapes and metadata, the pose visibility check. `backend/tests/conftest.py` makes small real clips with ffmpeg (`media`, `upload` fixtures). `frontend/test/validate.test.ts` and `youtube.test.ts` cover the same checks on the frontend. `frontend/test/api.test.ts` covers every Next.js route in stub, proxy (fetch mocked) and demo modes. It fails if a new `route.ts` isn't added to its table.
-- Background jobs go through `jobs.run(...)`, so a job always ends `done` or `failed`. A job left `running` by a server restart (`uvicorn --reload` on a file save, a crash) is reported as failed with a "server restarted" message, because `jobs.ACTIVE` only holds jobs this process is working on. This assumes one worker process.
+- Jobs go through `jobqueue.submit(...)` and the worker runs them through `jobs.run(...)`, so a job always ends `done` or `failed`: a job process that dies or passes its time limit fails its job with a message; a worker that dies leaves its jobs to be failed on restart (and by `jobs.get` meanwhile).
 - Run only one `make dev` per checkout. Two `next dev` servers share `frontend/.next` and break each other's routes.
 
 - Tests that need a real match skip unless `samples/IMG_8782.MOV` exists, or `TTSKILL_SAMPLE` is set for the technique test.
@@ -201,7 +205,7 @@ Backend (Python)
 - Pipelines are plain functions: `run_<kind>(job_id, ...)`.
   - Report progress with `jobs.update(job_id, status=..., progress=..., message=...)`.
   - Wrap the whole body in `try/except Exception`, print the traceback, and mark the job `failed` with a readable `message`. The job page shows it.
-  - Schedule it with `background.add_task(jobs.run, run_<kind>, job["id"], ...)`, never bare, so a crash or a missing final status can't leave the job running.
+  - Schedule it with `jobqueue.submit(background, run_<kind>, job["id"], ...)` (module-level function, picklable arguments), so the worker runs it with a time limit and a crash or a missing final status can't leave the job running.
 - Import heavy modules (MediaPipe, OpenCV) inside the pipeline function, so the API starts fast.
 - Endpoints validate input with `app/validate.py` (or raise `validate.Invalid("...")`), which main.py answers with a 422 and a message a user can act on. Uploads go through `stage_upload()`, so a bad file never creates a job. FastAPI's own type errors (`top_n=abc`) are turned into the same kind of message. The Next.js layer turns FastAPI's `{detail}` into `{error}`.
 - After pose extraction, call `pose.require_player(track)`: under 40% of frames with a player, the job asks for a clearer clip instead of rendering a bad video.
