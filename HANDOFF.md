@@ -14,7 +14,7 @@ conventions). Last updated 2026-11-17 after Tasks 1a, 2 and 3 of the user's brie
 | Coached stroke selection (8 peaks labelled from frames) | 5/5 real strokes kept, 3/3 post-point turns/walks rejected |
 | Coach end to end | coaches the user on IMG_8782, coach_demo, both montage encodes (frame-checked) |
 | Forehand/backhand auto-detection | fails its one labelled case (strict xfail); geometry candidate rejected |
-| Tests | backend 365 pass, 2 network skips, 1 xfail; frontend 140 pass; build passes |
+| Tests | backend 370 pass, 2 network skips, 1 xfail; frontend 145 pass; build passes |
 
 Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone far back),
 `coach_demo.mp4` (640x360 drill), `match_b.mp4` (480p montage, 18 clips, crossfades),
@@ -52,6 +52,15 @@ left this clip's top 3.
    browser. Breakdown on the full IMG_8782 with the user picked and hand "auto" asks for the hand
    (pooled bat colour just under 1.8x); with the far opponent picked it completes (42% seen,
    skeleton on him).
+   Picker hang, fixed 2026-11-18 (`a446a9e`, `8e20b2b`, `84cd05e`): the browser test saw detect
+   take 178-301 s and pages stuck on "Finding the players". Detection is 1.5-3.5 s (timed per
+   step); the dev backend was stuck in `--reload` restarts waiting for running work, and the
+   frontend had no time limits (Chrome can't decode iPhone HEVC frames, so loadeddata/seeked
+   never fired on Breakdown). Now: model reused per thread, 8 s detection budget, async endpoint
+   in its own 2-thread pool cancelled on browser disconnect (checked direct and through
+   Next.js), `make backend --timeout-graceful-shutdown 5`, 10 s/6 s frame-event limits, 30 s
+   lookup limit, "Analyse anyway (auto-pick)" + "Try again". Browser check steps are in the
+   commit `84cd05e` message and the session summary.
 2. **1b: learned forehand/backhand classifier** (in progress). Cached pose windows: test_7 41
    contacts (calibration), test_6 31 + test_3 19 (validation, frozen). Too few to train on, so
    add test_1 (84 strokes), test_4 (71), test_5 (27): download, verify each side's hitting hand
