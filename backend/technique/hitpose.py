@@ -137,7 +137,7 @@ def speed(track: pose.PoseTrack, side: str | None) -> np.ndarray:
     return right if side == "right" else left if side == "left" else np.maximum(left, right)
 
 
-def own_stroke(track: pose.PoseTrack, hit_at: float, side: str | None) -> int | None:
+def own_stroke(track: pose.PoseTrack, hit_at: float, side: str | None, bar: float = STROKE_SPEED) -> int | None:
     """The frame of the followed player's swing peak at this hit, if it is their stroke:
     their bat wrist (or either, before the hand is known) peaks within 0.15 s of the sound,
     fast (STROKE_SPEED). The opponent's hit leaves the wrist moving into the ready position."""
@@ -148,7 +148,25 @@ def own_stroke(track: pose.PoseTrack, hit_at: float, side: str | None) -> int | 
     if not len(near):
         return None
     i = int(near[np.argmax(v[near])])
-    return i if v[i] >= STROKE_SPEED else None
+    return i if v[i] >= bar else None
+
+
+def find_own(hp: HitPose, side: str) -> None:
+    """Mark the player's own strokes among the windows. When none reaches STROKE_SPEED (slow
+    strokes: pushes, a short exchange; a 30 s stretch of IMG_8782 peaked at 3.1), the bar drops
+    to 60% of the fastest window there (at least 1.5), as the real-stroke rules relax only
+    when nothing passes."""
+    for w in hp.windows:
+        w.peak = own_stroke(w.track, w.hit - w.start, side)
+        w.own = w.peak is not None
+    if any(w.own for w in hp.windows) or not hp.windows:
+        return
+    near = [float(np.max(speed(w.track, side)[np.abs(w.track.times - (w.hit - w.start)) <= .15], initial=0))
+            for w in hp.windows]
+    bar = max(1.5, 0.6 * max(near))
+    for w in hp.windows:
+        w.peak = own_stroke(w.track, w.hit - w.start, side, bar)
+        w.own = w.peak is not None
 
 
 def strokes_only(hits: list[float]) -> list[float]:

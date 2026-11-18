@@ -84,3 +84,16 @@ def test_the_cache_keeps_a_videos_analysis(tmp_path, monkeypatch):
     assert cache.video_key(other) != key
 
 
+
+
+def test_slow_strokes_still_count_when_nothing_is_fast():
+    """A stretch of pushes never reaches STROKE_SPEED: the bar drops to the best there."""
+    n = 36
+    push = np.zeros(n)
+    push[16:21] = np.cumsum([.01, .015, .02, .015, .01])   # ~2.5 torso/s at the sound
+    push[21:] = push[20]
+    still = standing(n, wrist_dx=np.zeros(n))
+    hp = hitpose.HitPose(windows=[hitpose.HitWindow(hit=.6, track=standing(n, wrist_dx=push), start=0.0),
+                                  hitpose.HitWindow(hit=.6, track=still, start=0.0)])
+    hitpose.find_own(hp, "right")
+    assert [w.own for w in hp.windows] == [True, False]
