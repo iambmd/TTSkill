@@ -82,6 +82,11 @@ left this clip's top 3.
    render/matching; caches; partial results; eval of YOLO-pose/RTMPose + ByteTrack in eval/;
    RQ worker; then resume 1b with test_5 = both players left-handed, confirmed by the user).
    Progress is recorded below as each phase lands.
+   - Phase 0 done (`e4c07be`): `backend/timing.py` + `scripts/time_coach.py`; records in
+     `backend/eval/coach_speed/`. Deep agent (Opus 5.5), demo request: coaching-demo 242 s / $0.36,
+     IMG_8782 297 s / $0.35; 19 Claude calls (105-116 s, mostly serial), floor-bounce check 45-65 s,
+     choose_window 28-42 s, full-rate pose on the same window x3 (~17-23 s each), breakdown rendered
+     x2 (~20 s each), vision analyzer 14-16 s whose text is replaced.
 
 
 1. **"Tap the player to analyze": done** (all six parts pushed):
