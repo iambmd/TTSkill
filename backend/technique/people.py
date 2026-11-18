@@ -7,6 +7,8 @@ one player, or a clear "nearest the camera" winner, needs no question."""
 from __future__ import annotations
 
 import base64
+import threading
+import time
 from dataclasses import dataclass
 
 import cv2
@@ -20,6 +22,34 @@ MIN_SIZE = 0.3        # torso vs the biggest candidate's; smaller is another cou
 DECISIVE_SHARE = 2 / 3  # nearest in this share of frames, and twice as often as anyone else
 THUMB_H = 160
 FRAME_W = 960
+# Seconds of detection before answering with what was found: the zoomed quarters stop after
+# half of it, frames after all of it. 6 frames measured 1.5-1.7 s in-process, 1.6-3.5 s over HTTP.
+BUDGET_S = 8.0
+
+_LOCAL = threading.local()   # one loaded model per worker thread (MediaPipe objects aren't thread-safe)
+
+
+class Cancelled(Exception):
+    """The browser went away, so nobody wants the answer."""
+
+
+def _landmarker():
+    """The pose model, loaded once per thread and reused (loading took up to 0.3 s a request)."""
+    lmk = getattr(_LOCAL, "landmarker", None)
+    if lmk is None:
+        import mediapipe as mp
+        from mediapipe.tasks.python import BaseOptions, vision
+
+        from .pose import model_path
+
+        opts = vision.PoseLandmarkerOptions(
+            base_options=BaseOptions(model_asset_path=str(model_path())),
+            running_mode=vision.RunningMode.IMAGE, num_poses=3,
+            min_pose_detection_confidence=0.4, min_tracking_confidence=0.4,
+        )
+        lmk = _LOCAL.landmarker = vision.PoseLandmarker.create_from_options(opts)
+        _LOCAL.mp = mp
+    return lmk, _LOCAL.mp
 
 
 @dataclass
@@ -95,33 +125,38 @@ def _thumb(frame: np.ndarray, box: tuple[float, float, float, float]) -> str:
     return _jpeg(cv2.resize(crop, (max(1, round(crop.shape[1] * scale)), THUMB_H)))
 
 
-def detect(frames: list[tuple[float, np.ndarray]]) -> dict:
+def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | None = None,
+           budget: float = BUDGET_S) -> dict:
     """frames: (time in s, BGR image). Returns the picker's data:
     {"candidates": [{id, time, box, thumb, seen, near}], "frame": {time, image, boxes},
-     "suggested": id or None, "decisive": bool}."""
-    import mediapipe as mp
-    from mediapipe.tasks.python import BaseOptions, vision
+     "suggested": id or None, "decisive": bool, "timing": {...}}.
+    cancel: set when the browser disconnects; raises Cancelled at the next frame."""
+    from .pose import QUARTERS, _pose_candidates
 
-    from .pose import QUARTERS, _pose_candidates, model_path
-
-    opts = vision.PoseLandmarkerOptions(
-        base_options=BaseOptions(model_asset_path=str(model_path())),
-        running_mode=vision.RunningMode.IMAGE, num_poses=3,
-        min_pose_detection_confidence=0.4, min_tracking_confidence=0.4,
-    )
+    start = time.monotonic()
+    landmarker, mp = _landmarker()
+    loaded = time.monotonic() - start
     images = []
     detections: list[Detection] = []
-    with vision.PoseLandmarker.create_from_options(opts) as landmarker:
-        for f, (_, image) in enumerate(frames):
+    zoomed = 0
+    for f, (_, image) in enumerate(frames):
+        if cancel is not None and cancel.is_set():
+            raise Cancelled()
+        spent = time.monotonic() - start
+        if spent > budget and f >= 2:
+            break   # answer with the frames done so far rather than keep the page waiting
+        h, w = image.shape[:2]
+        if h > 720:   # the same working size as the seed and tracking
+            image = cv2.resize(image, (round(w * 720 / h), 720))
             h, w = image.shape[:2]
-            if h > 720:   # the same working size as the seed and tracking
-                image = cv2.resize(image, (round(w * 720 / h), 720))
-                h, w = image.shape[:2]
-            images.append(image)
-            people, _ = _pose_candidates(image, landmarker, mp, extra=QUARTERS)
-            for p in people:
-                torso = float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
-                detections.append(Detection(f, box_of(p), torso, signature(image, p)))
+        images.append(image)
+        extra = QUARTERS if spent < budget / 2 else None
+        zoomed += extra is not None
+        people, _ = _pose_candidates(image, landmarker, mp, extra=extra)
+        for p in people:
+            torso = float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
+            detections.append(Detection(f, box_of(p), torso, signature(image, p)))
+    frames = frames[:len(images)]
     g = group(detections, len(frames))
     candidates = []
     for i, pl in enumerate(g["players"]):
@@ -140,7 +175,10 @@ def detect(frames: list[tuple[float, np.ndarray]]) -> dict:
         frame = {"time": round(frames[f][0], 3), "image": _jpeg(image),
                  "boxes": [{"id": i, "box": [round(v, 4) for v in d.box]}
                            for i, pl in enumerate(g["players"]) for d in pl if d.frame == f]}
-    return {"candidates": candidates, "frame": frame, "suggested": g["suggested"], "decisive": g["decisive"]}
+    timing = {"seconds": round(time.monotonic() - start, 2), "model_load_s": round(loaded, 2),
+              "frames": len(images), "zoomed_frames": zoomed}
+    return {"candidates": candidates, "frame": frame, "suggested": g["suggested"], "decisive": g["decisive"],
+            "timing": timing}
 
 
 def sample_frames(video: str, count: int = 6) -> list[tuple[float, np.ndarray]]:

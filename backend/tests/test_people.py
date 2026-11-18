@@ -70,3 +70,51 @@ def test_finds_both_players_on_the_wide_match():
     near, far = sorted(r["candidates"], key=lambda c: -c["near"])
     assert near["box"][3] - near["box"][1] > far["box"][3] - far["box"][1]   # the user is the bigger one
     assert r["frame"]["image"].startswith("data:image/jpeg;base64,")
+    assert r["timing"]["seconds"] < 10   # the picker must not keep the page waiting
+
+
+def _fake_detector(monkeypatch, delay: float = 0.0):
+    """people.detect without MediaPipe: one standing person per frame, each call taking `delay` s."""
+    import threading
+    import time
+    from technique import people, pose
+    calls = []
+
+    def candidates(image, landmarker, mp, extra=None, first=None):
+        calls.append(extra is not None)
+        time.sleep(delay)
+        lm = np.zeros((33, 4), np.float32)
+        lm[:, 3] = 1
+        lm[:, 0] = .5
+        lm[:, 1] = np.linspace(.1, .9, 33)
+        lm[[11, 12], 1], lm[[23, 24], 1] = .3, .5
+        return [lm], [np.zeros((33, 3), np.float32)]
+    monkeypatch.setattr(people, "_landmarker", lambda: (None, None))
+    monkeypatch.setattr(pose, "_pose_candidates", candidates)
+    frames = [(float(i), np.full((360, 640, 3), 120, np.uint8)) for i in range(6)]
+    return people, frames, calls, threading
+
+
+def test_detection_answers_within_its_budget(monkeypatch):
+    people, frames, calls, _ = _fake_detector(monkeypatch, delay=0.2)
+    r = people.detect(frames, budget=0.5)
+    # Quarters stop after half the budget, frames after all of it (at least 2 frames answered).
+    assert 2 <= r["timing"]["frames"] < 6 and r["timing"]["zoomed_frames"] < r["timing"]["frames"]
+    assert r["timing"]["seconds"] < 1.5 and len(r["candidates"]) == 1
+    assert calls[:r["timing"]["zoomed_frames"]] == [True] * r["timing"]["zoomed_frames"]
+
+
+def test_detection_stops_when_the_browser_goes_away(monkeypatch):
+    people, frames, calls, threading = _fake_detector(monkeypatch)
+    cancel = threading.Event()
+    cancel.set()
+    with pytest.raises(people.Cancelled):
+        people.detect(frames, cancel=cancel)
+    assert calls == []
+
+
+def test_the_pose_model_is_loaded_once_per_thread():
+    from technique import people
+    a, _ = people._landmarker()
+    b, _ = people._landmarker()
+    assert a is b
