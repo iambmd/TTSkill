@@ -6,6 +6,8 @@ export const STROKE_TYPES = [
   { value: "backhand_topspin", label: "Backhand topspin" },
   { value: "backhand_flick", label: "Backhand flick" },
   { value: "backhand_push", label: "Backhand push" },
+  { value: "backhand_block", label: "Backhand block" },
+  { value: "forehand_block", label: "Forehand block" },
   { value: "chop", label: "Chop" },
   { value: "serve", label: "Serve" },
 ] as const;

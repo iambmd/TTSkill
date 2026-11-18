@@ -44,6 +44,14 @@ STROKE_TYPES: dict[str, StrokeType] = {s.key: s for s in [
     StrokeType("backhand_push", "Backhand push", "backhand", "down", 0.45,
                ("open the bat", "push under the ball", "reset"),
                "open bat face, short forward-and-down stroke under the ball, contact early after the bounce"),
+    StrokeType("backhand_block", "Backhand block", "backhand", "any", 0.35,
+               ("bat ready early", "firm bat at contact", "absorb and recover"),
+               "short, compact stroke using the opponent's pace: little backswing, bat angle closed against "
+               "topspin, contact early in front of the body just after the bounce, quick reset"),
+    StrokeType("forehand_block", "Forehand block", "forehand", "any", 0.35,
+               ("bat ready early", "firm bat at contact", "absorb and recover"),
+               "short forehand counter to a fast topspin: bat in front, closed angle, a small forward push "
+               "from the forearm, contact early off the bounce, recover to the ready position"),
     StrokeType("chop", "Chop", "chop", "down", 0.7,
                ("bat up high", "cut down at contact", "finish low"),
                "away from the table, high-to-low cut under the ball as it drops, open bat face"),
@@ -53,7 +61,8 @@ STROKE_TYPES: dict[str, StrokeType] = {s.key: s for s in [
 ]}
 
 # Old broad strokes that map straight to a type; forehand/backhand still auto-detect the type
-# within that wing; block and footwork have no type.
+# within that wing; footwork has no type, and a broad "block" can't say which wing. Blocks are
+# picked, not auto-detected (eval/train_wing.py: the detector isn't validated).
 LEGACY_TYPE = {"serve": "serve", "flick": "backhand_flick"}
 
 

@@ -117,6 +117,7 @@ describe("POST /api/jobs/breakdown", () => {
   it.each([
     ["text", { text: "Fan flicks early" }],
     ["a video", { video: video(), stroke_type: "backhand_flick" }],
+    ["a backhand block", { video: video(), stroke_type: "backhand_block" }],
     ["a link", { url: SHORT }],
   ])("creates a job from %s", async (_label, fields) => {
     const { POST } = await route("breakdown");

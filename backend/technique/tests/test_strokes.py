@@ -139,3 +139,17 @@ def test_claude_request_uses_structured_output_and_fallbacks():
     assert body["output_config"]["format"]["type"] == "json_schema"
     assert "Forehand topspin" in body["messages"][0]["content"][0]["text"]
     assert b.stroke_type == "forehand_topspin" and b.source == "claude:claude-opus-5-5"
+
+
+def test_blocks_can_be_picked_but_are_not_auto_detected():
+    """1c: the block types exist for the Breakdown form and the coaching prompt; auto-detection
+    never returns them (eval/train_wing.py block: not validated)."""
+    from technique.analyze import _TEMPLATES
+    for key, wing in (("backhand_block", "backhand"), ("forehand_block", "forehand")):
+        st = strokes.STROKE_TYPES[key]
+        assert strokes.resolve(key) == key and st.stroke == wing and "early" in st.focus
+        assert len(_TEMPLATES[key]["steps"]) == 3
+    for side_score in (-1.0, 1.0):
+        for rise in (-0.5, 0.0, 0.5):
+            for path in (0.3, 1.0, 2.0):
+                assert "block" not in strokes.classify({"side_score": side_score, "rise": rise, "low_start": 0.0, "path": path})
