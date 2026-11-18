@@ -409,11 +409,11 @@ describe("POST /api/players/detect", () => {
     await expectError(await POST!(post({ url: "https://example.com/v" })), 422, "YouTube");
   });
 
-  it("skips the picker without a backend", async () => {
+  it("says nothing could look without a backend, so the picker hides", async () => {
     const { POST } = await route("players");
     const res = await POST!(frames(2, "1.5,30"));
     expect(res.status).toBe(200);
-    expect(await res.json()).toMatchObject({ candidates: [], decisive: true });
+    expect(await res.json()).toMatchObject({ candidates: [], available: false });
   });
 
   it("passes the frames to the backend and its errors back as {error}", async () => {

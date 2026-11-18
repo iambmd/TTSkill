@@ -58,10 +58,10 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
   return Response.json(job, { status: 201 });
 }
 
-/** "Which one is you?": the players in a few frames of the chosen video. Without a backend (stub
- * or demo mode) there is nobody to find, so the answer is decisive and the picker stays hidden. */
+/** "Which one is you?": the players in frames of the chosen video. Without a backend (stub or
+ * demo mode) nothing can look, so the answer says so and the picker stays hidden. */
 export async function detectPlayers(form: FormData, signal?: AbortSignal): Promise<Response> {
-  if (DEMO_MODE || !BACKEND_URL) return Response.json({ candidates: [], frame: null, suggested: null, decisive: true });
+  if (DEMO_MODE || !BACKEND_URL) return Response.json({ candidates: [], frame: null, available: false });
   const start = Date.now();
   // Pass the browser's abort on, so the backend stops working for a page that left.
   const res = await backend("/players/detect", { method: "POST", body: form, signal });

@@ -1,28 +1,33 @@
 /** "Which one is you?": auto first, ask only when the choice is unclear. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  CANT_READ, CHOOSE, FRAMES, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
+  CANT_READ, CHOOSE, FRAMES, NOBODY_CHOOSE, pickerView, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
   pickerProblem, withTimeout, frameTimes,
 } from "@/app/player-picker";
 
 const players = (n: number) => Array.from({ length: n }, (_, id) => ({ id }));
+const base = { finding: false, failed: null, skipped: false, asking: false, chosen: false };
 
-describe("player picker", () => {
-  it("doesn't ask when nobody or one player is found", () => {
-    expect(needsChoice(null, false)).toBe(false);
-    expect(needsChoice({ candidates: [], decisive: true } as never, false)).toBe(false);
-    expect(needsChoice({ candidates: players(1), decisive: true } as never, true)).toBe(false);
+describe("player picker: what to show by how many players we found", () => {
+  it("says so when nobody is found, and offers 'Analyse anyway'", () => {
+    expect(pickerView({ candidates: [] }, false)).toBe("nobody");
+    expect(pickerProblem({ ...base, nobody: true })).toBe(NOBODY_CHOOSE);
+    expect(pickerProblem({ ...base, nobody: true, skipped: true })).toBeNull();
   });
-  it("doesn't ask when one player is clearly nearest, unless you tap Change", () => {
-    const found = { candidates: players(2), decisive: true } as never;
-    expect(needsChoice(found, false)).toBe(false);
-    expect(needsChoice(found, true)).toBe(true);
+  it("analyses the one player found without asking; Change player opens the picker", () => {
+    expect(pickerView({ candidates: players(1) as never }, false)).toBe("one");
+    expect(needsChoice({ candidates: players(1) as never }, false)).toBe(false);
+    expect(pickerView({ candidates: players(1) as never }, true)).toBe("pick");
   });
-  it("asks when two players take turns being nearest", () => {
-    expect(needsChoice({ candidates: players(2), decisive: false } as never, false)).toBe(true);
+  it("always asks when there are two or more, even when one is nearest the camera", () => {
+    expect(pickerView({ candidates: players(2), decisive: true } as never, false)).toBe("pick");
+    expect(pickerView({ candidates: players(3) as never }, false)).toBe("pick");
+  });
+  it("stays out of the way when nothing could look (stub or demo mode)", () => {
+    expect(pickerView(null, false)).toBe("hidden");
+    expect(pickerView({ candidates: [], available: false }, false)).toBe("hidden");
   });
 });
-
 
 describe("the picker can't hang", () => {
   beforeEach(() => { vi.useFakeTimers(); });
@@ -57,7 +62,6 @@ describe("the picker can't hang", () => {
 });
 
 describe("what blocks the submit button", () => {
-  const base = { finding: false, failed: null, skipped: false, asking: false, chosen: false };
   it("waits while looking, asks after a failure, and never blocks after 'Analyse anyway'", () => {
     expect(pickerProblem({ ...base, finding: true })).toContain("Finding the players");
     expect(pickerProblem({ ...base, failed: TOO_LONG })).toBe(CHOOSE);

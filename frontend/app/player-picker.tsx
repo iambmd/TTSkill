@@ -1,10 +1,12 @@
 "use client";
 
 /**
- * "Which one is you?" When the chosen video shows more than one player, the analysis needs to
- * know who to follow. We draw a few frames from the file in the browser (no second upload),
- * ask /api/players/detect who is in them, and only ask when the answer isn't clear. The choice
- * goes with the job as hidden player_time and player_box fields.
+ * "Which one is you?" The analysis needs to know who to follow. We draw frames spread over the
+ * file in the browser (no second upload) and ask /api/players/detect who is in them:
+ * - nobody: say so, and offer "Analyse anyway" (the job then picks the player itself);
+ * - one player: analyse them, with "Change player" in case we got it wrong;
+ * - two or more: ask which one.
+ * The choice goes with the job as hidden player_time and player_box fields.
  */
 import { useEffect, useState } from "react";
 
@@ -13,11 +15,13 @@ type Candidate = { id: number; time: number; box: Box; thumb: string; seen: numb
 type Found = {
   candidates: Candidate[];
   frame: { time: number; image: string; boxes: { id: number; box: Box }[] } | null;
-  suggested: number | null;
-  decisive: boolean;
+  suggested?: number | null;
+  decisive?: boolean;
   /** People found in each frame, and where the time went (for the console log). */
   frames?: { time: number; people: number }[];
   timing?: Record<string, number>;
+  /** false when nothing could look (no backend: stub or demo mode), so the picker stays out of the way. */
+  available?: boolean;
 };
 type Choice = { id: number; time: number; box: Box };
 
@@ -38,6 +42,8 @@ const SEEK_MS = 6_000;
 export const TOO_LONG = "Finding the players took too long.";
 export const CANT_READ = "Your browser can't read frames from this video (often an iPhone HEVC file).";
 export const CHOOSE = "Choose “Analyse anyway” or try again.";
+export const NOBODY = "We couldn't spot a player in your video.";
+export const NOBODY_CHOOSE = "Choose “Analyse anyway” or pick another video.";
 
 /** Rejects with `message` if `promise` hasn't settled within `ms`. */
 export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
@@ -121,21 +127,32 @@ export function lookupLog(s: { grabMs: number | null; frames: number; bytes: num
     + `people per frame ${people || "-"}; ${s.found.candidates.length} players`;
 }
 
-/** What blocks the submit button. The "Analyse anyway" button is always on screen while a
- * lookup runs or after it fails, so the form can never be stuck. */
-export function pickerProblem(s: { finding: boolean; failed: string | null; skipped: boolean; asking: boolean; chosen: boolean }): string | null {
+/** What blocks the submit button. "Analyse anyway" is on screen whenever something does
+ * (looking, a failure, nobody found), so the form can never be stuck. */
+export function pickerProblem(s: { finding: boolean; failed: string | null; skipped: boolean; nobody?: boolean; asking: boolean; chosen: boolean }): string | null {
   if (s.skipped) return null;
   if (s.finding) return FINDING;
   if (s.failed) return CHOOSE;
+  if (s.nobody) return NOBODY_CHOOSE;
   return s.asking && !s.chosen ? PICK_PLAYER : null;
 }
 
 const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
 
-/** Auto first: ask only when there are 2+ players and the nearest-player vote isn't clear,
- * or when the user asked to change the automatic choice. */
-export function needsChoice(found: Pick<Found, "candidates" | "decisive"> | null, open: boolean): boolean {
-  return !!found && found.candidates.length > 1 && (!found.decisive || open);
+export type View = "hidden" | "nobody" | "one" | "pick";
+
+/** What to show for an answer, by how many players were found: nobody -> say so and offer
+ * "Analyse anyway"; one -> analyse them (Change player opens the picker); two or more -> ask. */
+export function pickerView(found: Pick<Found, "candidates" | "available"> | null, open: boolean): View {
+  if (!found || found.available === false) return "hidden";
+  const n = found.candidates.length;
+  if (n === 0) return "nobody";
+  return n > 1 || open ? "pick" : "one";
+}
+
+/** Whether the user has to tap someone before submitting. */
+export function needsChoice(found: Pick<Found, "candidates" | "available"> | null, open: boolean): boolean {
+  return pickerView(found, open) === "pick";
 }
 
 export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobId, onChoice }: {
@@ -199,8 +216,10 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
         .then((r) => {
           if (stale) return;
           setFound(r);
-          const pick = r.decisive && r.suggested !== null ? r.candidates[r.suggested] : null;
-          setChoice(pick ? { id: pick.id, time: pick.time, box: pick.box } : null);
+          // One player: theirs is the only answer. Two or more: always ask (being nearest the
+          // camera most often picked the partner on montages).
+          const only = r.candidates.length === 1 ? r.candidates[0] : null;
+          setChoice(only ? { id: only.id, time: only.time, box: only.box } : null);
         })
         .catch((e: Error) => {
           if (stale) return;
@@ -212,13 +231,15 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     return () => { stale = true; clearTimeout(timer); controller.abort(); };
   }, [previewUrl, duration, link, kind, jobId, attempt]);
 
-  const asking = needsChoice(found, open || !!jobId);
-  const problem = pickerProblem({ finding, failed, skipped, asking, chosen: !!choice });
+  const view = pickerView(found, open || !!jobId);
+  const asking = view === "pick";
+  const problem = pickerProblem({ finding, failed, skipped, nobody: view === "nobody", asking, chosen: !!choice });
   useEffect(() => { onProblem(problem); }, [problem, onProblem]);
   useEffect(() => () => onProblem(null), [onProblem]);   // unmounted: nothing to wait for
 
   const giveUp = () => { setSkipped(true); setFinding(false); setFailed(null); setFound(null); setChoice(null); };
-  const anyway = (
+  // A result page's "Change player" has no form to submit, so nothing to analyse anyway.
+  const anyway = jobId ? null : (
     <button type="button" onClick={giveUp} className="text-sm font-bold text-accent hover:text-accent-hot">
       Analyse anyway (auto-pick)
     </button>
@@ -261,20 +282,29 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
       </div>
     );
   }
-  if (!found || found.candidates.length === 0) return null;
+  if (!found || view === "hidden") return null;
   const chosen = choice ? found.candidates.find((c) => c.id === choice.id) : undefined;
 
-  if (!asking) {
+  if (view === "nobody") {
+    return (
+      <div role="alert" className="space-y-2 rounded-xl border border-line bg-panel px-4 py-3">
+        <p className="text-sm">
+          {NOBODY} <span className="text-muted">Film with your whole body in view, or analyse anyway and we&apos;ll look through the whole video.</span>
+        </p>
+        {anyway}
+      </div>
+    );
+  }
+
+  if (view === "one") {
     return (
       <div className="flex items-center gap-3 rounded-xl border border-line bg-panel p-2 pr-4">
         {hidden}
         {chosen && <img src={chosen.thumb} alt="" className="h-14 w-auto rounded-lg" />}
-        <p className="flex-1 text-sm text-muted">We&apos;ll analyse this player.</p>
-        {found.candidates.length > 1 && (
-          <button type="button" onClick={() => setOpen(true)} className="text-sm font-bold text-accent hover:text-accent-hot">
-            Change
-          </button>
-        )}
+        <p aria-live="polite" className="flex-1 text-sm">Analysing this player</p>
+        <button type="button" onClick={() => setOpen(true)} className="text-sm font-bold text-accent hover:text-accent-hot">
+          Change player
+        </button>
       </div>
     );
   }
@@ -288,7 +318,8 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
       {hidden}
       <legend className="headline mb-1 text-2xl">{kind === "breakdown" ? "Which player should we analyse?" : "Which one is you?"}</legend>
       <p className="text-sm text-muted">
-        {kind === "breakdown" ? "We see more than one player. Tap the one to break down." : "We see more than one player. Tap yourself so we analyse the right one."}
+        {found.candidates.length > 1 ? `We see ${found.candidates.length} players. ` : ""}
+        {kind === "breakdown" ? "Tap the one to break down." : "Tap yourself so we analyse the right one."}
       </p>
       {found.frame && (
         <div className="relative overflow-hidden rounded-2xl border border-line bg-black">
