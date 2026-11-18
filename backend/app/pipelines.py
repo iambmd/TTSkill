@@ -122,7 +122,7 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
             from technique import pose
             seed = pose.identity_from_box(video, *selection) if selection else None
             res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand,
-                            stroke_type=stroke_type or None, identity=seed)
+                            stroke_type=stroke_type or None, identity=seed, picked=bool(selection))
         else:
             res = run_text(text, str(out), stroke, player or None, progress=report,
                            stroke_type=stroke_type or None)
@@ -146,7 +146,8 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
 
 def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
                 hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None,
-                grip: str | None = None, chosen: dict | None = None, identity=None) -> dict:
+                grip: str | None = None, chosen: dict | None = None, identity=None,
+                picked: bool = False) -> dict:
     """Find my pro match core, shared by the /jobs/match pipeline and the coach agent:
     pose on the user's clip, body profile, height (entered or from the table), top 3 pros
     with the same bat hand (and grip first, when given), form differences, and one
@@ -170,7 +171,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     report(0.3, "Reading your body and swing with MediaPipe...")
     track = pose.extract_pose(clip, identity=identity)
-    pose.require_player(track)
+    pose.require_player(track, picked=picked)
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
     side, how = pose.bat_side(clip, track, hand, hit_times=hits, pooled=win.get("paddle"))
     _, contact = key_moments(track, side, hits, direction="up")
@@ -204,7 +205,7 @@ def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = N
             seed = pose.identity_from_box(video, *selection)
         res = match_video(video, stroke, jobs.job_dir(job_id) / "match", jobs.job_dir(job_id) / "result.mp4",
                           height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m),
-                          grip=grip, identity=seed)
+                          grip=grip, identity=seed, picked=bool(selection))
         top = res["matches"][0]
         jobs.update(job_id, status="done", progress=1.0,
                     message=f"You play most like {top['name']} ({top['score']}% body match).",

@@ -200,11 +200,12 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
               progress: Optional[Progress] = None, hand: str = "auto",
               stroke_type: Optional[str] = None, trust_hand: bool = False,
               assume_hand: Optional[str] = None, chosen: Optional[dict] = None,
-              identity: Optional[np.ndarray] = None) -> dict:
+              identity: Optional[np.ndarray] = None, picked: bool = False) -> dict:
     """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible;
     with trust_hand, always used).
     chosen, identity: a choose_window result and the player seed already computed for this
     video (Coach's pose step), so the candidate rallies aren't scanned again.
+    picked: the seed is a player the user tapped (for the "we lost the player you picked" message).
     stroke: a broad stroke, or "" / "auto" to read it from the swing.
     stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect."""
     t0 = time.time()
@@ -230,7 +231,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
                                 start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
     track = pose.extract_pose(clip, identity=identity)
-    pose.require_player(track)
+    pose.require_player(track, picked=picked)
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
     side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand,

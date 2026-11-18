@@ -132,7 +132,7 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     track = pose.extract_pose(clip, identity=identity)
     try:
-        pose.require_player(track)
+        pose.require_player(track, picked=s.selection is not None)
     except pose.NoPlayer as e:
         raise ToolError(str(e)) from e
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
@@ -177,7 +177,7 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
     res = run_video(str(video), str(out), stroke or "", player or None, progress=lambda m: s.update(message=m),
                     stroke_type=stroke_type or (s.pose or {}).get("stroke_type"),
                     hand=known or s.hand, trust_hand=bool(known), assume_hand="right",
-                    chosen=s.window, identity=s.seed(video))
+                    chosen=s.window, identity=s.seed(video), picked=s.selection is not None)
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
     if cards:
         for step, card in zip(b.steps, cards):
@@ -204,7 +204,7 @@ def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[floa
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
                       hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m),
-                      chosen=s.window, identity=s.seed(video))
+                      chosen=s.window, identity=s.seed(video), picked=s.selection is not None)
     if res["video"]:
         top = res["matches"][0]
         s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",

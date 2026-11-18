@@ -73,10 +73,18 @@ MIN_VISIBLE = LIMITS["pose"]["min_visible_ratio"]
 _CLEARER = "Film a clearer clip: the whole body in frame, side-on if you can, in good light."
 
 
-def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
+_LOST_PICK = ("Pick them in a frame where they're clearly in view, film closer, or trim the video "
+              "to the part where they play.")
+
+
+def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE, picked: bool = False) -> float:
     """The share of frames with a player; NoPlayer if it is under `min_ratio`, so a job asks
-    for a clearer clip instead of rendering a bad video."""
+    for a clearer clip instead of rendering a bad video. picked: the user tapped this player,
+    so say they were lost (the tracker never swaps in someone else)."""
     ratio = float(track.valid.mean()) if len(track.valid) else 0.0
+    if picked and ratio < min_ratio:
+        seen = f"only in {int(ratio * 100)}% of the clip" if ratio else "anywhere in the analysed part of the clip"
+        raise NoPlayer(f"We lost the player you picked: we could see them {seen}. {_LOST_PICK}")
     if ratio == 0:
         raise NoPlayer(f"We couldn't find a player in this clip. {_CLEARER}")
     if ratio < min_ratio:

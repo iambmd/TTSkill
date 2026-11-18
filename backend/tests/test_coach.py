@@ -163,7 +163,8 @@ def test_render_and_match_reuse_the_window_the_pose_step_chose(tmp_path, monkeyp
     win = {"start": 34.6, "end": 42.6, "reason": "busy rally", "hit_times": [36.0], "paddle": {"left": 1, "right": 9}}
     session = SimpleNamespace(need_video=lambda: tmp_path / "v.mp4", dir=tmp_path, update=lambda **kw: None,
                               pose={"bat_hand": "right", "stroke_type": "forehand_drive"}, hand="auto",
-                              window=win, identity="seed", seed=lambda video: "seed", add_output=lambda *a: None)
+                              window=win, identity="seed", seed=lambda video: "seed", selection=None,
+                              add_output=lambda *a: None)
 
     def fake_run_video(*args, **kwargs):
         seen["render"] = kwargs
@@ -175,6 +176,7 @@ def test_render_and_match_reuse_the_window_the_pose_step_chose(tmp_path, monkeyp
         pass
     assert seen["render"]["chosen"] is win and seen["render"]["identity"] == "seed"
     assert seen["render"]["hand"] == "right" and seen["render"]["trust_hand"]
+    assert seen["render"]["picked"] is False
 
     def fake_match_video(*args, **kwargs):
         seen["match"] = kwargs

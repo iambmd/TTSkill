@@ -161,3 +161,18 @@ def test_zoomed_search_only_when_the_selected_player_is_small_or_missing():
     assert region[0] < .4 and region[2] > .48 and region[1] < .25 and region[3] > .42
     tr.missing = 30
     assert zoom_regions(tr, RESEARCH_EVERY * 3) == {"extra": QUARTERS} and zoom_regions(tr, 31) == {}
+
+
+def test_a_lost_pick_is_reported_not_replaced():
+    import pytest
+    from technique.pose import NoPlayer, require_player
+    from technique.tests.test_technique import _fake_track
+    tr = _fake_track(n=30)
+    tr.lm[6:, :, :] = np.nan                       # the tapped player is seen in 6 of 30 frames
+    with pytest.raises(NoPlayer, match=r"We lost the player you picked: we could see them only in 20%"):
+        require_player(tr, picked=True)
+    with pytest.raises(NoPlayer, match=r"could only see the player in 20%"):
+        require_player(tr)                         # no pick: the general message
+    tr.lm[:] = np.nan
+    with pytest.raises(NoPlayer, match="anywhere in the analysed part"):
+        require_player(tr, picked=True)
