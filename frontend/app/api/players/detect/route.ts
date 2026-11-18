@@ -5,5 +5,5 @@ import { invalid, playerFramesProblem } from "@/lib/validate";
 export async function POST(req: Request) {
   const form = await req.formData();
   const problem = playerFramesProblem(form);
-  return problem ? invalid(problem) : detectPlayers(form);
+  return problem ? invalid(problem) : detectPlayers(form, req.signal);
 }

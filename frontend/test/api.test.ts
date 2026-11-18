@@ -424,6 +424,7 @@ describe("POST /api/players/detect", () => {
     const { POST } = await route("players", { BACKEND_URL: "http://backend" });
     expect(await (await POST!(frames(2, "1.5,30"))).json()).toMatchObject({ decisive: false, suggested: 0 });
     expect(fetch.mock.calls[0][0]).toBe("http://backend/players/detect");
+    expect(fetch.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);   // a page that leaves stops the backend
     await expectError(await POST!(frames(1, "2")), 422, "couldn't be read");
   });
 });

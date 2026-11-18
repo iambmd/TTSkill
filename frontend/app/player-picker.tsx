@@ -22,43 +22,90 @@ const FRAMES = 6;
 const MAX_W = 1280;
 export const PICK_PLAYER = "Tap the player to analyse.";
 const FINDING = "Finding the players in your video...";
+/** The whole lookup (drawing frames + the request) never keeps the page waiting longer. */
+export const LOOKUP_TIMEOUT_MS = 30_000;
+const LOAD_MS = 10_000;   // a playable file decodes its first frame well within this
+const SEEK_MS = 6_000;
+export const TOO_LONG = "Finding the players took too long.";
+export const CANT_READ = "Your browser can't read frames from this video (often an iPhone HEVC file).";
+export const CHOOSE = "Choose “Analyse anyway” or try again.";
+
+/** Rejects with `message` if `promise` hasn't settled within `ms`. */
+export function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+  return new Promise<T>((ok, fail) => {
+    const timer = setTimeout(() => fail(new Error(message)), ms);
+    promise.then((v) => { clearTimeout(timer); ok(v); }, (e) => { clearTimeout(timer); fail(e); });
+  });
+}
+
+/** The next `name` event on `target`; rejects on its "error" event or after `ms`. A video the
+ * browser can't decode (Chrome and iPhone HEVC) reports its length but never fires
+ * loadeddata or seeked, which used to leave the picker waiting forever. */
+export function nextEvent(target: EventTarget, name: string, ms: number, message: string): Promise<void> {
+  return new Promise<void>((ok, fail) => {
+    const done = (error?: Error) => {
+      clearTimeout(timer);
+      target.removeEventListener(name, onEvent);
+      target.removeEventListener("error", onError);
+      if (error) fail(error);
+      else ok();
+    };
+    const onEvent = () => done();
+    const onError = () => done(new Error(message));
+    const timer = setTimeout(() => done(new Error(message)), ms);
+    target.addEventListener(name, onEvent);
+    target.addEventListener("error", onError);
+  });
+}
 
 /** Grab `count` JPEG frames spread over a local video, with their times in seconds. */
-async function drawFrames(src: string, duration: number, count = FRAMES): Promise<{ time: number; blob: Blob }[]> {
+async function drawFrames(src: string, duration: number, signal: AbortSignal, count = FRAMES): Promise<{ time: number; blob: Blob }[]> {
   const video = document.createElement("video");
   video.muted = true;
   video.playsInline = true;
   video.preload = "auto";
-  video.src = src;
-  await new Promise<void>((ok, fail) => {
-    video.onloadeddata = () => ok();
-    video.onerror = () => fail(new Error("can't read the video"));
-  });
-  const scale = Math.min(1, MAX_W / video.videoWidth);
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(video.videoWidth * scale);
-  canvas.height = Math.round(video.videoHeight * scale);
-  const out = [];
-  for (let i = 0; i < count; i++) {
-    const time = ((i + 0.5) / count) * duration;
-    await new Promise<void>((ok) => {
-      video.onseeked = () => ok();
+  try {
+    const loaded = nextEvent(video, "loadeddata", LOAD_MS, CANT_READ);   // listen before loading
+    video.src = src;
+    video.load();
+    await loaded;
+    if (!video.videoWidth) throw new Error(CANT_READ);
+    const scale = Math.min(1, MAX_W / video.videoWidth);
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      if (signal.aborted) throw signal.reason ?? new Error(TOO_LONG);
+      const time = ((i + 0.5) / count) * duration;
+      const seeked = nextEvent(video, "seeked", SEEK_MS, CANT_READ);
       video.currentTime = time;
-    });
-    canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.8));
-    if (blob) out.push({ time: Number(time.toFixed(3)), blob });
+      await seeked;
+      canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.8));
+      if (blob) out.push({ time: Number(time.toFixed(3)), blob });
+    }
+    return out;
+  } finally {
+    video.removeAttribute("src");
+    video.load();
   }
-  video.removeAttribute("src");
-  video.load();
-  return out;
 }
 
-async function findPlayers(body: FormData): Promise<Found> {
-  const res = await fetch("/api/players/detect", { method: "POST", body });
-  const data = await res.json();
+async function findPlayers(body: FormData, signal: AbortSignal): Promise<Found> {
+  const res = await fetch("/api/players/detect", { method: "POST", body, signal });
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error ?? "Couldn't look for players.");
   return data as Found;
+}
+
+/** What blocks the submit button. The "Analyse anyway" button is always on screen while a
+ * lookup runs or after it fails, so the form can never be stuck. */
+export function pickerProblem(s: { finding: boolean; failed: string | null; skipped: boolean; asking: boolean; chosen: boolean }): string | null {
+  if (s.skipped) return null;
+  if (s.finding) return FINDING;
+  if (s.failed) return CHOOSE;
+  return s.asking && !s.chosen ? PICK_PLAYER : null;
 }
 
 const pct = (v: number) => `${(v * 100).toFixed(2)}%`;
@@ -83,16 +130,23 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
 }) {
   const [found, setFound] = useState<Found | null>(null);
   const [finding, setFinding] = useState(false);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [skipped, setSkipped] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [open, setOpen] = useState(false);
 
-  // Look for players whenever the video changes. A failure just leaves the choice to the
-  // analysis (the person nearest the camera most often), as before this picker existed.
+  // Look for players whenever the video changes (or on "Try again"). Every step has a time
+  // limit; leaving, changing the video or giving up aborts the request, and the backend stops.
   useEffect(() => {
     setFound(null);
     setChoice(null);
     setOpen(false);
+    setFailed(null);
+    setSkipped(false);
+    setFinding(false);
     if (!(previewUrl && duration) && !link && !jobId) return;
+    const controller = new AbortController();
     let stale = false;
     setFinding(true);
     const run = async () => {
@@ -101,31 +155,43 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
       if (jobId) {
         body.append("job", jobId);
       } else if (previewUrl && duration) {
-        const frames = await drawFrames(previewUrl, duration);
+        const frames = await drawFrames(previewUrl, duration, controller.signal);
         frames.forEach((f, i) => body.append("frames", new File([f.blob], `frame${i}.jpg`, { type: "image/jpeg" })));
         body.append("times", frames.map((f) => f.time).join(","));
       } else {
         body.append("url", link!);
       }
-      return findPlayers(body);
+      return findPlayers(body, controller.signal);
     };
     const timer = setTimeout(() => {
-      run()
+      withTimeout(run(), LOOKUP_TIMEOUT_MS, TOO_LONG)
         .then((r) => {
           if (stale) return;
           setFound(r);
           const pick = r.decisive && r.suggested !== null ? r.candidates[r.suggested] : null;
           setChoice(pick ? { id: pick.id, time: pick.time, box: pick.box } : null);
         })
-        .catch(() => { if (!stale) setFound(null); })
+        .catch((e: Error) => {
+          if (stale) return;
+          controller.abort();   // a timeout: stop the request so the backend stops too
+          setFailed(e.name === "AbortError" ? TOO_LONG : e.message || "Couldn't look for players.");
+        })
         .finally(() => { if (!stale) setFinding(false); });
     }, link ? 600 : 0);   // let a pasted link settle before downloading it
-    return () => { stale = true; clearTimeout(timer); };
-  }, [previewUrl, duration, link, kind, jobId]);
+    return () => { stale = true; clearTimeout(timer); controller.abort(); };
+  }, [previewUrl, duration, link, kind, jobId, attempt]);
 
   const asking = needsChoice(found, open || !!jobId);
-  const problem = finding ? FINDING : asking && !choice ? PICK_PLAYER : null;
+  const problem = pickerProblem({ finding, failed, skipped, asking, chosen: !!choice });
   useEffect(() => { onProblem(problem); }, [problem, onProblem]);
+  useEffect(() => () => onProblem(null), [onProblem]);   // unmounted: nothing to wait for
+
+  const giveUp = () => { setSkipped(true); setFinding(false); setFailed(null); setFound(null); setChoice(null); };
+  const anyway = (
+    <button type="button" onClick={giveUp} className="text-sm font-bold text-accent hover:text-accent-hot">
+      Analyse anyway (auto-pick)
+    </button>
+  );
 
   const hidden = choice && (
     <>
@@ -133,8 +199,36 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
       <input type="hidden" name="player_box" value={choice.box.join(",")} />
     </>
   );
+  if (skipped) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
+        <p className="flex-1 text-sm text-muted">We&apos;ll pick the player automatically.</p>
+        <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-accent hover:text-accent-hot">
+          Pick a player
+        </button>
+      </div>
+    );
+  }
   if (finding) {
-    return <p aria-live="polite" className="stripes rounded-xl border border-line bg-panel px-4 py-3 text-sm text-muted">{FINDING}</p>;
+    return (
+      <div className="stripes flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
+        <p aria-live="polite" className="flex-1 text-sm text-muted">{FINDING}</p>
+        {anyway}
+      </div>
+    );
+  }
+  if (failed) {
+    return (
+      <div role="alert" className="space-y-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
+        <p className="text-sm text-red-100">{failed} You can analyse anyway (we pick the player nearest the camera most often), or try again.</p>
+        <div className="flex gap-5">
+          {anyway}
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-muted hover:text-white">
+            Try again
+          </button>
+        </div>
+      </div>
+    );
   }
   if (!found || found.candidates.length === 0) return null;
   const chosen = choice ? found.candidates.find((c) => c.id === choice.id) : undefined;
