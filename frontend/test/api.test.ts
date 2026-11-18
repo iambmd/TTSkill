@@ -11,7 +11,8 @@ import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Route = {
-  POST?: (req: Request) => Promise<Response>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each route has its own params shape
+  POST?: (...args: any[]) => Promise<Response>;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- each route has its own params shape
   GET?: (req: Request, ctx: { params: Promise<any> }) => Promise<Response>;
 };
@@ -26,6 +27,7 @@ const ROUTES = {
   files: "@/app/api/jobs/[id]/files/[name]/route",
   rubbers: "@/app/api/rubbers/route",
   players: "@/app/api/players/detect/route",
+  rerun: "@/app/api/jobs/[id]/rerun/route",
 } as const;
 
 const SHORT = "https://youtube.com/shorts/g3n9jVP0fMU";
@@ -53,6 +55,7 @@ async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
     rubbers: () => import("@/app/api/rubbers/route"),
     players: () => import("@/app/api/players/detect/route"),
+    rerun: () => import("@/app/api/jobs/[id]/rerun/route"),
   };
   return imports[name]();
 }
@@ -422,6 +425,39 @@ describe("POST /api/players/detect", () => {
     expect(await (await POST!(frames(2, "1.5,30"))).json()).toMatchObject({ decisive: false, suggested: 0 });
     expect(fetch.mock.calls[0][0]).toBe("http://backend/players/detect");
     await expectError(await POST!(frames(1, "2")), 422, "couldn't be read");
+  });
+});
+
+describe("POST /api/jobs/[id]/rerun (Change player)", () => {
+  const ID = "0123456789abcdef0123456789abcdef";
+  it("needs a complete pick", async () => {
+    const { POST } = await route("rerun", { BACKEND_URL: "http://backend" });
+    await expectError(await POST!(post({}), ctx({ id: ID })), 422, "Pick the player again");
+    await expectError(await POST!(post({ player_time: "1", player_box: "0.5,0,0.4,1" }), ctx({ id: ID })), 422, "Pick the player again");
+  });
+  it("can't re-run a demo job or without a backend", async () => {
+    const pick = { player_time: "1", player_box: "0.1,0.1,0.5,0.9" };
+    const { POST } = await route("rerun");
+    await expectError(await POST!(post(pick), ctx({ id: ID })), 422, "needs the TTSkill backend");
+    const demo = await route("rerun", { BACKEND_URL: "http://backend" });
+    await expectError(await demo.POST!(post(pick), ctx({ id: "demo-match" })), 422, "needs the TTSkill backend");
+  });
+  it("forwards the pick to the backend and returns the new job", async () => {
+    const fetch = vi.fn().mockResolvedValue(Response.json({ id: "new", kind: "match", status: "queued" }, { status: 201 }));
+    vi.stubGlobal("fetch", fetch);
+    const { POST } = await route("rerun", { BACKEND_URL: "http://backend" });
+    const res = await POST!(post({ player_time: "1", player_box: "0.1,0.1,0.5,0.9" }), ctx({ id: ID }));
+    expect(res.status).toBe(201);
+    expect((await res.json()).id).toBe("new");
+    expect(fetch.mock.calls[0][0]).toBe(`http://backend/jobs/${ID}/rerun`);
+  });
+});
+
+describe("POST /api/players/detect for a past job", () => {
+  it("accepts a job id instead of frames", async () => {
+    const { POST } = await route("players");
+    expect((await POST!(post({ job: "0123456789abcdef0123456789abcdef", kind: "coach" }))).status).toBe(200);
+    await expectError(await POST!(post({ job: "../etc" })), 422, "Unknown job");
   });
 });
 

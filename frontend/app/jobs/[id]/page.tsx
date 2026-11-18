@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Breakdown, Job } from "@/lib/submit";
 import { BoldText, CheckIcon, DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { AnalysedPlayer } from "./analysed-player";
 import { Matches } from "./matches";
 
 type Rally = NonNullable<Job["rallies"]>[number];
@@ -221,6 +222,7 @@ function CoachView({ job }: { job: Job }) {
           </section>
         ))}
         {running && !(job.outputs ?? []).length && <div className="stripes aspect-video rounded-3xl border border-line bg-panel" />}
+        <AnalysedPlayer job={job} />
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {(job.agentFiles ?? []).length > 0 && (
@@ -382,6 +384,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
             </div>
           )}
         </div>
+        <AnalysedPlayer job={job} />
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}

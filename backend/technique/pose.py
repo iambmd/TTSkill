@@ -314,6 +314,22 @@ def identity_from_box(video: str | Path, time: float, box: tuple[float, float, f
     return signature(frame, best[1])
 
 
+def player_thumb(video: str | Path, track: PoseTrack, i: int | None = None) -> str | None:
+    """A small JPEG (data URL) of the tracked player at frame i (default: their first seen frame),
+    for the result page's "who we analysed"."""
+    from .people import _thumb, box_of
+
+    seen = np.flatnonzero(track.valid)
+    if not len(seen):
+        return None
+    i = int(i) if i is not None and track.valid[int(i)] else int(seen[0])
+    cap = cv2.VideoCapture(str(video))
+    cap.set(cv2.CAP_PROP_POS_MSEC, float(track.times[i]) * 1000)
+    ok, frame = cap.read()
+    cap.release()
+    return _thumb(frame, box_of(track.lm[i])) if ok else None
+
+
 def save_track(track: PoseTrack, path: str | Path) -> None:
     np.savez_compressed(path, fps=track.fps, width=track.width, height=track.height,
                         times=track.times, lm=track.lm, world=track.world,

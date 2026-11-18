@@ -19,6 +19,8 @@ export type Job = {
   engineNote?: string;
   summary?: string;
   you?: { bat_hand: string; height: { height_cm: number; method: string } | null };
+  /** Who was analysed: a crop of the tracked player, and whether the user tapped them. */
+  player?: { thumb: string | null; picked: boolean } | null;
 };
 
 export type ProMatch = {

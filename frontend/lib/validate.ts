@@ -114,6 +114,8 @@ export function videoInputProblem(form: FormData, missing: string): string | nul
  * from the chosen video, each with its time, or a YouTube link instead. Same rules as the API. */
 export function playerFramesProblem(form: FormData): string | null {
   const P = LIMITS.players;
+  const job = String(form.get("job") ?? "");
+  if (job) return /^[0-9a-f]{32}$/.test(job) ? null : "Unknown job.";   // "Change player" on a result
   const frames = form.getAll("frames").filter((f): f is File => f instanceof File && f.size > 0);
   if (!frames.length) {
     const url = String(form.get("url") ?? "").trim();

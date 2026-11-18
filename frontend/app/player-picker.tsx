@@ -69,7 +69,7 @@ export function needsChoice(found: Pick<Found, "candidates" | "decisive"> | null
   return !!found && found.candidates.length > 1 && (!found.decisive || open);
 }
 
-export function PlayerPicker({ previewUrl, duration, link, kind, onProblem }: {
+export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobId, onChoice }: {
   /** The chosen file's object URL and length, once the preview has loaded. */
   previewUrl: string | null;
   duration: number | null;
@@ -77,6 +77,9 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem }: {
   link: string | null;
   kind: "breakdown" | "match" | "coach";
   onProblem: (problem: string | null) => void;
+  /** "Change player" on a result: look in that job's stored video and always ask. */
+  jobId?: string;
+  onChoice?: (choice: { time: number; box: Box }) => void;
 }) {
   const [found, setFound] = useState<Found | null>(null);
   const [finding, setFinding] = useState(false);
@@ -89,13 +92,15 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem }: {
     setFound(null);
     setChoice(null);
     setOpen(false);
-    if (!(previewUrl && duration) && !link) return;
+    if (!(previewUrl && duration) && !link && !jobId) return;
     let stale = false;
     setFinding(true);
     const run = async () => {
       const body = new FormData();
       body.append("kind", kind);
-      if (previewUrl && duration) {
+      if (jobId) {
+        body.append("job", jobId);
+      } else if (previewUrl && duration) {
         const frames = await drawFrames(previewUrl, duration);
         frames.forEach((f, i) => body.append("frames", new File([f.blob], `frame${i}.jpg`, { type: "image/jpeg" })));
         body.append("times", frames.map((f) => f.time).join(","));
@@ -116,9 +121,9 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem }: {
         .finally(() => { if (!stale) setFinding(false); });
     }, link ? 600 : 0);   // let a pasted link settle before downloading it
     return () => { stale = true; clearTimeout(timer); };
-  }, [previewUrl, duration, link, kind]);
+  }, [previewUrl, duration, link, kind, jobId]);
 
-  const asking = needsChoice(found, open);
+  const asking = needsChoice(found, open || !!jobId);
   const problem = finding ? FINDING : asking && !choice ? PICK_PLAYER : null;
   useEffect(() => { onProblem(problem); }, [problem, onProblem]);
 
@@ -149,7 +154,10 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem }: {
     );
   }
 
-  const select = (c: Candidate, time = c.time, box = c.box) => setChoice({ id: c.id, time, box });
+  const select = (c: Candidate, time = c.time, box = c.box) => {
+    setChoice({ id: c.id, time, box });
+    onChoice?.({ time, box });
+  };
   return (
     <fieldset className="space-y-3">
       {hidden}

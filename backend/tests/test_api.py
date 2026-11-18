@@ -525,3 +525,33 @@ def test_jobs_take_the_tapped_player_only_when_there_is_one(api, ran, upload):
 def test_a_broken_player_pick_is_a_422(api, ran, upload):
     r = api.post("/jobs/match", files=upload(), data={"player_time": "3", "player_box": "0.5,0,0.4,1"})
     assert r.status_code == 422 and "Pick the player again" in _error(r) and not ran
+
+
+def test_change_player_reruns_the_same_job_on_the_stored_video(api, ran, upload):
+    first = api.post("/jobs/match", files=upload(), data={"stroke": "backhand", "grip": "penhold", "height_cm": "168"}).json()
+    r = api.post(f"/jobs/{first['id']}/rerun", data={"player_time": "3.5", "player_box": "0.5,0.2,0.7,0.9"})
+    assert r.status_code == 201, r.text
+    again = r.json()
+    assert again["kind"] == "match" and again["id"] != first["id"]
+    assert again["params"]["rerun_of"] == first["id"] and again["params"]["player_pick"]["time"] == 3.5
+    path, stroke, height, hand, grip, selection = ran["run_match"][-1]
+    assert (stroke, height, grip, selection) == ("backhand", 168.0, "penhold", (3.5, (0.5, 0.2, 0.7, 0.9)))
+    assert path.parent.name == again["id"] and path.exists()   # its own copy of the upload
+
+
+def test_change_player_needs_a_pick_and_a_kind_that_tracks_one(api, ran, upload):
+    first = api.post("/jobs/autocut", files=upload(), data={}).json()
+    pick = {"player_time": "1", "player_box": "0,0,1,1"}
+    assert "Pick the player again" in _error(api.post(f"/jobs/{first['id']}/rerun", data={}))
+    assert "Only Breakdown" in _error(api.post(f"/jobs/{first['id']}/rerun", data=pick))
+    assert "Unknown job" in _error(api.post("/jobs/not-a-job/rerun", data=pick))
+
+
+def test_detect_players_on_a_jobs_stored_video(api, ran, upload, monkeypatch):
+    from technique import people
+    first = api.post("/jobs/coach", files=upload(), data={"request": "fix my forehand"}).json()
+    seen = {}
+    monkeypatch.setattr(people, "sample_frames", lambda path, count=6: seen.setdefault("path", path) and [])
+    monkeypatch.setattr(people, "detect", lambda frames: {"candidates": [], "frame": None, "suggested": None, "decisive": True})
+    r = api.post("/players/detect", data={"job": first["id"], "kind": "coach"})
+    assert r.status_code == 200 and seen["path"].endswith(".mp4") and first["id"] in seen["path"]

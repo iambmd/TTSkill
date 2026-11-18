@@ -136,6 +136,7 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
                     resultUrl=f"/jobs/{job_id}/result", breakdown=breakdown,
                     videoPrompt=video_prompt, analyzer=res["analyzer"],
                     batHand=res.get("bat_hand"), window=res.get("window"),
+                    player={"thumb": res.get("player_thumb"), "picked": bool(selection)},
                     strokeType={"key": res.get("stroke_type"), "label": label(res.get("stroke_type") or res["stroke"]),
                                 "detected": res.get("stroke_type_detected") is not None,
                                 "features": res.get("stroke_type_detected")})
@@ -192,7 +193,8 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     return {"matches": [{k: v for k, v in m.items() if k != "form"} for m in matches],
             "you": {"bat_hand": side, "bat_hand_how": how, "height": height,
                     "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}},
-            "video": str(result) if result else None}
+            "video": str(result) if result else None,
+            "player_thumb": pose.player_thumb(clip, track, contact)}
 
 
 def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
@@ -210,7 +212,8 @@ def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = N
         jobs.update(job_id, status="done", progress=1.0,
                     message=f"You play most like {top['name']} ({top['score']}% body match).",
                     resultUrl=f"/jobs/{job_id}/result" if res["video"] else None,
-                    matches=res["matches"], you=res["you"])
+                    matches=res["matches"], you=res["you"],
+                    player={"thumb": res.get("player_thumb"), "picked": bool(selection)})
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

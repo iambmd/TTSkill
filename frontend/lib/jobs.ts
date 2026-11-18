@@ -71,6 +71,20 @@ export async function detectPlayers(form: FormData): Promise<Response> {
   return Response.json(data);
 }
 
+/** "Change player": the same job on the same video, following the newly tapped player. */
+export async function rerunJob(id: string, form: FormData): Promise<Response> {
+  if (DEMO_MODE || !BACKEND_URL || DEMO_JOBS[id]) {
+    return Response.json({ error: "Changing the player needs the TTSkill backend." }, { status: 422 });
+  }
+  const res = await backend(`/jobs/${id}/rerun`, { method: "POST", body: form });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const detail = typeof data.detail === "string" ? data.detail : data.error ?? "Backend rejected the request";
+    return Response.json({ error: detail }, { status: res.status });
+  }
+  return Response.json(data, { status: res.status });
+}
+
 export async function getJob(id: string): Promise<Response> {
   if (DEMO_JOBS[id]) return Response.json(DEMO_JOBS[id]);
   if (BACKEND_URL) {

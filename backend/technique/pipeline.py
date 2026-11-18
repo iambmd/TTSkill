@@ -294,6 +294,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         "bat_hand": {"side": side, "how": how},
         "key_times_s": keys,
         "contact_frame": int(peak_i),
+        "player_thumb": pose.player_thumb(clip, track, peak_i),
         "outputs": {
             "breakdown_json": str(out / "breakdown.json"),
             "video_prompt_json": str(out / "video_prompt.json"),

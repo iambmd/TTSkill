@@ -216,3 +216,20 @@ def test_pose_summary_reports_only_the_swings_it_is_given():
     only = pose.summarize(tr, "right", peaks=[45])
     assert only["swing_count"] == 1 and len(only["swings"]) == 1
     assert every["swing_count"] >= 1
+
+
+def test_player_thumb_crops_the_tracked_player(tmp_path):
+    import base64
+    import cv2
+    from technique import pose
+    tr = _fake_track(n=30)
+    vid = str(tmp_path / "v.mp4")
+    wr = cv2.VideoWriter(vid, cv2.VideoWriter_fourcc(*"mp4v"), 30, (1280, 720))
+    for _ in range(30):
+        wr.write(np.full((720, 1280, 3), 90, np.uint8))
+    wr.release()
+    thumb = pose.player_thumb(vid, tr, 10)
+    image = cv2.imdecode(np.frombuffer(base64.b64decode(thumb.split(",")[1]), np.uint8), cv2.IMREAD_COLOR)
+    assert image.shape[0] == 160 and image.shape[1] > 0            # a crop of the tracked body
+    tr.lm[:] = np.nan
+    assert pose.player_thumb(vid, tr) is None                      # nobody tracked: no thumbnail

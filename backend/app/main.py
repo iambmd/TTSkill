@@ -245,6 +245,7 @@ def detect_players(
     times: str = Form(""),
     url: str = Form(""),
     kind: str = Form("breakdown"),
+    job: str = Form(""),
 ) -> dict:
     """The players in a few frames of the chosen video, for "Which one is you?". The browser
     sends frames it drew from the file (no second upload of the video); for a pasted link we
@@ -256,6 +257,14 @@ def detect_players(
 
     if kind not in ("breakdown", "match", "coach"):
         raise validate.Invalid("kind must be breakdown, match or coach.")
+    if job:
+        # "Change player" on a result: the job's stored upload, or its link downloaded again.
+        stored = job_input(job)
+        if stored is not None:
+            return people.detect(people.sample_frames(str(stored)))
+        url = (jobs.load(job) or {}).get("params", {}).get("url") or ""
+        if not url:
+            raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
     sent = [(f.filename, f.file.read()) for f in (frames or []) if has_file(f)]
     if sent or not url.strip():
         images = []
@@ -272,6 +281,53 @@ def detect_players(
         return people.detect(people.sample_frames(str(download.download(link["url"], folder))))
     finally:
         shutil.rmtree(folder, ignore_errors=True)   # the download is only for finding players
+
+
+def job_input(job_id: str) -> Path | None:
+    """A job's stored upload (input.<ext>), if it still exists. Links are deleted after the job."""
+    if not re.fullmatch(r"[0-9a-f]{32}", job_id):
+        raise validate.Invalid("Unknown job.")
+    return next(iter(sorted(jobs.job_dir(job_id).glob("input.*"))), None)
+
+
+@app.post("/jobs/{job_id}/rerun", status_code=201)
+def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(""),
+              player_box: str = Form("")) -> dict:
+    """'Change player': the same job again on the same video, following a different player."""
+    from agent.coach import run_coach
+
+    selection = validate.player_selection(player_time, player_box)
+    if selection is None:
+        raise validate.Invalid(validate.PICK_AGAIN)
+    stored = job_input(job_id)
+    old = jobs.load(job_id)
+    if not old or old.get("kind") not in ("breakdown", "match", "coach"):
+        raise validate.Invalid("Only Breakdown, Pro match and Coach results can change player.")
+    p = old["params"]
+    url = None if stored else p.get("url")
+    if stored is None and not url:
+        raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
+    params = {**p, "player_pick": {"time": selection[0], "box": list(selection[1])}, "rerun_of": job_id}
+    job = jobs.create(old["kind"], params)
+    path = None
+    if stored is not None:
+        path = jobs.job_dir(job["id"]) / stored.name
+        shutil.copyfile(stored, path)
+    if old["kind"] == "breakdown":
+        fn, args = run_breakdown, (p.get("text") or "", p.get("stroke") or "", p.get("player") or "",
+                                   p.get("hand") or "auto",
+                                   "" if p.get("stroke_type") in (None, "auto") else p["stroke_type"], selection)
+    elif old["kind"] == "match":
+        fn, args = run_match, (p.get("stroke") or "forehand", p.get("height_cm"), p.get("hand") or "auto",
+                               p.get("grip") or "shakehand", selection)
+    else:
+        background.add_task(jobs.run, run_coach, job["id"], path, url, p.get("request") or "", selection)
+        return job
+    if url:
+        background.add_task(jobs.run, fetch_then, job["id"], url, fn, *args)
+    else:
+        background.add_task(jobs.run, fn, job["id"], path, *args)
+    return job
 
 
 @app.get("/jobs/{job_id}/files/{name}")

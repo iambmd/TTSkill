@@ -144,6 +144,7 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     st = strokes.STROKE_TYPES[stype]
     keys, peak = key_moments(track, side, hits, direction=st.direction, window_s=st.window_s)
     summary = pose.summarize(track, side, real_strokes(track, list(pose.swing_peaks(track, side)), np.array(hits)))
+    s.update(player={"thumb": pose.player_thumb(clip, track, peak), "picked": s.selection is not None})
     s.pose = {
         "window_s": [round(win["start"], 2), round(win["end"], 2)], "bat_hand": side, "bat_hand_how": how,
         "stroke_type": stype, "stroke_label": st.label, "stroke_features": feats,
