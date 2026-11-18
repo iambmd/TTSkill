@@ -1,0 +1,9 @@
+{
+  "about": "Hitting (bat) hand of each OpenTTGames player by table side in the camera view. The dataset's labels give the table side of each stroke, not the hand, so every hand here was checked by a person. Pass these to eval/extract_strokes.py (--left-hand / --right-hand).",
+  "videos": {
+    "test_3": {"left": "right", "right": "left", "source": "verified on frames, 2026-11-17 (stored with the cached pose windows)"},
+    "test_6": {"left": "right", "right": "right", "source": "verified on frames, 2026-11-17 (stored with the cached pose windows)"},
+    "test_7": {"left": "right", "right": "left", "source": "verified on frames, 2026-11-17 (stored with the cached pose windows)"},
+    "test_5": {"left": "left", "right": "left", "source": "the user watched the whole video, 2026-11-18: both players are left-handed (confirmed ground truth; it overrides the earlier frame guess that the left player looked right-handed)", "confirmed_by_user": true}
+  }
+}
