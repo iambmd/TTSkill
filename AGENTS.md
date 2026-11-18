@@ -9,6 +9,8 @@ AI coaching for table tennis from the video on your phone, built for HackPrincet
 
 Every video input accepts an upload or a pasted YouTube link (watch, youtu.be, Shorts or /live/; fetched at <=720p by `app/download.py` and deleted after the job). Bad input is stopped on the form and again by the API, never in the pipeline; the limits are in `shared/limits.json` (see [Input validation](#input-validation)).
 
+**Which one is you?** (Breakdown, Match, Coach; `frontend/app/player-picker.tsx`, `backend/technique/people.py`). The browser draws 12 frames spread over the video and `/players/detect` finds the people in them (duplicates merged, background people set aside). Nobody: a message and "Analyse anyway". One player: analysed, with "Change player". Two or more: the picker. A browser that can't read the file (Chrome without HEVC) sends the video instead and the job reuses it (`staged`). "Only me in the video" (Coach, Breakdown) skips all this and follows whoever plays the most (`people.most_active`). Each lookup logs its frames, people per frame and time split in the browser console, Next.js and the backend.
+
 **TT Coach** (`/coach`). One plain-language request plus a video. A LangChain deepagents agent with Claude:
 - plans with `write_todos`; the todo list streams to the page live
 - delegates to the subagents `clip_analyst`, `player_matcher` and `coach_writer`
@@ -75,10 +77,12 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | Method | Path | Body |
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
-| POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video` or `url`, `player`, `hand` (`auto`/`left`/`right`); legacy `stroke` still accepted |
-| POST | `/jobs/coach` | multipart: `request`, `video` or `url` |
+| POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video`, `staged` or `url`, `player`, `hand` (`auto`/`left`/`right`), `player_time` + `player_box` (tapped player), `only_me` (`1`); legacy `stroke` still accepted |
+| POST | `/jobs/coach` | multipart: `request`, `video`, `staged` or `url`, `player_time` + `player_box`, `only_me` (`1`) |
+| POST | `/players/detect` | "Which one is you?": `frames` (JPEG/PNG, max 16) + `times`, or `video` (the browser couldn't read it: ffmpeg frames, answer carries a `staged` token for the job), or `url`, or `job` (Change player). Answers `candidates`, `others` (background: `still`/`far`/`small`), `frame`, `frames` (people per frame) and `timing` |
+| POST | `/jobs/{id}/rerun` | `player_time` + `player_box`: the same job following another player |
 | GET | `/jobs/{id}/files/{name}` | Videos the coach made (`highlights.mp4`, `breakdown.mp4`, `pro_matches.mp4`) |
-| POST | `/jobs/match` | multipart: `video` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`, default shakehand), `height_cm` (optional), `hand` |
+| POST | `/jobs/match` | multipart: `video`, `staged` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`, default shakehand), `height_cm` (optional), `hand`, `player_time` + `player_box` |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |
@@ -178,6 +182,7 @@ The limits live in `shared/limits.json`; change them there and both sides follow
 | Auto-Cut settings | Rallies in the reel 1–20, hit threshold 1.5–10, max gap 0.5–5 s, min hits 2–20 | form, route, API |
 | Rallies found | Fewer than 2 is a warning on a `done` job (film closer, less background noise, lower the threshold), not an error | pipeline |
 | Player visible | At least 40% of the analysed frames, else the job fails asking for a clearer clip | pipeline, after pose |
+| Player frames, only_me, staged | At most 16 frames of 1500 KB; `only_me` is `1` or blank; `staged` is a token from `/players/detect` (used once, kept 2 h) | route, API |
 
 ## Code conventions
 

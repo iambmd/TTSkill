@@ -1,8 +1,9 @@
 # HANDOFF
 
 Read this first, then `PROGRESS.md` (history, every measurement) and `AGENTS.md` (layout,
-conventions). Last updated 2026-11-17 after Tasks 1a, 2 and 3 of the user's brief. Work is on
-`main`; each change is its own commit. All metrics are development data (no held-out set).
+conventions). Last updated 2026-11-18 after the player-picker brief (diagnose, 12 frames,
+counts, Only me, HEVC fallback). Work is on `main`; each change is its own commit. All metrics
+are development data (no held-out set).
 
 ## Current state
 
@@ -14,7 +15,9 @@ conventions). Last updated 2026-11-17 after Tasks 1a, 2 and 3 of the user's brie
 | Coached stroke selection (8 peaks labelled from frames) | 5/5 real strokes kept, 3/3 post-point turns/walks rejected |
 | Coach end to end | coaches the user on IMG_8782, coach_demo, both montage encodes (frame-checked) |
 | Forehand/backhand auto-detection | fails its one labelled case (strict xfail); geometry candidate rejected |
-| Tests | backend 370 pass, 2 network skips, 1 xfail; frontend 145 pass; build passes |
+| Player lookup, real Chrome, 12 frames | IMG_8782 3.2 s end to end (grab 0.96 s, answer 2.19 s); coaching-demo 4.1 s; HEVC fallback (238 MB) ~12 s locally (upload ~3 s, server 6.9 s, Next.js +1.4 s) |
+| Players found (12 rally frames) | IMG_8782 2 (was 3), coach_demo 2 (was 3), montages 3 players + table leg as "still" |
+| Tests | backend 399 pass, 3 skips, 1 xfail; frontend 156 pass; build passes |
 
 Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone far back),
 `coach_demo.mp4` (640x360 drill), `match_b.mp4` (480p montage, 18 clips, crossfades),
@@ -22,7 +25,43 @@ Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone f
 the teal "CHINA" shirt, right-handed, 168 cm. OpenTTGames videos: ignored `data/openttgames/`
 (~1.9 GB of the 10 GB cap).
 
-## Done this session (user brief of 2026-11-17)
+## Done this session (player-picker brief of 2026-11-18)
+
+How it was checked: a real headless Windows Chrome driven over CDP from a scratch script
+(`node.exe` on the Windows side; WSL can't reach Windows' localhost), plus curl from both sides
+of WSL. A second Chrome with `--disable-features=PlatformHEVCDecoderSupport` stands in for Chrome
+without an HEVC decoder (this machine's Chrome decodes iPhone HEVC through Windows).
+
+| Commit | Change | Measured |
+| --- | --- | --- |
+| f4b299e | 1/1b: every lookup logged on all three hops (browser console `[players]`, Next.js `[players/detect]`, backend `players/detect ...`) with frame times, people per frame and the time split; `timing` covers read/wait/decode/download/sample/probe/detect/total + `next_s`; link probe off the event loop; link download cancellable; model warmed at startup (`TTSKILL_WARM=0` off); links get 120 s | Frames path 1.4-1.6 s end to end (Next.js adds 0.01-0.05 s, upload 0.7-1 MB is not a factor). The 28.8 s / 30 s requests could not be reproduced on the frames path, idle or under a running Coach job (2.2-2.4 s). They match the link path: probe 9.9 s + download 5.8 s + sample + detect = 20.3 s for a 32 s video while timing.seconds said 3.06, and the probe blocked every other request. /health now stays at 11 ms during a link lookup |
+| 7fda7e4 | 2: 12 frames over the whole video (browser), ffmpeg rally-preferred frames on the server (9 in rallies, 3 anywhere; 2 decoder threads x 6), coarse-to-fine order under the budget, duplicate skeletons merged (shoulders < 0.25 torso, or a box inside another), table-leg bodies dropped, groups rejoined, 2 sightings instead of a third of frames, best frame = most players then biggest | Duplicates measured 0.02-0.11 torso apart vs >= 1.8 for different people; table legs thighs 0.77-1.83 torsos not going down vs 0.33-0.43 for misfits on real people. 12 HEVC frames 1.0 s (was 3.4 s sequential) |
+| 2edfdc4 | 3: 0 -> "We couldn't spot a player" + Analyse anyway (submit waits); 1 -> "Analysing this player" + Change player; 2+ -> always the picker. Stub/demo answer `available: false` | Checked in Chrome on a single-player crop, a test pattern, IMG_8782 |
+| 83d99b7 | 3b: background people (box moves < 0.05 box heights, far from a found blue/green table, tiny) go to `others`, behind "Show everyone we saw"; typical sighting for thumb/seed; average-linkage regrouping. "Only me in the video" on Coach/Breakdown -> `only_me=1` -> `people.most_active` (16 moments x 2 frames 0.2 s apart, limb motion weighted by relative size) | Players' box motion 0.083-0.594, table leg 0.045. most_active = the user on IMG_8782 and coach_demo; a Breakdown with only_me ran end to end |
+| d8d133b | 4: unreadable video -> the picker uploads it to /players/detect (progress, Analyse anyway stops it) -> ffmpeg frames -> `staged` token -> the job takes the token, the file is not sent again | Chrome without HEVC on IMG_8782: fallback in 0.2 s, 2 players, submit ~1 KB, job on input.mov |
+| 543e503, 1ab8d96 | 5: real-video tests: late entrant (IMG_8782 with 30 s black), one person (crop), nobody (test pattern), HEVC (libx265); tap-then-track test moved to 12 frames, players only, first 2 s | Full suites green |
+
+Browser steps to check it yourself (`make dev`, Chrome, DevTools console open):
+1. /coach, choose `samples/coaching-demo.mp4`: "Finding the players" for ~3-4 s, then "We see
+   N players" with a frame and thumbnails. The console prints `[players] drew 12 frames ... answer
+   in ... (Next.js ..., backend ..., detect ...); people per frame ...`; the `make dev` terminal
+   prints the matching Next.js and backend lines.
+2. /breakdown, choose `IMG_8782.MOV`: "We see 2 players" (you and your opponent), one thumbnail
+   each. Tap yourself; submit unblocks.
+3. Tick "Only me in the video" before choosing a file: no lookup, no picker, submit enabled.
+4. A video with one person (e.g. crop IMG_8782 with
+   `ffmpeg -ss 95 -t 30 -i IMG_8782.MOV -vf crop=iw*0.56:ih:iw*0.44:0 single.mp4`): "Analysing
+   this player" + Change player. A video with nobody: the message + "Analyse anyway".
+5. HEVC fallback: start Chrome with `--disable-features=PlatformHEVCDecoderSupport` (or use a
+   browser without HEVC) and choose IMG_8782.MOV: "Your browser can't read this video, so we're
+   sending it... N%", then the picker; on submit the Network tab shows a ~1 KB job POST.
+
+Not re-verified: a staged-upload job run to the end (the one started in the browser test was
+killed by a `--reload` when a test file under backend/ changed; job creation and the stored
+input were checked). Links still need YouTube's probe (2-10 s) and a full download, so they
+can't be under 5 s; the job submit probes the link again.
+
+## Earlier session (user brief of 2026-11-17)
 
 | Commit | Change | Measured |
 | --- | --- | --- |
@@ -37,6 +76,13 @@ Side effect to know: a pro profile with two clips takes the upper value as its "
 left this clip's top 3.
 
 ## Next steps (ordered)
+
+0. **User brief of 2026-11-18 (later): make Coach fast and cheap** (Phases 0-4: time every
+   stage; fixed pipeline + one structured Claude call with caching; hit-window pose; parallel
+   render/matching; caches; partial results; eval of YOLO-pose/RTMPose + ByteTrack in eval/;
+   RQ worker; then resume 1b with test_5 = both players left-handed, confirmed by the user).
+   Progress is recorded below as each phase lands.
+
 
 1. **"Tap the player to analyze": done** (all six parts pushed):
    - A `dd3d502` detect endpoint (`technique/people.py`, `/players/detect`, browser frames or link).
@@ -76,6 +122,11 @@ left this clip's top 3.
    offline template in `technique/analyze.py`, `frontend/lib/strokes.ts`.
 
 ## Known bugs and open questions
+
+- Player lookup: a partner seen only twice in the same spot on a montage reads as "still"
+  (background), and a small split-off of the user can land in `others`; both stay tappable via
+  "Show everyone we saw". Table "far" only works for blue/green tops (grey tables never count).
+- `uvicorn --reload` watches backend/tests too: editing a test fails running jobs.
 
 - Late rally starts (the montage 129.5 s rally is detected from 131.4 s); quiet
   continuous-video rallies split (3 on coach_demo); one retrieval false rally on coach_demo.
