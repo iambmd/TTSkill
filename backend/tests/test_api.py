@@ -499,7 +499,7 @@ def test_detect_players_runs_on_the_sent_frames(api, monkeypatch):
     from technique import people
     seen = {}
 
-    def fake(frames):
+    def fake(frames, cancel=None):
         seen["frames"] = [(t, img.shape) for t, img in frames]
         return {"candidates": [], "frame": None, "suggested": None, "decisive": True}
     monkeypatch.setattr(people, "detect", fake)
@@ -552,6 +552,46 @@ def test_detect_players_on_a_jobs_stored_video(api, ran, upload, monkeypatch):
     first = api.post("/jobs/coach", files=upload(), data={"request": "fix my forehand"}).json()
     seen = {}
     monkeypatch.setattr(people, "sample_frames", lambda path, count=6: seen.setdefault("path", path) and [])
-    monkeypatch.setattr(people, "detect", lambda frames: {"candidates": [], "frame": None, "suggested": None, "decisive": True})
+    monkeypatch.setattr(people, "detect", lambda frames, cancel=None: {"candidates": [], "frame": None, "suggested": None, "decisive": True})
     r = api.post("/players/detect", data={"job": first["id"], "kind": "coach"})
     assert r.status_code == 200 and seen["path"].endswith(".mp4") and first["id"] in seen["path"]
+
+
+def test_detect_work_is_cancelled_when_the_browser_disconnects():
+    import asyncio
+    import threading
+    import time
+
+    started, stopped = threading.Event(), threading.Event()
+
+    def slow(cancel):
+        started.set()
+        while not cancel.is_set():   # a detection loop checks this between frames
+            time.sleep(.01)
+        stopped.set()
+        return "nobody reads this"
+
+    class Browser:
+        polls = 0
+
+        async def is_disconnected(self):
+            self.polls += 1
+            return self.polls > 1    # still there at the first check, gone at the second
+
+    async def go():
+        with pytest.raises(main.ClientGone):
+            await main.run_while_connected(Browser(), slow)
+    asyncio.run(go())
+    assert started.is_set() and stopped.wait(2), "the worker kept going after the disconnect"
+
+
+def test_detect_returns_while_connected():
+    import asyncio
+
+    class Browser:
+        async def is_disconnected(self):
+            return False
+
+    async def go():
+        return await main.run_while_connected(Browser(), lambda x, cancel: x * 2, 21)
+    assert asyncio.run(go()) == 42

@@ -143,7 +143,7 @@ cloudflared tunnel --url http://localhost:8000  # prints https://<random>.tryclo
 On Vercel, set the root directory to `frontend` and `NEXT_PUBLIC_API_URL` to the tunnel URL, then redeploy.
 - The tunnel URL changes every time `cloudflared` restarts. Update the variable and redeploy, since it is baked into the build.
 - Submissions then go straight to the backend, so `DEMO_MODE` no longer answers them; the `/jobs/demo-*` pages still work.
-- `make backend` reloads on file saves, which fails running jobs. Don't edit backend code during a demo.
+- `make backend` reloads on file saves, which fails running jobs. Don't edit backend code during a demo. A reload waits at most 5 s for running work (`--timeout-graceful-shutdown 5`); without it a reload waited for a running job (minutes) and every new request queued behind it.
 
 ## Tests and checks
 

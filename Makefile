@@ -7,7 +7,7 @@ install:
 	cd frontend && npm install
 
 backend:
-	cd backend && .venv/bin/uvicorn app.main:app --reload --port 8000
+	cd backend && .venv/bin/uvicorn app.main:app --reload --timeout-graceful-shutdown 5 --port 8000
 
 frontend:
 	cd frontend && BACKEND_URL=http://localhost:8000 npm run dev

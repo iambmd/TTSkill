@@ -1,14 +1,18 @@
 from __future__ import annotations
 
+import asyncio
 import re
 import shutil
+import threading
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 
 from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from equipment import recommend as rubbers
 from technique.strokes import STROKE_TYPES
@@ -239,48 +243,90 @@ def create_coach(
     return job
 
 
-@app.post("/players/detect")
-def detect_players(
-    frames: list[UploadFile] | None = File(None),
-    times: str = Form(""),
-    url: str = Form(""),
-    kind: str = Form("breakdown"),
-    job: str = Form(""),
-) -> dict:
-    """The players in a few frames of the chosen video, for "Which one is you?". The browser
-    sends frames it drew from the file (no second upload of the video); for a pasted link we
-    download it and sample frames ourselves. `decisive` means no question is needed."""
+# Finding players runs here, off the event loop, so the API keeps answering and two pickers
+# don't wait on each other (1.6-2.0 s each when run together). Two threads: each loads a model.
+PLAYER_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="players")
+
+
+class ClientGone(Exception):
+    """The browser closed the request (navigated away, changed video, or timed out)."""
+
+
+async def run_while_connected(request: Request, fn, *args):
+    """fn(*args, cancel=Event) in PLAYER_POOL; if the browser disconnects, set the event (fn stops
+    at its next step) and raise ClientGone instead of finishing work nobody will read."""
+    cancel = threading.Event()
+    future = asyncio.get_running_loop().run_in_executor(PLAYER_POOL, partial(fn, *args, cancel=cancel))
+    while True:
+        done, _ = await asyncio.wait({future}, timeout=0.25)
+        if done:
+            return future.result()
+        if await request.is_disconnected():
+            cancel.set()
+            future.add_done_callback(lambda f: f.exception())   # collect its Cancelled quietly
+            raise ClientGone()
+
+
+def _detect_frames(sent: list[tuple[float, bytes]], cancel: threading.Event) -> dict:
     import cv2
     import numpy as np
 
     from technique import people
 
-    if kind not in ("breakdown", "match", "coach"):
-        raise validate.Invalid("kind must be breakdown, match or coach.")
-    if job:
-        # "Change player" on a result: the job's stored upload, or its link downloaded again.
-        stored = job_input(job)
-        if stored is not None:
-            return people.detect(people.sample_frames(str(stored)))
-        url = (jobs.load(job) or {}).get("params", {}).get("url") or ""
-        if not url:
-            raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
-    sent = [(f.filename, f.file.read()) for f in (frames or []) if has_file(f)]
-    if sent or not url.strip():
-        images = []
-        for t, data in validate.player_frames(sent, times):
-            image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
-            if image is None:
-                raise validate.Invalid("A frame couldn't be read as an image.")
-            images.append((t, image))
-        return people.detect(images)
-    link = check_link(url, kind)
+    images = []
+    for t, data in sent:
+        image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
+        if image is None:
+            raise validate.Invalid("A frame couldn't be read as an image.")
+        images.append((t, image))
+    return people.detect(images, cancel=cancel)
+
+
+def _detect_video(path: Path | None, url: str | None, cancel: threading.Event) -> dict:
+    """A stored upload, or a link downloaded just for finding the players and then deleted."""
+    from technique import people
+
+    if path is not None:
+        return people.detect(people.sample_frames(str(path)), cancel=cancel)
     folder = jobs.DATA_DIR / ".players" / uuid.uuid4().hex
     folder.mkdir(parents=True, exist_ok=True)
     try:
-        return people.detect(people.sample_frames(str(download.download(link["url"], folder))))
+        return people.detect(people.sample_frames(str(download.download(url, folder))), cancel=cancel)
     finally:
-        shutil.rmtree(folder, ignore_errors=True)   # the download is only for finding players
+        shutil.rmtree(folder, ignore_errors=True)
+
+
+@app.post("/players/detect")
+async def detect_players(
+    request: Request,
+    frames: list[UploadFile] | None = File(None),
+    times: str = Form(""),
+    url: str = Form(""),
+    kind: str = Form("breakdown"),
+    job: str = Form(""),
+):
+    """The players in a few frames of the chosen video, for "Which one is you?". The browser
+    sends frames it drew from the file (no second upload of the video); for a pasted link we
+    download it and sample frames ourselves. `decisive` means no question is needed."""
+    from technique.people import Cancelled
+
+    if kind not in ("breakdown", "match", "coach"):
+        raise validate.Invalid("kind must be breakdown, match or coach.")
+    try:
+        if job:
+            # "Change player" on a result: the job's stored upload, or its link downloaded again.
+            stored = job_input(job)
+            link_url = None if stored else (jobs.load(job) or {}).get("params", {}).get("url")
+            if stored is None and not link_url:
+                raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
+            return await run_while_connected(request, _detect_video, stored, link_url)
+        sent = [(f.filename, await f.read()) for f in (frames or []) if has_file(f)]
+        if sent or not url.strip():
+            return await run_while_connected(request, _detect_frames, validate.player_frames(sent, times))
+        link = check_link(url, kind)
+        return await run_while_connected(request, _detect_video, None, link["url"])
+    except (ClientGone, Cancelled):
+        return Response(status_code=499)   # nginx's "client closed request"; nobody reads it
 
 
 def job_input(job_id: str) -> Path | None:
