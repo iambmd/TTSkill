@@ -17,6 +17,7 @@ Every video input accepts an upload or a pasted YouTube link (watch, youtu.be, S
 - the coached stroke: the player's own, seen whole, inside the frame and big; a 2.4 s clip of it gives the key moments, angles at contact, height and the pro match (the pros' video compiles in the background)
 - one Claude call with prompt caching on the static instructions, style guide and pro reference numbers; it writes the summary and the 3 cards, then the coached stroke is rendered at 720x1280
 - outputs reach the job page as they finish; `job.timings` holds every stage and the call's tokens and cost (`backend/timing.py`, `scripts/time_coach.py`)
+- the page's main section is `job.coaching` (`agent/notes.py`): Markdown that always has the biggest fix and a drill, the same from every engine. The working files in `agentFiles` (/facts.json, /rallies.json) are internal: the page shows them only in `next dev`, under Debug
 
 Without `ANTHROPIC_API_KEY` the offline cards are used. `COACH_ENGINE=agent` runs the earlier LangChain deepagents agent instead (planning with `write_todos`, subagents `clip_analyst`, `player_matcher`, `coach_writer`, six tools); if the pipeline itself fails, the old fixed plan of those tools finishes the job.
 
@@ -98,6 +99,7 @@ The job record has these fields:
 - Auto-Cut adds `rallies`, and `warning` when fewer than 2 rallies were heard (the job is still `done`).
 - Breakdown adds `breakdown`, `videoPrompt`, `analyzer`, `batHand` and `window`.
 - Match adds `matches` (each with `grip` and `warnings`) and `you`.
+- Coach adds `todos`, `outputs`, `summary`, `engine`, `timings`, `agentFiles` (internal) and `coaching`: `{markdown, fix, drill}`, null until written or when no stroke was coached. Jobs from before `coaching` existed (the cached demo) only have `summary`; the page falls back to it (`lib/coaching.ts`). `warning` holds what a finished Coach job skipped.
 
 Invalid input is answered with a 422 and a message the user can act on, as `{detail}` from FastAPI and `{error}` from the Next.js routes.
 

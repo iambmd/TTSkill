@@ -1,11 +1,50 @@
 # HANDOFF
 
 Read this first, then `PROGRESS.md` (history, every measurement) and `AGENTS.md` (layout,
-conventions). Last updated 2026-11-18 after the licensing brief, the Coach speed brief
+conventions). Last updated 2026-11-18 after the Coach result page fix, the licensing brief, the Coach speed brief
 (Phases 0-4) and the player-picker brief before it. Work is on `main`; each change is its own
 commit. All metrics are development data (no held-out set).
 
-## Licensing (brief of 2026-11-18, latest)
+## Coach result page (bug brief of 2026-11-18, latest)
+
+Reported:
+- **A:** at 1920 px the plan wrapped one word per line, "100%" overlapped the cards, and the
+  page scrolled sideways.
+- **B:** "Coach's notes (2 files)" showed the internal /facts.json and /rallies.json as raw JSON.
+
+Root cause of A: the grid was `lg:grid-cols-[minmax(0,22rem)_1fr]`. A `1fr` track can't shrink
+below its widest content, and a raw JSON line in the notes' `<pre>` was thousands of pixels wide.
+That pushed the right column past the page and squeezed the plan column to almost nothing.
+
+Fixes:
+- **Layout:** every track is now `minmax(0, ...)`, with `min-w-0` on the columns and
+  `overflow-wrap:anywhere` on long text. The same fix went on the Breakdown/Match page grid and
+  the breakdown details.
+- **Plan** (`frontend/app/jobs/[id]/coach-view.tsx`): a compact checklist with a progress bar and
+  "n of 6 · %" while running. When done it collapses to one "All steps done" line that opens. On
+  failure the list stays open and marks where it stopped.
+- **Notes:** "Your coaching" is the main section. It renders `job.coaching.markdown` with
+  `app/markdown.tsx`, a small renderer that outputs React text only (no HTML).
+  - The backend fills `coaching` = `{markdown, fix, drill}` from every engine (`agent/notes.py`):
+    the coaching call, offline cards (now Markdown with numbered fixes), the deep agent and the old
+    fixed plan. It's null until written.
+  - With no notes, the page says so with the reason (`warning`).
+  - The working files appear only under a Debug toggle in `next dev`.
+  - The breakdown no longer repeats the drill.
+- **Old jobs:** jobs without the field (the cached demos, older jobs) show their `summary`.
+
+Checked:
+- Headless Chrome at 375, 768 and 1920 px, dark and light: a running job, a new done job (also
+  with everything expanded), the reported job 39d38550 and all four demo jobs. No horizontal
+  scroll on any of them. Each plan step fits on one line at 1920 px, and the plan column is 352 px.
+- Live Coach jobs on coaching-demo and match_b ended with `coaching` set (offline cards: `make dev`
+  has no API key).
+- Tests: frontend 172 pass (`test/coach-view.test.ts`, including a check that no result-page grid
+  uses a bare `1fr`); `tsc` clean; backend Coach/API/worker tests 164 pass, 1 skipped.
+- Not checked: the full backend suite (it was run out of memory beside `make dev` before) and
+  `next build` (dev server running).
+
+## Licensing (brief of 2026-11-18)
 
 The user plans to sell the whole app. No app logic changed.
 - `LICENSE`: BSL 1.1. Every word from "Terms" to the end is identical to the SPDX `BUSL-1.1`
