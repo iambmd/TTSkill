@@ -1,0 +1,66 @@
+{
+ "target": "block",
+ "per_video": {
+  "test_6": {
+   "n": 29,
+   "decisions": 5,
+   "selective_precision": 0.8,
+   "positives": 7,
+   "base": {
+    "correct": 22,
+    "recall": {
+     "block": 0.0,
+     "other": 1.0
+    }
+   },
+   "hybrid": {
+    "correct": 22,
+    "recall": {
+     "block": 0.0,
+     "other": 1.0
+    }
+   }
+  },
+  "test_3": {
+   "n": 18,
+   "decisions": 5,
+   "selective_precision": 1.0,
+   "positives": 0,
+   "base": {
+    "correct": 18,
+    "recall": {
+     "block": null,
+     "other": 1.0
+    }
+   },
+   "hybrid": {
+    "correct": 18,
+    "recall": {
+     "block": null,
+     "other": 1.0
+    }
+   }
+  }
+ },
+ "local": {},
+ "gates": {
+  "selective_precision_min": 0.9,
+  "per_wing_recall_drop_max": 0.05,
+  "hybrid_accuracy_must_improve": true,
+  "local_backhand_regression_must_pass": true
+ },
+ "verdict": {
+  "selective_precision": 0.9,
+  "recall_drop": {
+   "block": 0.0,
+   "other": 0.0
+  },
+  "checks": {
+   "selective_precision": true,
+   "recall_drop": true,
+   "hybrid_improves": false,
+   "local_backhand": null
+  },
+  "promote": false
+ }
+}

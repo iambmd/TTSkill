@@ -1,0 +1,75 @@
+{
+ "target": "wing",
+ "per_video": {
+  "test_6": {
+   "n": 29,
+   "decisions": 5,
+   "selective_precision": 0.8,
+   "positives": 13,
+   "base": {
+    "correct": 16,
+    "recall": {
+     "forehand": 1.0,
+     "backhand": 0.188
+    }
+   },
+   "hybrid": {
+    "correct": 16,
+    "recall": {
+     "forehand": 0.923,
+     "backhand": 0.25
+    }
+   }
+  },
+  "test_3": {
+   "n": 18,
+   "decisions": 4,
+   "selective_precision": 1.0,
+   "positives": 12,
+   "base": {
+    "correct": 14,
+    "recall": {
+     "forehand": 1.0,
+     "backhand": 0.333
+    }
+   },
+   "hybrid": {
+    "correct": 15,
+    "recall": {
+     "forehand": 1.0,
+     "backhand": 0.5
+    }
+   }
+  }
+ },
+ "local": {
+  "local_backhand": {
+   "want": "backhand",
+   "learned": null
+  },
+  "local_forehand": {
+   "want": "forehand",
+   "learned": "forehand"
+  }
+ },
+ "gates": {
+  "selective_precision_min": 0.9,
+  "per_wing_recall_drop_max": 0.05,
+  "hybrid_accuracy_must_improve": true,
+  "local_backhand_regression_must_pass": true
+ },
+ "verdict": {
+  "selective_precision": 0.889,
+  "recall_drop": {
+   "forehand": 0.038,
+   "backhand": -0.114
+  },
+  "checks": {
+   "selective_precision": false,
+   "recall_drop": true,
+   "hybrid_improves": true,
+   "local_backhand": true
+  },
+  "promote": false
+ }
+}
