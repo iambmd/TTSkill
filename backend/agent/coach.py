@@ -1,4 +1,9 @@
-"""TT Coach: a LangChain deep agent (Claude) for one request about one video.
+"""TT Coach: one request about one video.
+
+Since 2026-11-18 the job runs a fixed pipeline with one Claude call (agent/fixed.py,
+agent/brief.py); COACH_ENGINE=agent runs the deep agent described below instead.
+
+The deep agent (LangChain deepagents, Claude):
 
 The main agent plans with the deepagents todo list, keeps its plan and notes in the
 virtual file system (/plan.md, /rallies.json, /pose_summary.json, /matches.json), and
@@ -274,7 +279,8 @@ def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: s
     s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[])
     timer = timing.start()   # every stage and Claude call, saved as job["timings"]
     try:
-        if os.environ.get("ANTHROPIC_API_KEY"):
+        if os.environ.get("COACH_ENGINE") == "agent" and os.environ.get("ANTHROPIC_API_KEY"):
+            # The deep agent (Phase 0's baseline: 19 model calls, 242-297 s, ~$0.36 a job).
             try:
                 s.update(engine="deepagents")
                 run_agent(s, request)
@@ -284,7 +290,15 @@ def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: s
                 why = f"the agent stopped: {type(e).__name__}"
                 s.update(agentError=str(e)[:300])
         else:
-            why = "no ANTHROPIC_API_KEY"
+            # The fixed pipeline with one Claude call (agent/fixed.py); offline cards without a key.
+            try:
+                from .fixed import run_fixed
+                s.update(engine="pipeline")
+                run_fixed(s, request)
+                return
+            except Exception as e:
+                traceback.print_exc()
+                why = f"the pipeline stopped: {type(e).__name__}: {e}"
         s.update(engine="fallback", engineNote=why)
         try:
             run_fallback(s, request, why)

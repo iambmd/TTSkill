@@ -15,7 +15,8 @@ export type Job = {
   todos?: { content: string; status: "pending" | "in_progress" | "completed" }[];
   agentFiles?: { name: string; preview: string }[];
   outputs?: { kind: string; title: string; url: string; summary: string }[];
-  engine?: "deepagents" | "fallback";
+  /** pipeline: the fixed steps + one Claude call (default); deepagents: COACH_ENGINE=agent; fallback: the old fixed plan. */
+  engine?: "pipeline" | "deepagents" | "fallback";
   engineNote?: string;
   summary?: string;
   you?: { bat_hand: string; height: { height_cm: number; method: string } | null };

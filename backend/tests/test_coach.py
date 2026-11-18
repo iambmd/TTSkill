@@ -45,8 +45,14 @@ def test_plan_from_request():
 
 
 def test_fallback_runs_tools_with_a_live_plan(tmp_path, monkeypatch):
+    """When the fixed pipeline itself stops, the old fixed plan still finishes the job."""
+    from agent import fixed
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+
+    def stops(s, request):
+        raise RuntimeError("pipeline broke")
+    monkeypatch.setattr(fixed, "run_fixed", stops)
     job = jobs.create("coach", {})
     calls = []
 
@@ -68,7 +74,7 @@ def test_fallback_runs_tools_with_a_live_plan(tmp_path, monkeypatch):
     coach.run_coach(job["id"], tmp_path / "v.mp4", None, "show my best rallies and fix my forehand")
     done = jobs.load(job["id"])
     assert calls == ["detect_rallies", "cut_highlights", "extract_pose", "render_breakdown"]
-    assert done["status"] == "done" and done["engine"] == "fallback"
+    assert done["status"] == "done" and done["engine"] == "fallback" and "pipeline broke" in done["engineNote"]
     assert "3 rallies" in done["summary"] and "Shadow 20 swings." in done["summary"]
     assert {f["name"] for f in done["agentFiles"]} >= {"/plan.md", "/rallies.json", "/pose_summary.json", "/cards.md"}
 
@@ -84,6 +90,7 @@ def test_tool_errors_go_back_to_the_agent(tmp_path, monkeypatch):
 def test_agent_failure_falls_back(tmp_path, monkeypatch):
     monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
     monkeypatch.setenv("ANTHROPIC_API_KEY", "set")
+    monkeypatch.setenv("COACH_ENGINE", "agent")   # the deep agent is opt-in since Phase 1
     job = jobs.create("coach", {})
 
     def boom(*a, **k):

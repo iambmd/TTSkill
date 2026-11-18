@@ -1,12 +1,13 @@
 """Time one Coach job, stage by stage: every Claude call (seconds, tokens, dollars), pose,
 matching, rendering. Runs the real pipeline in-process on a local video.
 
-    backend/.venv/bin/python scripts/time_coach.py samples/coaching-demo.mp4
-    backend/.venv/bin/python scripts/time_coach.py samples/IMG_8782.MOV --engine fallback
+    backend/.venv/bin/python scripts/time_coach.py samples/coaching-demo.mp4 --label phase1
+    backend/.venv/bin/python scripts/time_coach.py samples/IMG_8782.MOV --engine agent --label phase0
 
---engine agent loads ANTHROPIC_API_KEY from backend/.env into this process only (nothing
-else loads that file) and bills real API calls. The job record and a JSON copy of the timings
-go to backend/eval/coach_speed/<label>-<video>.json."""
+--engine pipeline (default) runs the fixed pipeline with one Claude call, agent the deep
+agent (COACH_ENGINE=agent), offline the pipeline without a key. pipeline and agent load
+ANTHROPIC_API_KEY from backend/.env into this process only (nothing else loads that file) and
+bill real API calls. A JSON copy of the job goes to backend/eval/coach_speed/<label>-<engine>-<video>.json."""
 from __future__ import annotations
 
 import argparse
@@ -33,7 +34,7 @@ def load_key() -> None:
 
 CATEGORIES = [   # first match wins, on the leaf stage name
     ("Claude", lambda r: r["kind"] == "llm"),
-    ("pose", lambda r: "pose (" in r["leaf"] or r["leaf"].startswith("seed") or r["leaf"] == "choose_window"),
+    ("pose", lambda r: "pose" in r["leaf"] or r["leaf"].startswith(("seed", "scan", "probe")) or r["leaf"] == "choose_window"),
     ("render", lambda r: r["leaf"].startswith("render") or "compile" in r["leaf"] or "cut + join" in r["leaf"]),
     ("matching", lambda r: r["leaf"].startswith("match") or "height" in r["leaf"]),
     ("audio/rallies", lambda r: "rallies" in r["leaf"] or "non-play" in r["leaf"]),
@@ -71,16 +72,22 @@ def table(t: dict) -> str:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("video")
-    ap.add_argument("--engine", choices=["agent", "fallback"], default="agent")
+    ap.add_argument("--engine", choices=["pipeline", "agent", "offline"], default="pipeline")
+    ap.add_argument("--fresh", action="store_true", help="ignore the per-video cache (time a first run)")
     ap.add_argument("--request", default=REQUEST)
     ap.add_argument("--label", default="phase0")
     args = ap.parse_args()
-    if args.engine == "agent":
+    if args.engine in ("pipeline", "agent"):
         load_key()
         if not os.environ.get("ANTHROPIC_API_KEY"):
             sys.exit("No ANTHROPIC_API_KEY (environment or backend/.env)")
     else:
         os.environ.pop("ANTHROPIC_API_KEY", None)
+    if args.engine == "agent":
+        os.environ["COACH_ENGINE"] = "agent"
+    if args.fresh:
+        from app import cache
+        cache.VERSION = f"fresh{os.getpid()}"   # a cache namespace nobody wrote to
 
     from agent.coach import run_coach
     from app import jobs

@@ -11,13 +11,14 @@ Every video input accepts an upload or a pasted YouTube link (watch, youtu.be, S
 
 **Which one is you?** (Breakdown, Match, Coach; `frontend/app/player-picker.tsx`, `backend/technique/people.py`). The browser draws 12 frames spread over the video and `/players/detect` finds the people in them (duplicates merged, background people set aside). Nobody: a message and "Analyse anyway". One player: analysed, with "Change player". Two or more: the picker. A browser that can't read the file (Chrome without HEVC) sends the video instead and the job reuses it (`staged`). "Only me in the video" (Coach, Breakdown) skips all this and follows whoever plays the most (`people.most_active`). Each lookup logs its frames, people per frame and time split in the browser console, Next.js and the backend.
 
-**TT Coach** (`/coach`). One plain-language request plus a video. A LangChain deepagents agent with Claude:
-- plans with `write_todos`; the todo list streams to the page live
-- delegates to the subagents `clip_analyst`, `player_matcher` and `coach_writer`
-- keeps its plan and notes in the virtual file system (`/plan.md`, `/pose_summary.json`, ...)
-- calls six tools that wrap the pipelines below
+**TT Coach** (`/coach`). One plain-language request plus a video. A fixed pipeline in code (`agent/fixed.py`) and one structured Claude call (`agent/brief.py`, `COACH_MODEL`):
+- rallies from the sound (cached per video); the pose-based play check and the highlight reel run in the background
+- the seed, then pose at the strokes (`technique/hitpose.py`): the busiest rallies scanned at 1 fps, every stroke onset probed with 3 frames, full rate only around the fastest strokes (cached per video and player)
+- the coached stroke: the player's own, seen whole, inside the frame and big; a 2.4 s clip of it gives the key moments, angles at contact, height and the pro match (the pros' video compiles in the background)
+- one Claude call with prompt caching on the static instructions, style guide and pro reference numbers; it writes the summary and the 3 cards, then the coached stroke is rendered at 720x1280
+- outputs reach the job page as they finish; `job.timings` holds every stage and the call's tokens and cost (`backend/timing.py`, `scripts/time_coach.py`)
 
-Without `ANTHROPIC_API_KEY`, or if the agent fails, the same tools run on a fixed plan built from the request.
+Without `ANTHROPIC_API_KEY` the offline cards are used. `COACH_ENGINE=agent` runs the earlier LangChain deepagents agent instead (planning with `write_todos`, subagents `clip_analyst`, `player_matcher`, `coach_writer`, six tools); if the pipeline itself fails, the old fixed plan of those tools finishes the job.
 
 **Technique Breakdown** (`/breakdown`). A clip of a player the user admires, or a text description of their training, plus an optional stroke type: forehand topspin, forehand drive, forehand loop vs backspin, backhand topspin, backhand flick, backhand push, chop or serve. Blank means auto-detect from the swing or the text.
 - The result is a vertical 1080x1920 coaching video in the measured style from `style/swift_style.json`:
@@ -67,7 +68,9 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> background p
 | `shared/limits.json` | Every input limit: height, upload type/size/length/resolution, link length per page, text lengths, Auto-Cut settings, the allowed choices, and the pose visibility floor. Read by `frontend/lib/validate.ts` and `backend/limits.py`. |
 | `backend/app/validate.py` | The API's input checks against those limits, including ffprobe on uploads (video track, length, resolution). |
 | `frontend/lib/validate.ts` | The same checks for the forms' inline errors and the Next.js routes' 422s. Link-shape checks are in `lib/youtube.ts`. |
-| `backend/agent/` | TT Coach. `coach.py` builds the deepagents agent (Claude, `write_todos` planning, virtual file system, subagents `clip_analyst`, `player_matcher`, `coach_writer`), streams its todos and files into the job, and falls back to a fixed plan without a key. `tools.py` holds the six tools, bound to one job, wrapping the existing pipelines. |
+| `backend/agent/` | TT Coach. `fixed.py` is the default pipeline (parallel steps, partial results), `brief.py` its one cached, structured Claude call. `coach.py` runs it, or the deepagents agent with `COACH_ENGINE=agent`, and the old fixed plan if the pipeline fails. `tools.py` holds the six tools, bound to one job, wrapping the existing pipelines. |
+| `backend/technique/hitpose.py` | Pose at the strokes for Coach: rally scan at 1 fps, 3-frame probes at every stroke onset, 30 fps windows around the fastest; the coached-stroke choice. |
+| `backend/app/cache.py`, `backend/timing.py` | The per-video cache (by content hash, `backend/data/cache/`) of rallies, seed and stroke pose; the per-job stage and Claude-cost timings. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
 | `scripts/refresh_demos.py` | Re-runs the four demo jobs on the committed Before clips (`frontend/public/examples/*-before.mp4`) and exports `lib/demo-jobs.json`, `coach-example.json`, `demo-assets.json` and the After videos together. Don't hand-edit those; `frontend/test/demo.test.ts` checks they come from one refresh. |
 | `samples/` | Local test videos. Git-ignored. |
@@ -129,8 +132,10 @@ Space YouTube requests out. Never work around its bot check by switching clients
 | `BACKEND_URL` | frontend | FastAPI URL for the Next.js routes. Unset means `NEXT_PUBLIC_API_URL`, then stub mode. `make frontend` sets it to `http://localhost:8000`. |
 | `NEXT_PUBLIC_API_URL` | frontend | The backend's public URL, e.g. a Cloudflare tunnel. When set, the browser posts jobs and loads result videos straight from it (Vercel Functions cap bodies at 4.5 MB), and the routes use it when `BACKEND_URL` is unset. Inlined at build time: redeploy after changing it. Leave it unset locally. |
 | `DEMO_MODE` | frontend | `1` makes every submission return the cached demo jobs. |
-| `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer and the TT Coach deep agent. Without it, the offline analyzer and the coach's fixed plan run. |
-| `COACH_MODEL` | backend | Claude model for TT Coach (default `claude-opus-5-5`). |
+| `ANTHROPIC_API_KEY` | backend | Enables the Claude vision analyzer (Breakdown) and Coach's coaching call. Without it, the offline analyzer and offline cards are used. `make dev` doesn't read `backend/.env`; export the key or put it in your shell. |
+| `COACH_MODEL` | backend | Claude model for Coach's one call (default `claude-sonnet-5-5`). The deep agent (`COACH_ENGINE=agent`) uses `claude-opus-5-5`. |
+| `COACH_EFFORT` | backend | Effort for that call (default `medium`: 8.7 s vs 19-22 s at the model default, same fixes; blank = model default). |
+| `COACH_ENGINE` | backend | `agent` runs the deepagents agent instead of the fixed pipeline (Phase 0 baseline). |
 | `TECHNIQUE_MODEL` | backend | Claude model id for the analyzer (default `claude-opus-5-5`). |
 | `POSE_MODEL_PATH` | backend | Local `pose_landmarker_full.task`. Otherwise it is downloaded once to `~/.cache/ttskill/`. |
 | `TTSKILL_SAMPLE` | tests | Sample video for the technique end-to-end test. |

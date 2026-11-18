@@ -63,7 +63,7 @@ export default function CoachPage() {
         <PageIntro
           eyebrow="TT Coach"
           title="Ask your coach."
-          body="One request, one video. The coach plans the work, runs the tools, and shows you its to-do list as it goes."
+          body="One request, one video. The coach finds your rallies and your best strokes, compares you with the pros, and shows each result as soon as it's ready."
         />
         <div>
           <div className="flex items-end justify-between">
