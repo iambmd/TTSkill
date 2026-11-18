@@ -87,7 +87,7 @@ left this clip's top 3.
      IMG_8782 297 s / $0.35; 19 Claude calls (105-116 s, mostly serial), floor-bounce check 45-65 s,
      choose_window 28-42 s, full-rate pose on the same window x3 (~17-23 s each), breakdown rendered
      x2 (~20 s each), vision analyzer 14-16 s whose text is replaced.
-   - Phase 1 done (`aedbd03`, `220064c`, `626ae6d`, next commit): fixed pipeline (`agent/fixed.py`) +
+   - Phase 1 done (`aedbd03`, `220064c`, `626ae6d`, `e41e7b8`): fixed pipeline (`agent/fixed.py`) +
      one cached structured Sonnet 5.5 call at effort medium (`agent/brief.py`); pose at the strokes
      (`technique/hitpose.py`); per-video cache (`app/cache.py`); 720x1280 render of the coached stroke.
      | | Phase 0 agent | Phase 1 first time | Phase 1 same video again |
