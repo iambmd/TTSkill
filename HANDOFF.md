@@ -14,7 +14,7 @@ conventions). Last updated 2026-11-17 after Tasks 1a, 2 and 3 of the user's brie
 | Coached stroke selection (8 peaks labelled from frames) | 5/5 real strokes kept, 3/3 post-point turns/walks rejected |
 | Coach end to end | coaches the user on IMG_8782, coach_demo, both montage encodes (frame-checked) |
 | Forehand/backhand auto-detection | fails its one labelled case (strict xfail); geometry candidate rejected |
-| Tests | backend 351+ pass, 2 network skips, 1 xfail; frontend 136 pass; build passes |
+| Tests | backend 365 pass, 2 network skips, 1 xfail; frontend 140 pass; build passes |
 
 Samples (git-ignored `samples/`): `IMG_8782.MOV` (3:35 continuous match, phone far back),
 `coach_demo.mp4` (640x360 drill), `match_b.mp4` (480p montage, 18 clips, crossfades),
@@ -38,37 +38,26 @@ left this clip's top 3.
 
 ## Next steps (ordered)
 
-1. **"Tap the player to analyze"** (approved 2026-11-17: browser frames, picker before 1b/1c).
-   Done and pushed:
-   - A `dd3d502`: `POST /players/detect` + `/api/players/detect` (`technique/people.py`):
-     6 browser frames -> players (torso+thigh colour groups, passers-by and other courts
-     dropped, zoomed `pose.QUARTERS` pass for small far players), one frame with boxes,
-     thumbnails, `suggested`, `decisive`. Body-span floor 1.5 -> 2.0 (table phantoms 0.87-1.7,
-     real 2.7-3.2; audits unchanged).
-   - C `e332896`: Breakdown/Match/Coach take `player_time` + `player_box` (validated both
-     sides); `pose.identity_from_box` seeds the tracker; `technique/tests/test_pick_player.py`
-     taps each player of 6 s IMG_8782 and coaching-demo clips. Checked on frames: never the
-     other player. Far players mostly lost by the tracker (IMG opponent 3%, user far on the
-     montage 28% of frames).
-   - B `3d9be25`: `frontend/app/player-picker.tsx` inside `VideoPicker findPlayer`; asks only
-     when not decisive; hidden fields go with the job. Browser frame drawing not run here.
-   Next, in order:
-   - D. Tracker (`pose.extract_pose`, `identity.PlayerIdentity`): seeds and per-frame looks
-     as `identity.signature` (torso + thighs) with thighs as a veto, box IoU with a
-     constant-velocity prediction instead of hip distance, and a zoomed crop (2.5x the last
-     box, upscaled to >= 256 px) when the selected player is missing or small/weak (torso
-     < 60 px or visibility < .6). Measure far-player coverage on the two test clips (3% / 28%
-     now) and re-run both identity audits (must stay 0 wrong).
-   - E. Selected player visible < 40%: "We lost the player you picked..." instead of the
-     generic visibility message (`pose.require_player`, when a pick was made).
-   - F. `job.player.thumb` (crop at the pick) on the result page plus "Change player", which
-     re-runs the job on the stored upload with a new pick.
-2. **1b: learned forehand/backhand classifier.** Train a small model (logistic regression or
-   gradient boosting on resampled wrist/elbow trajectories in the body frame) on OpenTTGames
-   test_7 plus `train/` game strokes; freeze; score once on test_6/test_3 with the gates in
-   `backend/eval/geometry_protocol.json` (selective precision >= .90, no wing recall drop
-   > .05, hybrid accuracy improves, local backhand regression passes). Ship only if it passes;
-   otherwise keep in `backend/eval/` and report. Stay under 10 GB of downloads.
+1. **"Tap the player to analyze": done** (all six parts pushed):
+   - A `dd3d502` detect endpoint (`technique/people.py`, `/players/detect`, browser frames or link).
+   - C `e332896` jobs take `player_time` + `player_box`; `pose.identity_from_box` seeds tracking.
+   - B `3d9be25` picker UI (`frontend/app/player-picker.tsx`, `VideoPicker findPlayer`).
+   - D `7e1a55e` tracker: zoomed search around a small/missed player (`pose.zoom_regions`),
+     torso decides + thigh veto, motion-predicted continuity. Far picks on 6 s clips: IMG_8782
+     opponent 3% -> 18%, user far on the montage 28% -> 80%. Audits IMG_8782 12/0/0, match_b
+     10/0/2 (8 s box corrected in `9a698f9`, frame-checked).
+   - E `e74452a` "We lost the player you picked" when a pick is under 40% visible.
+   - F `0ae5ec6` `job.player.thumb` + "Change player" (`/players/detect job=`, `POST /jobs/<id>/rerun`).
+   Not verified here: the browser drawing frames from a local file (`drawFrames`) needs a real
+   browser. Breakdown on the full IMG_8782 with the user picked and hand "auto" asks for the hand
+   (pooled bat colour just under 1.8x); with the far opponent picked it completes (42% seen,
+   skeleton on him).
+2. **1b: learned forehand/backhand classifier** (in progress). Cached pose windows: test_7 41
+   contacts (calibration), test_6 31 + test_3 19 (validation, frozen). Too few to train on, so
+   add test_1 (84 strokes), test_4 (71), test_5 (27): download, verify each side's hitting hand
+   on frames (labels give table side, not hand), `eval/extract_strokes.py`, delete the raw video.
+   Train a small model (logistic regression with an abstain threshold) on calibration only;
+   freeze; score once on test_6/test_3 against `eval/geometry_protocol.json`'s gates.
 3. **1c: block stroke type**, after 1b and measured the same way: `technique/strokes.py`,
    offline template in `technique/analyze.py`, `frontend/lib/strokes.ts`.
 
@@ -83,4 +72,6 @@ left this clip's top 3.
 - A left-hander whose pooled bat colour stays under 1.8x gets "assumed right-handed" unless
   the request says otherwise.
 - Contact-level hit precision/recall is unmeasurable without per-contact labels.
+- Running `npm run build` while `next dev` runs breaks the dev server (shared `frontend/.next`);
+  build in a separate worktree.
 - The deep-agent Coach path (with `ANTHROPIC_API_KEY`) was not re-run; its tools share the code.
