@@ -1,8 +1,8 @@
 # HANDOFF
 
 Read this first, then `PROGRESS.md` (history, every measurement) and `AGENTS.md` (layout,
-conventions). Last updated 2026-11-18 after the player-picker brief (diagnose, 12 frames,
-counts, Only me, HEVC fallback). Work is on `main`; each change is its own commit. All metrics
+conventions). Last updated 2026-11-18 after the Coach speed brief (Phases 0-4) and the
+player-picker brief before it. Work is on `main`; each change is its own commit. All metrics
 are development data (no held-out set).
 
 ## Current state
@@ -101,6 +101,13 @@ left this clip's top 3.
      the DTW note ("16° straighter than Fan") disagree; the agent quoted the same note.
      Not done: follow-up questions (the deep agent is kept behind COACH_ENGINE=agent, not wired to a
      follow-up endpoint).
+   - Phase 2 done (`3420adf`, eval only): `backend/eval/pose_models.py`, results in
+     `backend/eval/pose_models_results.json`. s/frame MediaPipe+tracker 0.093, RTMPose-m 0.580,
+     RTMPose-lite 0.148, RTMO-m 0.277. Far player found in play: 0.26-0.42 (MediaPipe) vs 0.52-0.87.
+     Identity on the montage (match_b): ours 9/0/2, ByteTrack models 4-5 wrong of 11; continuous
+     match: all tie. Bat wrist seen at 4 strokes: 0.45 vs 0.79-0.83. Recommendation: don't switch;
+     next try RTMPose-lite for detection on few frames (picker, coached clip) with our identity on top.
+     The eval venv is `backend/eval/work/venv-pose` (git-ignored; how to make it is in the script).
    - Phase 3 done (`78ee64d`; fix `0507bed`): SQLite queue (`app/jobqueue.py`; Redis not installed,
      no sudo) + `python -m app.worker` (`make dev` starts it): a spawned process per job, 15 min limit
      (Auto-Cut 30), OOM/timeout/dead-worker all end the job failed with a message; a `prepare` lane
