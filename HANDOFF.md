@@ -1,9 +1,42 @@
 # HANDOFF
 
 Read this first, then `PROGRESS.md` (history, every measurement) and `AGENTS.md` (layout,
-conventions). Last updated 2026-11-18 after the Coach speed brief (Phases 0-4) and the
-player-picker brief before it. Work is on `main`; each change is its own commit. All metrics
-are development data (no held-out set).
+conventions). Last updated 2026-11-18 after the licensing brief, the Coach speed brief
+(Phases 0-4) and the player-picker brief before it. Work is on `main`; each change is its own
+commit. All metrics are development data (no held-out set).
+
+## Licensing (brief of 2026-11-18, latest)
+
+The user plans to sell the whole app. No app logic changed.
+- `LICENSE`: BSL 1.1. Every word from "Terms" to the end is identical to the SPDX `BUSL-1.1`
+  text; the Parameters and Notice blocks follow MariaDB's layout.
+  - Licensor: Duke (iambmd). Licensed Work: TTSkill (all code in this repository).
+  - Additional Use Grant: personal and non-commercial use, in the user's words.
+  - Change Date: 2030-11-18. Change License: Apache-2.0.
+  - Contact for other licensing: https://github.com/iambmd. The user's email was not put in
+    public files.
+- `THIRD_PARTY_LICENSES.md`: every Python distribution (91, from `.venv` metadata), every npm
+  package (200, from the lockfile), plus the system tools, fonts, models, datasets, footage and
+  data. Eleven items are flagged at the top.
+- README has a License section; `frontend/package.json` (and the lockfile root) has
+  `"license": "SEE LICENSE IN LICENSE"`; AGENTS.md "Adding things" says to record licenses.
+
+Open, for the user to decide before selling:
+- **Blocks commercial use as it is:**
+  - YouTube footage of pros (pro clips, the pros' breakdowns in Match/Coach, and the committed
+    Ma Long and match-after demo videos)
+  - the YouTube link input (yt-dlp; it also pulls in GPL `mutagen`)
+  - OpenTTGames (CC BY-NC-SA, eval only today)
+  - RevSpin rubber ratings
+  - hotlinked product photos
+- **Medium:** Commons pro photos without credit; pros' names and likeness; the @swift_TT-derived
+  style profile; consent from the people in the user's own demo videos.
+- **Covenant 2 of the BSL** says the Additional Use Grant must not add restrictions. The grant's
+  second sentence ("Any commercial use ... requires a commercial license") could be read as
+  narrowing the BSL's own non-production grant. Lawyer to confirm; a fix is "Any commercial
+  production use ..." or dropping that sentence. Kept verbatim as the user asked.
+- Each future release should bump the Change Date (it is fixed at 2030-11-18 for every version
+  until changed).
 
 ## Current state
 
