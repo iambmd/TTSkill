@@ -138,22 +138,77 @@ def _pose_candidates(frame: np.ndarray, landmarker, mp,
     return people, world_people
 
 
-def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
-                 max_frames: int | None = None,
-                 identity: np.ndarray | None = None) -> PoseTrack:
-    """Run PoseLandmarker over every `stride`-th frame. When several people are visible,
-    select the nearest initially, then retain that torso identity across cuts/occlusions."""
-    import mediapipe as mp
+def _landmarker_options(num_poses: int = 3):
     from mediapipe.tasks.python import BaseOptions
     from mediapipe.tasks.python import vision
 
-    opts = vision.PoseLandmarkerOptions(
+    return vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path())),
         running_mode=vision.RunningMode.IMAGE,
         num_poses=num_poses,
         min_pose_detection_confidence=0.4,
         min_tracking_confidence=0.4,
     )
+
+
+class Follower:
+    """The per-frame part of tracking one player: find the people, keep the one whose looks
+    match (PlayerIdentity), search zoomed crops when they are small or lost. extract_pose
+    feeds it every stride-th frame; hitpose feeds it full-rate frames around ball contacts
+    and a few frames a second in between."""
+
+    def __init__(self, landmarker, mp, w: int, h: int, identity: np.ndarray | None = None) -> None:
+        from .identity import PlayerIdentity
+
+        self.lmk, self.mp, self.w, self.h = landmarker, mp, w, h
+        self.tracker = PlayerIdentity(identity)
+        self.previous_scene = None
+        self.n = 0
+
+    def step(self, frame: np.ndarray, cut: bool | None = None) -> tuple[np.ndarray, np.ndarray]:
+        """Landmarks (33x4) and world landmarks (33x3) of the followed player, NaN if not seen.
+        cut: a known jump in time (hitpose's gaps); otherwise a scene change decides."""
+        from .identity import signature
+        from .people import box_of
+
+        people, world_people = _pose_candidates(frame, self.lmk, self.mp, **zoom_regions(self.tracker, self.n))
+        self.people = people   # everyone found in this frame (eval/pose_models.py counts them)
+        arr = np.full((33, 4), np.nan, np.float32)
+        warr = np.full((33, 3), np.nan, np.float32)
+        scene = cv2.resize(frame, (32, 18)).astype(float) / 255
+        changed = self.previous_scene is not None and np.mean(np.abs(scene - self.previous_scene)) > .25
+        self.previous_scene = scene
+        looks = [signature(frame, p) for p in people]
+        best = self.tracker.select(people, looks, cut=changed if cut is None else (cut or changed))
+        if best is not None:
+            arr = people[best]
+            warr = world_people[best]
+            self.tracker.last_box = box_of(arr)
+            self.tracker.last_torso = float(np.linalg.norm(
+                (arr[[11, 12], :2].mean(0) - arr[[23, 24], :2].mean(0)) * [self.w, self.h]))
+        self.n += 1
+        return arr, warr
+
+
+def make_track(times: list[float], lms: list, worlds: list, fps: float, w: int, h: int, meta: dict) -> PoseTrack:
+    """A PoseTrack from per-frame landmarks, with implausible bodies blanked."""
+    lm_arr = np.stack(lms) if lms else np.zeros((0, 33, 4), np.float32)
+    w_arr = np.stack(worlds) if worlds else np.zeros((0, 33, 3), np.float32)
+    bad = implausible(lm_arr, w, h)
+    lm_arr[bad] = np.nan
+    w_arr[bad] = np.nan
+    return PoseTrack(fps=fps, width=w, height=h, times=np.array(times), lm=lm_arr, world=w_arr,
+                     meta={**meta, "rejected": int(bad.sum()), "player_id": 1})
+
+
+def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
+                 max_frames: int | None = None,
+                 identity: np.ndarray | None = None) -> PoseTrack:
+    """Run PoseLandmarker over every `stride`-th frame. When several people are visible,
+    select the nearest initially, then retain that torso identity across cuts/occlusions."""
+    import mediapipe as mp
+    from mediapipe.tasks.python import vision
+
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
         raise RuntimeError(f"cannot open {video}")
@@ -162,48 +217,25 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     times, lms, worlds = [], [], []
-    from .identity import PlayerIdentity, signature
-    from .people import box_of
-    tracker = PlayerIdentity(identity)
-    previous_scene = None
     idx = 0
-    with vision.PoseLandmarker.create_from_options(opts) as lmk:
+    with vision.PoseLandmarker.create_from_options(_landmarker_options(num_poses)) as lmk:
+        follower = Follower(lmk, mp, w, h, identity)
         while True:
             ok, frame = cap.read()
             if not ok:
                 break
             if idx % stride == 0:
-                t = idx / fps
-                people, world_people = _pose_candidates(frame, lmk, mp, **zoom_regions(tracker, len(times)))
-                arr = np.full((33, 4), np.nan, np.float32)
-                warr = np.full((33, 3), np.nan, np.float32)
-                scene = cv2.resize(frame, (32, 18)).astype(float) / 255
-                cut = previous_scene is not None and np.mean(np.abs(scene - previous_scene)) > .25
-                previous_scene = scene
-                looks = [signature(frame, p) for p in people]
-                best = tracker.select(people, looks, cut=cut)
-                if best is not None:
-                    arr = people[best]
-                    warr = world_people[best]
-                    tracker.last_box = box_of(arr)
-                    tracker.last_torso = float(np.linalg.norm(
-                        (arr[[11, 12], :2].mean(0) - arr[[23, 24], :2].mean(0)) * [w, h]))
-                times.append(t)
+                arr, warr = follower.step(frame)
+                times.append(idx / fps)
                 lms.append(arr)
                 worlds.append(warr)
                 if max_frames and len(times) >= max_frames:
                     break
             idx += 1
     cap.release()
-    lm_arr = np.stack(lms) if lms else np.zeros((0, 33, 4), np.float32)
-    w_arr = np.stack(worlds) if worlds else np.zeros((0, 33, 3), np.float32)
-    bad = implausible(lm_arr, w, h)
-    lm_arr[bad] = np.nan
-    w_arr[bad] = np.nan
-    return PoseTrack(fps=fps / stride, width=w, height=h, times=np.array(times),
-                     lm=lm_arr, world=w_arr,
-                     meta={"source_fps": fps, "stride": stride, "rejected": int(bad.sum()),
-                           "player_id": 1, "identity": tracker.reference.tolist() if tracker.reference is not None else None})
+    ref = follower.tracker.reference
+    return make_track(times, lms, worlds, fps / stride, w, h,
+                      {"source_fps": fps, "stride": stride, "identity": ref.tolist() if ref is not None else None})
 
 
 SMALL_PLAYER = 60   # px torso at the working size: below it, also search a zoomed crop
