@@ -71,7 +71,7 @@ def dominant_appearance(looks: list[np.ndarray]) -> np.ndarray | None:
     return valid[medoid].copy()
 
 
-def choose_seed(looks: list[np.ndarray]) -> np.ndarray | None:
+def choose_seed(looks: list[np.ndarray], signatures: list[np.ndarray] | None = None) -> np.ndarray | None:
     """The player to coach: the appearance nearest the camera most often across the video,
     or, when that vote is ambiguous, the nearest person in the first sampled frame.
 
@@ -82,25 +82,48 @@ def choose_seed(looks: list[np.ndarray]) -> np.ndarray | None:
     if not looks:
         return None
     voted = dominant_appearance(looks)
-    return voted if voted is not None else looks[0].copy()
+    i = next((k for k, h in enumerate(looks) if voted is not None and np.array_equal(h, voted)), 0)
+    # The tracker gets the same person's torso + thigh signature when one was measured.
+    return (signatures[i] if signatures is not None else looks[i]).copy()
+
+
+TORSO_BINS = 48   # appearance() length; a signature() is torso + thighs, twice that
+
+
+def _parts(v: np.ndarray) -> tuple[np.ndarray, np.ndarray | None]:
+    """(torso, thighs) of a signature; a torso-only appearance has no thighs part."""
+    if len(v) == 2 * TORSO_BINS:
+        legs = v[TORSO_BINS:]
+        return v[:TORSO_BINS], legs if legs.sum() > 0 else None
+    return v, None
+
+
+def _hellinger(a: np.ndarray, b: np.ndarray) -> float:
+    return float(np.linalg.norm(np.sqrt(a) - np.sqrt(b)) / np.sqrt(2))
 
 
 class PlayerIdentity:
     """One persistent selected ID; abstain when re-identification is ambiguous.
 
-    The initial torso template is frozen to prevent drift onto a different player.
-    Position breaks ties during continuous play, but appearance survives side switches.
+    The initial template is frozen to prevent drift onto a different player. The torso decides;
+    thighs (shorts), when both are seen, veto a clearly different person. Position, predicted
+    from recent motion, breaks ties during continuous play; appearance survives side switches.
     """
 
     def __init__(self, reference: np.ndarray | None = None) -> None:
         self.reference = reference
         self.centre: np.ndarray | None = None
+        self.velocity = np.zeros(2)
         self.missing = 0
+        # Kept by the caller for the zoomed search around a small or missed player.
+        self.last_box: tuple[float, float, float, float] | None = None
+        self.last_torso = 0.0
 
     def select(self, poses: list[np.ndarray], looks: list[np.ndarray],
                cut: bool = False) -> int | None:
         if cut:
             self.centre = None
+            self.velocity = np.zeros(2)
         if not poses:
             self.missing += 1
             return None
@@ -112,15 +135,21 @@ class PlayerIdentity:
                 return None
             self.reference = looks[best].copy()
         else:
-            distances = [float(np.linalg.norm(np.sqrt(h) - np.sqrt(self.reference)) / np.sqrt(2))
-                         for h in looks]
-            eligible = [i for i, d in enumerate(distances) if d < LOOSE]
+            ref_torso, ref_legs = _parts(self.reference)
+            distances, legs_ok = [], []
+            for h in looks:
+                torso, legs = _parts(h)
+                distances.append(_hellinger(torso, ref_torso))
+                legs_ok.append(ref_legs is None or legs is None or _hellinger(legs, ref_legs) < LOOSE)
+            eligible = [i for i, d in enumerate(distances) if d < LOOSE and legs_ok[i]]
             if not eligible:
                 self.missing += 1
                 return None
             tracking = self.centre is not None and self.missing < 5
+            # Where the player should be now, from how they were moving.
+            expected = self.centre + self.velocity * (self.missing + 1) if tracking else None
             def cost(i: int) -> float:
-                continuity = min(float(np.linalg.norm(centres[i] - self.centre)), .5) if tracking else 0.
+                continuity = min(float(np.linalg.norm(centres[i] - expected)), .5) if tracking else 0.
                 return distances[i] + .25 * continuity
             ranked = sorted(eligible, key=cost)
             best = ranked[0]
@@ -130,10 +159,12 @@ class PlayerIdentity:
             if distances[best] >= STRICT:
                 # A lone loose match after a cut could be anyone; never guess there.
                 clear = min((d for i, d in enumerate(distances) if i != best), default=0.) - distances[best] >= MARGIN
-                in_place = tracking and float(np.linalg.norm(centres[best] - self.centre)) < NEAR
+                in_place = tracking and float(np.linalg.norm(centres[best] - expected)) < NEAR
                 if not (clear or in_place):
                     self.missing += 1
                     return None
+        if self.centre is not None and self.missing == 0:
+            self.velocity = .5 * self.velocity + .5 * (centres[best] - self.centre)
         self.centre = centres[best]
         self.missing = 0
         return best

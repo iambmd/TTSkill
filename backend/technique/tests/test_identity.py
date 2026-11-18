@@ -122,3 +122,42 @@ def test_table_phantom_is_not_a_person():
     phantom[[11, 12], 1], phantom[[23, 24], 1] = .62, .78
     phantom[[11, 23], 0], phantom[[12, 24], 0] = .44, .54
     assert implausible(np.stack([real, phantom]), 1280, 720).tolist() == [False, True]
+
+
+def _sig(torso: int, legs: int | None) -> np.ndarray:
+    t = np.eye(48)[torso]
+    return np.r_[t, np.eye(48)[legs] if legs is not None else np.zeros(48)]
+
+
+def test_thighs_veto_a_different_player_in_the_same_shirt():
+    tr = PlayerIdentity(_sig(3, 40))                 # teal shirt, black shorts
+    assert tr.select([person(.3)], [_sig(3, 10)], cut=True) is None   # teal shirt, white shorts
+    assert tr.select([person(.3)], [_sig(3, None)], cut=True) == 0    # shorts hidden: torso decides
+    assert tr.select([person(.3), person(.7)], [_sig(3, 10), _sig(3, 40)]) == 1
+
+
+def test_motion_predicts_where_the_player_should_be():
+    tr = PlayerIdentity(TEAL)
+    for x in (.10, .18, .26, .34):                   # moving right by .08 a frame
+        assert tr.select([person(x)], [TEAL]) == 0
+    # A lone loose match .11 past the last position: too far to be "in place" without motion,
+    # right where the player should be with it.
+    assert tr.select([person(.45)], [_look(.7)]) == 0
+    still = PlayerIdentity(TEAL)
+    assert still.select([person(.34)], [TEAL]) == 0
+    assert still.select([person(.45)], [_look(.7)]) is None
+
+
+def test_zoomed_search_only_when_the_selected_player_is_small_or_missing():
+    from technique.pose import QUARTERS, RESEARCH_EVERY, zoom_regions
+    tr = PlayerIdentity()
+    assert zoom_regions(tr, 0) == {}                       # nobody to look for yet
+    tr.reference = TEAL
+    assert zoom_regions(tr, 2) == {"extra": QUARTERS}      # tapped but not found yet
+    tr.last_box, tr.last_torso, tr.missing = (.4, .25, .48, .42), 120, 0
+    assert zoom_regions(tr, 7) == {}                       # big and seen: the usual search
+    tr.last_torso = 40
+    (region,) = zoom_regions(tr, 7)["first"]               # small: a crop around him
+    assert region[0] < .4 and region[2] > .48 and region[1] < .25 and region[3] > .42
+    tr.missing = 30
+    assert zoom_regions(tr, RESEARCH_EVERY * 3) == {"extra": QUARTERS} and zoom_regions(tr, 31) == {}

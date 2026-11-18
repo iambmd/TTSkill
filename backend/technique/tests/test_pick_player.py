@@ -30,12 +30,10 @@ def test_each_tapped_player_is_the_one_tracked(name, tmp_path):
         # The table can hide a far player's hips, so the tapped box may stop just above them.
         pad = .1 * (box[3] - box[1])
         assert box[0] <= hx <= box[2] and box[1] - pad <= hy <= box[3] + pad, (name, pick["id"], hx, hy, box)
-        # Over the whole clip the track keeps the tapped player's size and depth: near and far
-        # players can share an x position (IMG_8782), but not their height in the frame.
+        # Over the whole clip the track keeps the tapped player's size in the frame: near and
+        # far players can share an x position (IMG_8782), but not their height. (Hip height
+        # doesn't work as a check: the table hides a far player's hips and his box ends above them.)
         other = next(b["box"] for b in frame["boxes"] if b["id"] != pick["id"])
         height = np.median(np.ptp(track.lm[track.valid, :, 1], axis=1))
-        hip_y = np.median(track.lm[track.valid, 23:25, 1].mean(1))
         mine, theirs = box[3] - box[1], other[3] - other[1]
         assert abs(height - mine) < abs(height - theirs), (name, pick["id"], height, mine, theirs)
-        mid = lambda b: (b[1] + b[3]) / 2   # noqa: E731 - the box's vertical centre
-        assert abs(hip_y - mid(box)) < abs(hip_y - mid(other)), (name, pick["id"], hip_y, box, other)

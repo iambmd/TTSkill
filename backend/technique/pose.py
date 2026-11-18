@@ -91,19 +91,30 @@ def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE) -> float:
 QUARTERS = [(0., 0., .55, .6), (.45, 0., 1., .6), (0., .4, .55, 1.), (.45, .4, 1., 1.)]
 
 
+MIN_CROP = 256   # px: a smaller crop is upscaled before pose, so a far player gets enough pixels
+
+
 def _pose_candidates(frame: np.ndarray, landmarker, mp,
-                     extra: list[tuple[float, float, float, float]] | None = None
+                     extra: list[tuple[float, float, float, float]] | None = None,
+                     first: list[tuple[float, float, float, float]] | None = None
                      ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Detect visible upright people consistently during seed selection and tracking.
-    extra: more (left, top, right, bottom) crops to search, e.g. QUARTERS for small players."""
+    extra: more (left, top, right, bottom) crops to search, e.g. QUARTERS for small players.
+    first: crops searched before the usual ones, so their (zoomed) landmarks win duplicates."""
     h, w = frame.shape[:2]
     rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     # Wide gym views can hallucinate a body on the table. Half-frame
     # crops give each player enough pixels; the full view covers centre crossings.
     regions = [(0., 0., 1., 1.)] if w / h < 1.5 else [(0., 0., .6, 1.), (.4, 0., 1., 1.), (0., 0., 1., 1.)]
     people, world_people = [], []
-    for left, top, right, bottom in regions + (extra or []):
+    for left, top, right, bottom in (first or []) + regions + (extra or []):
         crop = np.ascontiguousarray(rgb[int(top * h):int(bottom * h), int(left * w):int(right * w)])
+        if 0 < min(crop.shape[:2]) < MIN_CROP:
+            scale = MIN_CROP / min(crop.shape[:2])
+            crop = cv2.resize(crop, (round(crop.shape[1] * scale), round(crop.shape[0] * scale)),
+                              interpolation=cv2.INTER_CUBIC)
+        if crop.size == 0:
+            continue
         result = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=crop))
         for k, pl in enumerate(result.pose_landmarks):
             p = np.array([[v.x * (right-left) + left, v.y * (bottom-top) + top, v.z * (right-left),
@@ -143,7 +154,8 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
     times, lms, worlds = [], [], []
-    from .identity import PlayerIdentity, appearance
+    from .identity import PlayerIdentity, signature
+    from .people import box_of
     tracker = PlayerIdentity(identity)
     previous_scene = None
     idx = 0
@@ -154,17 +166,20 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                 break
             if idx % stride == 0:
                 t = idx / fps
-                people, world_people = _pose_candidates(frame, lmk, mp)
+                people, world_people = _pose_candidates(frame, lmk, mp, **zoom_regions(tracker, len(times)))
                 arr = np.full((33, 4), np.nan, np.float32)
                 warr = np.full((33, 3), np.nan, np.float32)
                 scene = cv2.resize(frame, (32, 18)).astype(float) / 255
                 cut = previous_scene is not None and np.mean(np.abs(scene - previous_scene)) > .25
                 previous_scene = scene
-                looks = [appearance(frame, p) for p in people]
+                looks = [signature(frame, p) for p in people]
                 best = tracker.select(people, looks, cut=cut)
                 if best is not None:
                     arr = people[best]
                     warr = world_people[best]
+                    tracker.last_box = box_of(arr)
+                    tracker.last_torso = float(np.linalg.norm(
+                        (arr[[11, 12], :2].mean(0) - arr[[23, 24], :2].mean(0)) * [w, h]))
                 times.append(t)
                 lms.append(arr)
                 worlds.append(warr)
@@ -183,18 +198,42 @@ def extract_pose(video: str | Path, stride: int = 1, num_poses: int = 3,
                            "player_id": 1, "identity": tracker.reference.tolist() if tracker.reference is not None else None})
 
 
+SMALL_PLAYER = 60   # px torso at the working size: below it, also search a zoomed crop
+LOST = 15           # processed frames missing before searching the zoomed quarters instead
+RESEARCH_EVERY = 10  # ...on every this many processed frames while lost
+
+
+def zoom_regions(tracker, n: int) -> dict:
+    """Extra crops for _pose_candidates when the selected player is small or was missed:
+    around where they were (2.5x their box), or the zoomed quarters once they are long lost.
+    A far-side player is too small for the full or half frame (IMG_8782's opponent was
+    seen in 3% of frames without this)."""
+    if tracker.reference is None:
+        return {}
+    if tracker.last_box is None or tracker.missing >= LOST:
+        # Not found yet (a tapped far player can be missed from the first frame) or long lost:
+        # search the zoomed quarters, every frame at first, then every RESEARCH_EVERY frames.
+        return {"extra": QUARTERS} if n < 5 or n % RESEARCH_EVERY == 0 else {}
+    if tracker.missing == 0 and tracker.last_torso >= SMALL_PLAYER:
+        return {}
+    x0, y0, x1, y1 = tracker.last_box
+    cx, cy, bw, bh = (x0 + x1) / 2, (y0 + y1) / 2, (x1 - x0) * 2.5, (y1 - y0) * 2.5
+    side = max(bw, bh * 9 / 16)   # roughly square in pixels on a 16:9 frame
+    return {"first": [(max(0., cx - side / 2), max(0., cy - bh / 2), min(1., cx + side / 2), min(1., cy + bh / 2))]}
+
+
 def initial_identity(video: str | Path) -> np.ndarray | None:
     """Select the person nearest the camera most often across the whole video (see
     identity.choose_seed for the fallback when that vote is ambiguous)."""
     import mediapipe as mp
     from mediapipe.tasks.python import BaseOptions, vision
-    from .identity import appearance, choose_seed
+    from .identity import appearance, choose_seed, signature
 
     cap = cv2.VideoCapture(str(video))
     if not cap.isOpened():
         raise RuntimeError(f"cannot open {video}")
     count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    looks = []
+    looks, signatures = [], []
     opts = vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path())),
         running_mode=vision.RunningMode.IMAGE, num_poses=3,
@@ -216,10 +255,11 @@ def initial_identity(video: str | Path) -> np.ndarray | None:
                     near = max(people, key=lambda p: np.linalg.norm(
                         (p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
                     looks.append(appearance(frame, near))
+                    signatures.append(signature(frame, near))
     finally:
         cap.release()
     # None when nobody was seen: the existing require_player check gives the no-player message.
-    return choose_seed(looks)
+    return choose_seed(looks, signatures)
 
 
 def _overlap(a: tuple, b: tuple) -> float:
@@ -235,7 +275,7 @@ def identity_from_box(video: str | Path, time: float, box: tuple[float, float, f
     whose body box overlaps `box` most. Raises NoPlayer when nobody is there."""
     import mediapipe as mp
     from mediapipe.tasks.python import BaseOptions, vision
-    from .identity import appearance
+    from .identity import signature
     from .people import box_of
 
     cap = cv2.VideoCapture(str(video))
@@ -263,7 +303,7 @@ def identity_from_box(video: str | Path, time: float, box: tuple[float, float, f
     best = max(scored, key=lambda x: x[0], default=(0.0, None))
     if best[0] < .3:
         raise NoPlayer(f"We couldn't find the player you picked at {when}. Pick again, or trim the video.")
-    return appearance(frame, best[1])
+    return signature(frame, best[1])
 
 
 def save_track(track: PoseTrack, path: str | Path) -> None:
