@@ -7,6 +7,8 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 
+from technique.pose import PoseTrack
+
 
 def test_the_coaching_prompt_is_static_and_cached():
     from agent import brief
@@ -112,18 +114,26 @@ def test_the_second_run_on_a_video_reuses_its_rallies(pipeline):
 
 
 def test_results_appear_as_they_finish(pipeline, monkeypatch):
-    """The reel and the pros' video reach the job while the coaching is still being written."""
+    """The coaching call doesn't wait for the highlight reel (a warm run once waited 12 s for
+    the cut), and the reel still reaches the job when it's done."""
+    import threading
     from agent import fixed
     from app import jobs
     s, calls = pipeline
-    seen = {}
+    writing = threading.Event()
+
+    def slow_reel(s_):
+        assert writing.wait(5), "the coaching call waited for the reel"
+        s_.add_output("highlights", "Top 1 rally", "highlights.mp4", "4 s")
+    monkeypatch.setitem(fixed.TOOLS, "cut_highlights", slow_reel)
 
     def coach(s_, request, f, clip, track):
-        seen["outputs while writing"] = sorted(o["kind"] for o in jobs.load(s.job_id).get("outputs", []))
+        writing.set()
         return report()
     monkeypatch.setattr(fixed, "write_coaching", coach)
     fixed.run_fixed(s, "show my best rallies and fix my forehand")
-    assert "highlights" in seen["outputs while writing"]
+    job = jobs.load(s.job_id)
+    assert "highlights" in [o["kind"] for o in job["outputs"]] and job["status"] == "done"
 
 
 def test_without_a_key_the_offline_cards_are_used(monkeypatch, tmp_path):
@@ -138,3 +148,39 @@ def test_without_a_key_the_offline_cards_are_used(monkeypatch, tmp_path):
     assert out.summary == "offline" and "no ANTHROPIC_API_KEY" in updates["engineNote"]
 
 
+
+
+def test_a_warm_run_reuses_the_coached_clip_and_its_pose(tmp_path, monkeypatch):
+    """The second analysis of a video makes no clip and runs no pose (16.5 s of a warm run)."""
+    from agent import fixed
+    from agent.tools import Session
+    from app import cache, jobs
+    from technique import hitpose, media, pose, strokes
+    monkeypatch.setattr(jobs, "DATA_DIR", tmp_path / "jobs")
+    track = PoseTrack(fps=30, width=640, height=360, times=np.arange(72) / 30, lm=np.full((72, 33, 4), .5, np.float32),
+                      world=np.zeros((72, 33, 3), np.float32))
+    win = hitpose.HitWindow(hit=5.0, track=track, start=4.4, own=True, peak=18)
+    monkeypatch.setattr(hitpose, "hit_pose", lambda *a, **k: hitpose.HitPose(windows=[win], probes=[]))
+    monkeypatch.setattr(hitpose, "own_stroke", lambda *a: 18)
+    monkeypatch.setattr(hitpose, "coached", lambda *a: win)
+    monkeypatch.setattr(fixed, "decide_side", lambda hp, hand: ("right", "user"))
+    made = []
+    monkeypatch.setattr(media, "make_proxy", lambda v, dst, **k: made.append("clip") or Path(dst).write_bytes(b"clip"))
+    monkeypatch.setattr(pose, "extract_pose", lambda clip, identity=None: made.append("pose") or track)
+    monkeypatch.setattr(pose, "require_player", lambda *a, **k: 1.0)
+    monkeypatch.setattr(pose, "player_thumb", lambda *a: None)
+    monkeypatch.setattr(pose, "pose_metrics", lambda *a: {})
+    monkeypatch.setattr("technique.pipeline.key_moments", lambda *a, **k: ([.5, .6, .7], 18))
+    monkeypatch.setattr(strokes, "detect", lambda *a, **k: ("forehand_topspin", {}))
+    monkeypatch.setattr("players.body.body_ratios", lambda tr: {})
+    from app.rally import Rally
+    for _ in range(2):
+        job = jobs.create("coach", {})
+        video = tmp_path / "v.mp4"
+        video.write_bytes(b"one video")
+        s = Session(job["id"], video=video, identity="seed")
+        monkeypatch.setattr(s, "seed", lambda v: "seed")
+        facts, clip, tr = fixed.analyse_stroke(s, video, cache.video_key(video), "forehand",
+                                               [Rally(4.0, 6.0, 4, times=np.array([5.0]))])
+        assert clip.read_bytes() == b"clip" and tr.lm.shape == track.lm.shape
+    assert made == ["clip", "pose"]

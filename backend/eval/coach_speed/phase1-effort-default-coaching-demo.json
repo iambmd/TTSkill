@@ -1,0 +1,304 @@
+{
+  "id": "d1590329ed1a45a182731838e4121cd3",
+  "status": "done",
+  "engine": "pipeline",
+  "engineNote": "fixed pipeline + one claude-sonnet-5-5 call",
+  "summary": "Your forehand topspin is too upright: your knees are almost straight at contact (about 157\u00b0), so your arm does the work instead of your legs.\n\n**What I made:** I found 18 rallies in your match, and the longest was 13 shots. The highlight reel holds the top 5 by shot count. I read your bat hand as right from the paddle colour across several rallies. Tell me if that's wrong.\n\n**What to work on first:**\n1. **Sit lower.** Your knee angle at contact is 157\u00b0. Fan Zhendong is at 114\u00b0 and Ma Long at 126\u00b0. Aim for about 120-135\u00b0 so your legs drive the brush up. At 30.8s your knees were at 135\u00b0 and that was your best stroke.\n2. **Hold a steady, wider base.** Your stance ranged from 1.36 to 2.74 shoulder widths, and it was 1.77 at the coached contact. Aim for about 2 shoulder widths every time. Your wide stance at 30.8s (2.74) went with your deepest knee bend. The narrow one at 54.6s (1.36) went with your straightest legs (166\u00b0).\n3. **Start the bat lower.** Your bat arm is 13\u00b0 higher at the backswing than Sun Yingsha's. Start below the ball so you can brush up, not hit down or flat.\n\n**Keep:** your arm swings freely through the ball and finishes forward and across your body.\n\n**Drill:** shadow swings in front of a mirror. Bend your knees to about 130\u00b0, drop the bat low, then brush up and finish with your knees still bent.",
+  "outputs": [
+    {
+      "kind": "highlights",
+      "title": "Top 5 rallies",
+      "url": "/jobs/d1590329ed1a45a182731838e4121cd3/files/highlights.mp4",
+      "summary": "42 s, most shots first"
+    },
+    {
+      "kind": "match",
+      "title": "You play like Ma Long",
+      "url": "/jobs/d1590329ed1a45a182731838e4121cd3/files/pro_matches.mp4",
+      "summary": "Ma Long 84%, Fan Zhendong 77%, Sun Yingsha 76%"
+    },
+    {
+      "kind": "breakdown",
+      "title": "Forehand topspin breakdown",
+      "url": "/jobs/d1590329ed1a45a182731838e4121cd3/files/breakdown.mp4",
+      "summary": "Sit Lower, Brush Up"
+    }
+  ],
+  "breakdown": {
+    "player": "Player",
+    "stroke": "forehand",
+    "stroke_type": "forehand_topspin",
+    "handedness": "right",
+    "headline": "Sit Lower, Brush Up",
+    "grip": "Shakehand grip in your right hand; keep it loose and squeeze only at the ball.",
+    "stance": "Feet vary from 1.4 to 2.7 shoulder widths and your knees are almost straight (157\u00b0); settle at about 2 widths with deeper knees.",
+    "swing_path": "Your bat arm starts about 13\u00b0 higher than Sun Yingsha's, so drop the bat low and swing from low to high.",
+    "contact_point": "You meet the ball in front with your wrist about midway between hip and shoulder; good, now add leg drive.",
+    "follow_through": "The arm finishes forward and across, but your legs are about 18\u00b0 straighter than Ma Long's at the finish, so stay bent.",
+    "steps": [
+      {
+        "title": "DROP BAT LOW",
+        "lines": [
+          "Bat starts below the ball, elbow close in.",
+          "Low start leaves room to brush up the ball."
+        ],
+        "highlight_words": [],
+        "key_time_s": 1.4,
+        "callouts": [
+          "ARM 13\u00b0 HIGHER THAN SUN"
+        ]
+      },
+      {
+        "title": "SIT LOWER",
+        "lines": [
+          "Knees bent to about 120-135\u00b0 at contact.",
+          "Legs drive the lift so the arm stays loose."
+        ],
+        "highlight_words": [],
+        "key_time_s": 1.57,
+        "callouts": [
+          "KNEE 157\u00b0",
+          "MA LONG 126\u00b0"
+        ]
+      },
+      {
+        "title": "STAY LOW",
+        "lines": [
+          "Knees still bent as the bat ends high.",
+          "Standing up early costs spin and recovery."
+        ],
+        "highlight_words": [],
+        "key_time_s": 1.8,
+        "callouts": [
+          "LEGS 18\u00b0 STRAIGHTER"
+        ]
+      }
+    ],
+    "recap": "Drop the bat low, sit into your legs at contact, and stay low as you finish.",
+    "drill": "Do 20 shadow forehands in front of a mirror: bend your knees to about 130\u00b0, start the bat low, brush up, and freeze at the finish with your knees still bent.",
+    "source": "coach"
+  },
+  "matches": [
+    {
+      "id": "ma-long",
+      "name": "Ma Long",
+      "country": "CHN",
+      "gender": "M",
+      "height_cm": 175,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 84,
+      "body_distance": 0.34,
+      "form_score": 73,
+      "differences": [
+        "Your legs are 18\u00b0 straighter (less knee bend) at the finish than Ma Long's."
+      ],
+      "breakdown": "ma-long/forehand_g3n9jVP0fMU/breakdown.mp4",
+      "source_url": "https://www.youtube.com/watch?v=g3n9jVP0fMU"
+    },
+    {
+      "id": "fan-zhendong",
+      "name": "Fan Zhendong",
+      "country": "CHN",
+      "gender": "M",
+      "height_cm": 173,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 77,
+      "body_distance": 0.53,
+      "form_score": 53,
+      "differences": [
+        "Your legs are 31\u00b0 straighter (less knee bend) at contact than Fan Zhendong's.",
+        "Your elbow is 16\u00b0 straighter at contact than Fan Zhendong's."
+      ],
+      "breakdown": "fan-zhendong/forehand_manual/breakdown.mp4",
+      "source_url": null
+    },
+    {
+      "id": "sun-yingsha",
+      "name": "Sun Yingsha",
+      "country": "CHN",
+      "gender": "F",
+      "height_cm": 162,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 76,
+      "body_distance": 0.55,
+      "form_score": 67,
+      "differences": [
+        "Your legs are 14\u00b0 straighter (less knee bend) at the backswing than Sun Yingsha's.",
+        "Your bat arm is 13\u00b0 higher at the backswing than Sun Yingsha's."
+      ],
+      "breakdown": "sun-yingsha/forehand_manual/breakdown.mp4",
+      "source_url": null
+    }
+  ],
+  "timings": {
+    "wall_s": 81.9,
+    "llm_calls": 1,
+    "llm_s": 22.1,
+    "tokens": {
+      "input": 2614,
+      "output": 2812,
+      "cache_write": 0,
+      "cache_read": 3477
+    },
+    "cost_usd": 0.0337,
+    "rows": [
+      {
+        "kind": "stage",
+        "stage": "hash video",
+        "depth": 0,
+        "start_s": 0.0,
+        "seconds": 0.03
+      },
+      {
+        "kind": "stage",
+        "stage": "audio hits -> rallies (cached per video)",
+        "depth": 0,
+        "start_s": 0.03,
+        "seconds": 0.38
+      },
+      {
+        "kind": "stage",
+        "stage": "seed",
+        "depth": 0,
+        "start_s": 0.5,
+        "seconds": 3.99
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / scan 6 rallies at 1 fps",
+        "depth": 1,
+        "start_s": 4.69,
+        "seconds": 7.14
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / probe the strokes (3 frames each)",
+        "depth": 1,
+        "start_s": 11.83,
+        "seconds": 9.94
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / pose at the best strokes (30 fps)",
+        "depth": 1,
+        "start_s": 21.77,
+        "seconds": 18.01
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player)",
+        "depth": 0,
+        "start_s": 4.49,
+        "seconds": 35.44
+      },
+      {
+        "kind": "stage",
+        "stage": "clip of the coached stroke (720p)",
+        "depth": 0,
+        "start_s": 39.95,
+        "seconds": 0.41
+      },
+      {
+        "kind": "stage",
+        "stage": "drop non-play (floor bounce)",
+        "depth": 0,
+        "start_s": 0.41,
+        "seconds": 45.49
+      },
+      {
+        "kind": "stage",
+        "stage": "pose on that clip (30 fps)",
+        "depth": 0,
+        "start_s": 40.36,
+        "seconds": 8.54
+      },
+      {
+        "kind": "stage",
+        "stage": "height from the table",
+        "depth": 0,
+        "start_s": 49.05,
+        "seconds": 0.51
+      },
+      {
+        "kind": "stage",
+        "stage": "match (distance + DTW)",
+        "depth": 0,
+        "start_s": 49.56,
+        "seconds": 0.01
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights / cut + join (ffmpeg)",
+        "depth": 1,
+        "start_s": 45.98,
+        "seconds": 4.97
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights",
+        "depth": 0,
+        "start_s": 45.91,
+        "seconds": 5.05
+      },
+      {
+        "kind": "stage",
+        "stage": "compile pros' video",
+        "depth": 0,
+        "start_s": 49.58,
+        "seconds": 2.39
+      },
+      {
+        "kind": "llm",
+        "stage": "coach call",
+        "depth": 0,
+        "model": "claude-sonnet-5-5",
+        "start_s": 52.14,
+        "seconds": 22.12,
+        "input": 2614,
+        "output": 2812,
+        "cache_write": 0,
+        "cache_read": 3477,
+        "cost": 0.033695699999999995
+      },
+      {
+        "kind": "stage",
+        "stage": "render",
+        "depth": 0,
+        "start_s": 74.26,
+        "seconds": 7.59
+      }
+    ]
+  },
+  "todos": [
+    {
+      "content": "Find the rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Cut the best rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Track you at your forehands",
+      "status": "completed"
+    },
+    {
+      "content": "Find the pros closest to you",
+      "status": "completed"
+    },
+    {
+      "content": "Write the coaching",
+      "status": "completed"
+    },
+    {
+      "content": "Render your forehand",
+      "status": "completed"
+    }
+  ]
+}

@@ -60,6 +60,8 @@ Rules:
 - Coach what the user asked for. If they asked for rallies too, say what the reel holds.
 - Every fix comes from a measurement or a pro difference in the facts; quote the numbers (angles in
   degrees, stance in shoulder widths) and the pro you compare with. Never invent numbers.
+- Compare a stroke only with the pros' numbers for the same stroke (forehand with forehand).
+- When closest_pros is given, name all three with their match % where you say what was made.
 - Angle targets are estimates from the pros' numbers; say "about".
 - The frames show the user's body; use them to confirm or correct what the numbers suggest (for
   example the stroke type), not to invent new measurements.

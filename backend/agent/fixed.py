@@ -96,6 +96,7 @@ def run_fixed(s: Session, request: str) -> None:
     errors: list[str] = []
     pool = ThreadPoolExecutor(max_workers=3, thread_name_prefix="coach")
     background: dict[str, Future] = {}
+    reel: list[Future] = []   # the highlight cut, started by the play check
     try:
         if "download" in index:
             mark("download", "in_progress", status="running", message="Downloading the video...")
@@ -127,7 +128,9 @@ def run_fixed(s: Session, request: str) -> None:
             kept, _ = cache.cached(key, "rallies", refine)
             s.rallies = kept
             if want_reel and kept:
-                TOOLS["cut_highlights"](s)
+                # Its own job: the coaching call needs the rally count, not the reel (a warm
+                # IMG_8782 run waited 12 s for the cut before calling Claude).
+                reel.append(_in_thread(pool, TOOLS["cut_highlights"], s))
             return kept
 
         def rallies_done(kept) -> None:
@@ -136,10 +139,9 @@ def run_fixed(s: Session, request: str) -> None:
             if kept is None:
                 return
             files["/rallies.json"] = json.dumps([r.to_dict() for r in kept])
-            if want_reel:
+            if want_reel and not kept:
                 mark("reel", "completed")
-                if not kept:
-                    errors.append("No rallies were heard, so there is no reel. Film closer to the table, with the sound on.")
+                errors.append("No rallies were heard, so there is no reel. Film closer to the table, with the sound on.")
 
         background["rallies"] = _in_thread(pool, play_check)
         mark("rallies", "completed")
@@ -182,6 +184,9 @@ def run_fixed(s: Session, request: str) -> None:
             result = _wait(fut, errors, name)
             if name == "rallies":
                 rallies_done(result)
+        for fut in reel:
+            _wait(fut, errors, "Highlight reel")
+            mark("reel", "completed")
         summary = report.summary if report else ""
         if errors:
             summary = (summary + "\n\n" if summary else "") + " ".join(errors)
@@ -227,10 +232,18 @@ def analyse_stroke(s: Session, video: Path, key: str, wing: Optional[str], raw: 
     out = s.dir / "pose"
     out.mkdir(parents=True, exist_ok=True)
     start = max(0.0, best.hit - LEAD)
-    with timing.stage("clip of the coached stroke (720p)"):
-        clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=start, end=best.hit + TAIL)
-    with timing.stage("pose on that clip (30 fps)"):
-        track = pose.extract_pose(clip, identity=seed)
+    clip = out / "clip.mp4"
+
+    def coached_clip():
+        """The clip's bytes and pose, kept with the video's cache (16.5 s of a warm run)."""
+        with timing.stage("clip of the coached stroke (720p)"):
+            media.make_proxy(video, clip, height=720, fps=30, start=start, end=best.hit + TAIL)
+        with timing.stage("pose on that clip (30 fps)"):
+            return clip.read_bytes(), pose.extract_pose(clip, identity=seed)
+
+    (data, track), hit = cache.cached(key, f"clip-{who}-{best.hit:.3f}", coached_clip)
+    if hit:
+        clip.write_bytes(data)
     pose.require_player(track, picked=s.selection is not None)
     hits = [h - start for r in rallies for h in r["hit_times"] if start <= h <= best.hit + TAIL]
     _, p0 = key_moments(track, side, hits, direction="any")

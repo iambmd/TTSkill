@@ -1,6 +1,7 @@
-"""Per-video cache of the slow analysis steps (rallies, player seed, pose at the hits), keyed
-by the video's content hash, so the same video again ("Change player", another request, a
-re-upload) skips them. Lives in backend/data/cache/<hash>/; safe to delete at any time."""
+"""Per-video cache of the slow analysis steps (rallies, player seed, pose at the hits and on
+the coached stroke's clip), keyed by the video's content hash, so the same video again
+("Change player", another request, a re-upload) skips them. Lives in backend/data/cache/<hash>/;
+safe to delete at any time."""
 from __future__ import annotations
 
 import hashlib

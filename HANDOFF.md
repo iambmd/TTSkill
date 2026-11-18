@@ -87,6 +87,20 @@ left this clip's top 3.
      IMG_8782 297 s / $0.35; 19 Claude calls (105-116 s, mostly serial), floor-bounce check 45-65 s,
      choose_window 28-42 s, full-rate pose on the same window x3 (~17-23 s each), breakdown rendered
      x2 (~20 s each), vision analyzer 14-16 s whose text is replaced.
+   - Phase 1 done (`aedbd03`, `220064c`, `626ae6d`, next commit): fixed pipeline (`agent/fixed.py`) +
+     one cached structured Sonnet 5.5 call at effort medium (`agent/brief.py`); pose at the strokes
+     (`technique/hitpose.py`); per-video cache (`app/cache.py`); 720x1280 render of the coached stroke.
+     | | Phase 0 agent | Phase 1 first time | Phase 1 same video again |
+     | coaching-demo | 242 s, $0.36 | 83.6 s, $0.025 | 23.0 s, $0.016 |
+     | IMG_8782 | 297 s, $0.35 | 122.7 s, $0.016 | 29.4 s, $0.018 |
+     First-time runs are dominated by the pose-based play check (56-83 s, in the background, only
+     the reel needs it) and pose at the strokes (42-67 s; both slow each other down). Records:
+     `backend/eval/coach_speed/phase1-*.json` (effort default vs medium in `phase1-effort-*`).
+     Quality: same shape and first fix as the agent on coaching-demo (knees 157° vs 158°, same pros).
+     Open: the elbow advice can contradict itself because the contact angle (128° vs Fan 161°) and
+     the DTW note ("16° straighter than Fan") disagree; the agent quoted the same note.
+     Not done: follow-up questions (the deep agent is kept behind COACH_ENGINE=agent, not wired to a
+     follow-up endpoint).
 
 
 1. **"Tap the player to analyze": done** (all six parts pushed):

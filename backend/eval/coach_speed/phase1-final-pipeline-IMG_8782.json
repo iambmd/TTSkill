@@ -1,0 +1,305 @@
+{
+  "id": "4324069b296a46d485ee167b08f0945a",
+  "status": "done",
+  "engine": "pipeline",
+  "engineNote": "fixed pipeline + one claude-sonnet-5-5 call",
+  "summary": "Your forehand is standing too tall, with straight legs and a wide stance that stops your legs from driving the stroke.\n\n**What was made:** a highlight reel of your top 5 rallies by shot count, picked from 18 rallies found; the longest is 17 shots. I also broke down your forehand topspin from the rally at about 190 seconds. Your bat hand was read from the video as right.\n\n**What to work on first:**\n1. **Bend your knees more.** Your knee angle at contact is 162\u00b0. Fan Zhendong is at 114\u00b0 and Harimoto at 134\u00b0, so aim for about 115-135\u00b0. You are 46\u00b0 straighter than Fan, so you lose the leg push into the ball.\n2. **Finish higher.** Your bat arm ends 28\u00b0 lower than Sun Yingsha's and 81\u00b0 lower than Harimoto's. Brush up and forward and end near eye level so the stroke carries topspin instead of stopping short. Your elbow is also 26\u00b0 straighter than Fan's at the finish, so keep it softly bent.\n3. **Narrow your stance.** At contact your feet are 2.89 shoulder widths apart, and 1.84 on your other measured stroke. The wide stance locks your hips, so aim for about 1.8 shoulder widths each time so you can turn.\n\n**Keep:** your elbow at contact (137\u00b0) is close to Fan's 161\u00b0 and Harimoto's 144\u00b0, so your arm is already in a good place in front of you.\n\n**Drill:** shadow-swing in front of a mirror with your knees bent, 20 reps, finishing with the bat at eye level.",
+  "outputs": [
+    {
+      "kind": "highlights",
+      "title": "Top 5 rallies",
+      "url": "/jobs/4324069b296a46d485ee167b08f0945a/files/highlights.mp4",
+      "summary": "56 s, most shots first"
+    },
+    {
+      "kind": "match",
+      "title": "You play like Fan Zhendong",
+      "url": "/jobs/4324069b296a46d485ee167b08f0945a/files/pro_matches.mp4",
+      "summary": "Fan Zhendong 82%, Sun Yingsha 79%, Tomokazu Harimoto 76%"
+    },
+    {
+      "kind": "breakdown",
+      "title": "Forehand topspin breakdown",
+      "url": "/jobs/4324069b296a46d485ee167b08f0945a/files/breakdown.mp4",
+      "summary": "Sit lower, finish higher"
+    }
+  ],
+  "breakdown": {
+    "player": "Player",
+    "stroke": "forehand",
+    "stroke_type": "forehand_topspin",
+    "handedness": "right",
+    "headline": "Sit lower, finish higher",
+    "grip": "Shakehand grip held loose, with a light squeeze only at contact.",
+    "stance": "Feet are too wide at 2.89 shoulder widths and legs too straight at 162\u00b0; sit to about 115-135\u00b0 of knee bend.",
+    "swing_path": "Start low beside your hip and swing up and forward, driven by legs then waist, with the arm last.",
+    "contact_point": "Meet the ball in front of your body at the top of the bounce, with the elbow near 137-160\u00b0.",
+    "follow_through": "Finish up and across near eye level, then recover quickly to a ready stance; your finish is too low now.",
+    "steps": [
+      {
+        "title": "SIT LOWER",
+        "lines": [
+          "Bend knees, feet about shoulder-width apart",
+          "Loads the legs so they drive the stroke"
+        ],
+        "highlight_words": [],
+        "key_time_s": 1.83,
+        "callouts": [
+          "KNEE 162\u00b0",
+          "STANCE 2.89x"
+        ]
+      },
+      {
+        "title": "BRUSH FORWARD",
+        "lines": [
+          "Hit in front of you at the top of the bounce",
+          "Early contact gives control and topspin"
+        ],
+        "highlight_words": [],
+        "key_time_s": 1.93,
+        "callouts": [
+          "ELBOW 137\u00b0"
+        ]
+      },
+      {
+        "title": "FINISH HIGH",
+        "lines": [
+          "Bat ends up near eye level, elbow soft",
+          "A high finish shows a full upward brush"
+        ],
+        "highlight_words": [],
+        "key_time_s": 2.3,
+        "callouts": [
+          "ARM 28\u00b0 LOW"
+        ]
+      }
+    ],
+    "recap": "Sit lower, brush forward in front of you, then finish high.",
+    "drill": "Shadow-swing 20 forehands in front of a mirror: knees bent to about 130\u00b0, feet 1.8 shoulder widths apart, finish with the bat at eye level.",
+    "source": "coach"
+  },
+  "matches": [
+    {
+      "id": "fan-zhendong",
+      "name": "Fan Zhendong",
+      "country": "CHN",
+      "gender": "M",
+      "height_cm": 173,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 82,
+      "body_distance": 0.4,
+      "form_score": 46,
+      "differences": [
+        "Your legs are 46\u00b0 straighter (less knee bend) at contact than Fan Zhendong's.",
+        "Your elbow is 26\u00b0 straighter at the finish than Fan Zhendong's."
+      ],
+      "breakdown": "fan-zhendong/forehand_manual/breakdown.mp4",
+      "source_url": null
+    },
+    {
+      "id": "sun-yingsha",
+      "name": "Sun Yingsha",
+      "country": "CHN",
+      "gender": "F",
+      "height_cm": 162,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 79,
+      "body_distance": 0.47,
+      "form_score": 57,
+      "differences": [
+        "Your bat arm is 28\u00b0 lower at the finish than Sun Yingsha's.",
+        "Your elbow is 22\u00b0 straighter at the backswing than Sun Yingsha's."
+      ],
+      "breakdown": "sun-yingsha/forehand_manual/breakdown.mp4",
+      "source_url": null
+    },
+    {
+      "id": "tomokazu-harimoto",
+      "name": "Tomokazu Harimoto",
+      "country": "JPN",
+      "gender": "M",
+      "height_cm": 178,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 76,
+      "body_distance": 0.55,
+      "form_score": 38,
+      "differences": [
+        "Your bat arm is 81\u00b0 lower at the finish than Tomokazu Harimoto's.",
+        "Your legs are 39\u00b0 straighter (less knee bend) at contact than Tomokazu Harimoto's."
+      ],
+      "breakdown": "tomokazu-harimoto/forehand_RyaTg3GB_Wk/breakdown.mp4",
+      "source_url": "https://www.youtube.com/watch?v=RyaTg3GB_Wk"
+    }
+  ],
+  "timings": {
+    "wall_s": 122.7,
+    "llm_calls": 1,
+    "llm_s": 10.2,
+    "tokens": {
+      "input": 2586,
+      "output": 1089,
+      "cache_write": 0,
+      "cache_read": 3505
+    },
+    "cost_usd": 0.0164,
+    "rows": [
+      {
+        "kind": "stage",
+        "stage": "hash video",
+        "depth": 0,
+        "start_s": 0.0,
+        "seconds": 0.16
+      },
+      {
+        "kind": "stage",
+        "stage": "audio hits -> rallies (cached per video)",
+        "depth": 0,
+        "start_s": 0.16,
+        "seconds": 0.65
+      },
+      {
+        "kind": "stage",
+        "stage": "seed",
+        "depth": 0,
+        "start_s": 0.92,
+        "seconds": 10.53
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / scan 6 rallies at 1 fps",
+        "depth": 1,
+        "start_s": 11.82,
+        "seconds": 14.4
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / probe the strokes (3 frames each)",
+        "depth": 1,
+        "start_s": 26.22,
+        "seconds": 28.72
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player) / pose at the best strokes (30 fps)",
+        "depth": 1,
+        "start_s": 54.95,
+        "seconds": 23.72
+      },
+      {
+        "kind": "stage",
+        "stage": "pose at the hits (cached per video and player)",
+        "depth": 0,
+        "start_s": 11.45,
+        "seconds": 67.31
+      },
+      {
+        "kind": "stage",
+        "stage": "clip of the coached stroke (720p)",
+        "depth": 0,
+        "start_s": 78.78,
+        "seconds": 1.12
+      },
+      {
+        "kind": "stage",
+        "stage": "drop non-play (floor bounce)",
+        "depth": 0,
+        "start_s": 0.81,
+        "seconds": 83.35
+      },
+      {
+        "kind": "stage",
+        "stage": "pose on that clip (30 fps)",
+        "depth": 0,
+        "start_s": 79.9,
+        "seconds": 15.45
+      },
+      {
+        "kind": "stage",
+        "stage": "height from the table",
+        "depth": 0,
+        "start_s": 96.2,
+        "seconds": 1.42
+      },
+      {
+        "kind": "stage",
+        "stage": "match (distance + DTW)",
+        "depth": 0,
+        "start_s": 97.62,
+        "seconds": 0.02
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights / cut + join (ffmpeg)",
+        "depth": 1,
+        "start_s": 84.24,
+        "seconds": 14.7
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights",
+        "depth": 0,
+        "start_s": 84.16,
+        "seconds": 14.78
+      },
+      {
+        "kind": "stage",
+        "stage": "compile pros' video",
+        "depth": 0,
+        "start_s": 97.64,
+        "seconds": 3.85
+      },
+      {
+        "kind": "llm",
+        "stage": "coach call",
+        "depth": 0,
+        "model": "claude-sonnet-5-5",
+        "start_s": 102.11,
+        "seconds": 10.15,
+        "input": 2586,
+        "output": 1089,
+        "cache_write": 0,
+        "cache_read": 3505,
+        "cost": 0.0164125
+      },
+      {
+        "kind": "stage",
+        "stage": "render",
+        "depth": 0,
+        "start_s": 112.26,
+        "seconds": 10.47
+      }
+    ]
+  },
+  "todos": [
+    {
+      "content": "Find the rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Cut the best rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Track you at your forehands",
+      "status": "completed"
+    },
+    {
+      "content": "Find the pros closest to you",
+      "status": "completed"
+    },
+    {
+      "content": "Write the coaching",
+      "status": "completed"
+    },
+    {
+      "content": "Render your forehand",
+      "status": "completed"
+    }
+  ]
+}
