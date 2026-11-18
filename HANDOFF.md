@@ -101,6 +101,13 @@ left this clip's top 3.
      the DTW note ("16° straighter than Fan") disagree; the agent quoted the same note.
      Not done: follow-up questions (the deep agent is kept behind COACH_ENGINE=agent, not wired to a
      follow-up endpoint).
+   - Phase 3 done (`78ee64d`; fix `0507bed`): SQLite queue (`app/jobqueue.py`; Redis not installed,
+     no sudo) + `python -m app.worker` (`make dev` starts it): a spawned process per job, 15 min limit
+     (Auto-Cut 30), OOM/timeout/dead-worker all end the job failed with a message; a `prepare` lane
+     fills Coach's per-video cache at upload (cache entries locked across processes). API reloads no
+     longer kill jobs (checked live). `TTSKILL_INLINE=1` = old in-API mode (tests).
+     Fix found on the way: a slow-stroke stretch (pushes, 3.1 torso/s peak) found "no strokes";
+     `hitpose.find_own` now relaxes the 5 torso/s bar when nothing passes.
 
 
 1. **"Tap the player to analyze": done** (all six parts pushed):
@@ -145,7 +152,8 @@ left this clip's top 3.
 - Player lookup: a partner seen only twice in the same spot on a montage reads as "still"
   (background), and a small split-off of the user can land in `others`; both stay tappable via
   "Show everyone we saw". Table "far" only works for blue/green tops (grey tables never count).
-- `uvicorn --reload` watches backend/tests too: editing a test fails running jobs.
+- `uvicorn --reload` watches backend/tests too (only matters with TTSKILL_INLINE=1 now).
+- The worker runs one job at a time by default (TTSKILL_WORKERS); a second job waits in the queue.
 
 - Late rally starts (the montage 129.5 s rally is detected from 131.4 s); quiet
   continuous-video rallies split (3 on coach_demo); one retrieval false rally on coach_demo.
