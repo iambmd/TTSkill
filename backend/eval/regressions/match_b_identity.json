@@ -16,11 +16,12 @@
     {
       "time": 8,
       "box": [
-        0.65,
+        0.52,
         0.2,
         0.95,
         0.85
-      ]
+      ],
+      "note": "2026-11-17: left edge 0.65 -> 0.52. The teal player's hips are at x ~0.63 in this frame (checked on the frame); the original box excluded them."
     },
     {
       "time": 23,
