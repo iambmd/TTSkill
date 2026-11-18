@@ -154,3 +154,13 @@ See [AGENTS.md](AGENTS.md) for conventions and how to extend each part.
 - Height from the table is an estimate (about ±10 cm). Entering your height gives better matches.
 - Pro heights and bat hands come from public sources and are listed per player in `players.json`. Seven heights are marked approximate where sources disagree (for younger players, by a few cm).
 - Uploads are capped at 10 minutes, so a full match goes in as a YouTube link (up to 60 minutes on Auto-Cut) or in parts.
+
+## License
+
+TTSkill is source-available, not open source. It is licensed under the [Business Source License 1.1](LICENSE) (BSL 1.1):
+
+- **Free for personal and non-commercial use.** You can read, run, modify and share the code for those purposes.
+- **Commercial use needs a commercial license.** This includes offering TTSkill, or a modified version, as a hosted or paid service. For a commercial license, contact Duke ([@iambmd](https://github.com/iambmd)).
+- **It becomes open source on the Change Date, 2030-11-18.** The code is then available under the Apache License 2.0.
+
+Third-party code, models, fonts, footage and data keep their own licenses. See [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md), which also lists what can't be used commercially as it is (YouTube footage, OpenTTGames, RevSpin data).
