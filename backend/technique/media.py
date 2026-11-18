@@ -56,7 +56,8 @@ def make_proxy(src: str | Path, dst: str | Path, height: int = 720, fps: int = 3
     return dst
 
 
-def encode_frames(frame_iter, dst: str | Path, width: int, height: int, fps: int = 30) -> Path:
+def encode_frames(frame_iter, dst: str | Path, width: int, height: int, fps: int = 30,
+                  preset: str = "veryfast") -> Path:
     """Pipe raw BGR frames into ffmpeg -> H.264 mp4."""
     dst = Path(dst)
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -64,7 +65,7 @@ def encode_frames(frame_iter, dst: str | Path, width: int, height: int, fps: int
         [
             _ffmpeg(), "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "bgr24",
             "-s", f"{width}x{height}", "-r", str(fps), "-i", "-",
-            "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p",
+            "-c:v", "libx264", "-preset", preset, "-crf", "20", "-pix_fmt", "yuv420p",
             "-movflags", "+faststart", str(dst),
         ],
         stdin=subprocess.PIPE,

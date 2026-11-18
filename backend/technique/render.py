@@ -277,6 +277,9 @@ def blend(dst: np.ndarray, rgba: np.ndarray) -> np.ndarray:
     return out
 
 
+_blend = blend   # render_breakdown wraps it to shrink the text layers
+
+
 # ------------------------------------------------------------------ video area
 
 def compute_crop(track: PoseTrack, src_w: int, src_h: int) -> tuple[int, int, int, int]:
@@ -298,36 +301,48 @@ def compute_crop(track: PoseTrack, src_w: int, src_h: int) -> tuple[int, int, in
     return x, y, cw, ch
 
 
-def _add_glow(canvas: np.ndarray, glow: np.ndarray, sigma: float, gain: float):
+def _add_glow(canvas: np.ndarray, glow: np.ndarray, sigma: float, gain: float,
+              vid_y: int = VID_Y, vid_h: int = VID_H, margin: int = 100):
     """Blur `glow` (video band only, half resolution) and add it onto canvas in place."""
-    band = glow[VID_Y - 100:VID_Y + VID_H + 100]
-    small = cv2.resize(band, (W // 2, band.shape[0] // 2), interpolation=cv2.INTER_AREA)
+    w = canvas.shape[1]
+    band = glow[vid_y - margin:vid_y + vid_h + margin]
+    small = cv2.resize(band, (w // 2, band.shape[0] // 2), interpolation=cv2.INTER_AREA)
     small = cv2.GaussianBlur(small, (0, 0), sigma / 2)
-    big = cv2.resize(small, (W, band.shape[0]), interpolation=cv2.INTER_LINEAR)
-    region = canvas[VID_Y - 100:VID_Y + VID_H + 100]
+    big = cv2.resize(small, (w, band.shape[0]), interpolation=cv2.INTER_LINEAR)
+    region = canvas[vid_y - margin:vid_y + vid_h + margin]
     cv2.addWeighted(region, 1.0, big, gain, 0, dst=region)
 
 
 
 
 class Scene:
-    def __init__(self, frames: list[np.ndarray], track: PoseTrack, side: str):
+    """The per-frame picture: the cropped video band and the pose overlay. `s` scales the
+    output (2/3 = 720x1280); the text layers keep their 1080x1920 layout and are shrunk once."""
+
+    def __init__(self, frames: list[np.ndarray], track: PoseTrack, side: str, s: float = 1.0):
         self.frames = frames
         self.track = track
+        self.s = s
+        self.W, self.H = int(round(W * s / 2) * 2), int(round(H * s / 2) * 2)
+        self.VY, self.VH = int(round(VID_Y * s)), int(round(VID_H * s))
         sh, sw = frames[0].shape[:2]
         self.crop = compute_crop(track, sw, sh)
-        self.scale = VID_H / self.crop[3]
-        self.out_w = min(W, int(round(self.crop[2] * self.scale)))
-        self.x_off = (W - self.out_w) // 2
+        self.scale = self.VH / self.crop[3]
+        self.out_w = min(self.W, int(round(self.crop[2] * self.scale)))
+        self.x_off = (self.W - self.out_w) // 2
         n = len(track.times)
         self.pts = _interp_nan(track.lm[:, :, :2]) if n else np.zeros((0, 33, 2))
         self.pts = self.pts * np.array([sw, sh])
         self.vis = track.valid
         self.wrist = R_WRIST if side != "left" else L_WRIST
 
+    def px(self, v: float) -> int:
+        """A 1080x1920 layout size at this output's scale."""
+        return max(1, int(round(v * self.s)))
+
     def to_out(self, p: np.ndarray) -> np.ndarray:
         x, y = self.crop[:2]
-        return (p - np.array([x, y])) * self.scale + np.array([self.x_off, VID_Y])
+        return (p - np.array([x, y])) * self.scale + np.array([self.x_off, self.VY])
 
     def _pose_idx(self, fi: int) -> int:
         return int(np.clip(fi, 0, len(self.pts) - 1))
@@ -344,25 +359,24 @@ class Scene:
             gray = np.array([0.114, 0.587, 0.299], np.float32)
             gain = np.array([1.25, 1.0, 0.85], np.float32)
             Scene._TINT = (0.30 * np.outer(gain, gray) + 0.12 * np.diag(gain)).astype(np.float32)
-            r = 140
-            ramp = np.linspace(0, 1, r, dtype=np.float32)[:, None, None]
-            Scene._RAMP = ramp
+            Scene._RAMP = {}
         x, y, cw, ch = self.crop
         src = self.frames[min(fi, len(self.frames) - 1)][y:y + ch, x:x + cw]
         interp = cv2.INTER_AREA if self.out_w <= cw else cv2.INTER_CUBIC
-        clip = cv2.transform(cv2.resize(src, (self.out_w, VID_H), interpolation=interp),
+        clip = cv2.transform(cv2.resize(src, (self.out_w, self.VH), interpolation=interp),
                              Scene._TINT)
         bgf = np.array(BG, np.float32)
-        if self.out_w < W:  # pillarbox: fade the left/right edges into the background
-            e = min(90, self.out_w // 4)
+        if self.out_w < self.W:  # pillarbox: fade the left/right edges into the background
+            e = min(self.px(90), self.out_w // 4)
             hr = np.linspace(0, 1, e, dtype=np.float32)[None, :, None]
             clip[:, :e] = (clip[:, :e] * hr + bgf * (1 - hr)).astype(np.uint8)
             clip[:, -e:] = (clip[:, -e:] * hr[:, ::-1] + bgf * (1 - hr[:, ::-1])).astype(np.uint8)
-        vid = np.empty((VID_H, W, 3), np.uint8)
+        vid = np.empty((self.VH, self.W, 3), np.uint8)
         vid[:] = BG
         vid[:, self.x_off:self.x_off + self.out_w] = clip
         # vignette top/bottom so the video melts into the background
-        ramp, r = Scene._RAMP, Scene._RAMP.shape[0]
+        r = self.px(140)
+        ramp = Scene._RAMP.setdefault(r, np.linspace(0, 1, r, dtype=np.float32)[:, None, None])
         vid[:r] = (vid[:r] * ramp + bgf * (1 - ramp)).astype(np.uint8)
         vid[-r:] = (vid[-r:] * ramp[::-1] + bgf * (1 - ramp[::-1])).astype(np.uint8)
         if len(cache) > 8:
@@ -373,9 +387,9 @@ class Scene:
     def draw(self, fi: int, ring: Optional[tuple] = None, connector: bool = False,
              trail: bool = True, trail_color: tuple = (56, 217, 245)) -> np.ndarray:
         if not hasattr(self, "_bg"):
-            self._bg = np.full((H, W, 3), BG, np.uint8)
+            self._bg = np.full((self.H, self.W, 3), BG, np.uint8)
         canvas = self._bg.copy()
-        canvas[VID_Y:VID_Y + VID_H] = self._video_band(fi)
+        canvas[self.VY:self.VY + self.VH] = self._video_band(fi)
 
         if len(self.pts):
             pi = self._pose_idx(fi)
@@ -386,11 +400,11 @@ class Scene:
                 if ring:
                     self._ring(canvas, self.to_out(self.pts[pi, self.wrist]), *ring)
                 # keep the overlay inside the video band so it never runs under the text
-                canvas[:VID_Y] = BG
-                canvas[VID_Y + VID_H:] = BG
+                canvas[:self.VY] = BG
+                canvas[self.VY + self.VH:] = BG
                 if ring and connector:
                     c = self.to_out(self.pts[pi, self.wrist])
-                    c[1] = np.clip(c[1], VID_Y, VID_Y + VID_H - 1)
+                    c[1] = np.clip(c[1], self.VY, self.VY + self.VH - 1)
                     self._connector(canvas, c, ring[0])
         return canvas
 
@@ -398,14 +412,14 @@ class Scene:
         glow = np.zeros_like(canvas)
         pts = p.astype(int)
         for a, b in CONNECTIONS:
-            cv2.line(glow, tuple(pts[a]), tuple(pts[b]), (255, 220, 120), 16, cv2.LINE_AA)
-        _add_glow(canvas, glow, 9, 0.55)
+            cv2.line(glow, tuple(pts[a]), tuple(pts[b]), (255, 220, 120), self.px(16), cv2.LINE_AA)
+        _add_glow(canvas, glow, 9 * self.s, 0.55, self.VY, self.VH, self.px(100))
         for a, b in CONNECTIONS:
-            cv2.line(canvas, tuple(pts[a]), tuple(pts[b]), (245, 245, 245), 5, cv2.LINE_AA)
+            cv2.line(canvas, tuple(pts[a]), tuple(pts[b]), (245, 245, 245), self.px(5), cv2.LINE_AA)
         for j in (11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28):
-            cv2.circle(canvas, tuple(pts[j]), 8, (255, 255, 255), -1, cv2.LINE_AA)
-        head_r = int(max(14, np.linalg.norm(p[11] - p[12]) * 0.35))
-        cv2.circle(canvas, tuple(pts[NOSE]), head_r, (245, 245, 245), 4, cv2.LINE_AA)
+            cv2.circle(canvas, tuple(pts[j]), self.px(8), (255, 255, 255), -1, cv2.LINE_AA)
+        head_r = int(max(self.px(14), np.linalg.norm(p[11] - p[12]) * 0.35))
+        cv2.circle(canvas, tuple(pts[NOSE]), head_r, (245, 245, 245), self.px(4), cv2.LINE_AA)
 
     def _trail(self, canvas, pi, color_rgb=(56, 217, 245), n=10):
         idx = [i for i in range(max(0, pi - n), pi + 1)]
@@ -413,28 +427,28 @@ class Scene:
             return
         pts = np.array([self.to_out(self.pts[i, self.wrist]) for i in idx]).astype(int)
         for k in range(1, len(pts)):
-            if np.linalg.norm(pts[k] - pts[k - 1]) > 0.18 * W:
+            if np.linalg.norm(pts[k] - pts[k - 1]) > 0.18 * self.W:
                 continue  # tracking jump: don't draw a streak across the frame
             a = k / len(pts)
             col = tuple(int(c * a) for c in color_rgb[::-1])  # BGR, fading toward the tail
-            cv2.line(canvas, tuple(pts[k - 1]), tuple(pts[k]), col, int(2 + 6 * a), cv2.LINE_AA)
+            cv2.line(canvas, tuple(pts[k - 1]), tuple(pts[k]), col, self.px(2 + 6 * a), cv2.LINE_AA)
 
     def _ring(self, canvas, c, color_rgb, phase: float):
         bgr = tuple(int(v) for v in color_rgb[::-1])
         c = tuple(c.astype(int))
         glow = np.zeros_like(canvas)
-        r = int(34 + 6 * np.sin(phase * 2 * np.pi))
-        cv2.circle(glow, c, r, bgr, 14, cv2.LINE_AA)
-        _add_glow(canvas, glow, 8, 1.0)
-        cv2.circle(canvas, c, r, bgr, 5, cv2.LINE_AA)
-        cv2.circle(canvas, c, 8, (255, 255, 255), -1, cv2.LINE_AA)
+        r = self.px(34 + 6 * np.sin(phase * 2 * np.pi))
+        cv2.circle(glow, c, r, bgr, self.px(14), cv2.LINE_AA)
+        _add_glow(canvas, glow, 8 * self.s, 1.0, self.VY, self.VH, self.px(100))
+        cv2.circle(canvas, c, r, bgr, self.px(5), cv2.LINE_AA)
+        cv2.circle(canvas, c, self.px(8), (255, 255, 255), -1, cv2.LINE_AA)
 
     def _connector(self, canvas, c, color_rgb):
         bgr = tuple(int(v) for v in color_rgb[::-1])
         c = c.astype(int)
-        x0, y_lab = 72, VID_Y + VID_H + 30
-        cv2.line(canvas, (int(c[0]), int(c[1])), (x0, int(c[1])), bgr, 3, cv2.LINE_AA)
-        cv2.line(canvas, (x0, int(c[1])), (x0, y_lab), bgr, 3, cv2.LINE_AA)
+        x0, y_lab = self.px(72), self.VY + self.VH + self.px(30)
+        cv2.line(canvas, (int(c[0]), int(c[1])), (x0, int(c[1])), bgr, self.px(3), cv2.LINE_AA)
+        cv2.line(canvas, (x0, int(c[1])), (x0, y_lab), bgr, self.px(3), cv2.LINE_AA)
 
 
 
@@ -454,11 +468,24 @@ def _read_frames(video: str) -> list[np.ndarray]:
 
 
 def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path: str,
-                     side: str = "right") -> str:
+                     side: str = "right", height: int = H, preset: str = "veryfast") -> str:
+    """height: output height (1920 = the 1080x1920 house size; Coach renders 1280, 720 wide,
+    with preset "superfast": 2.25x fewer pixels to draw, blend and encode)."""
     frames = _read_frames(video)
     if not frames:
         raise RuntimeError("no frames in clip")
-    scene = Scene(frames, track, side)
+    scene = Scene(frames, track, side, height / H)
+    shrunk: dict[int, tuple] = {}
+
+    def blend(dst: np.ndarray, layer: np.ndarray) -> np.ndarray:
+        """The module's blend, with the 1080x1920 text layers shrunk once to the output size."""
+        if scene.s != 1.0:
+            hit = shrunk.get(id(layer))
+            if hit is None or hit[0] is not layer:
+                hit = (layer, cv2.resize(layer, (scene.W, scene.H), interpolation=cv2.INTER_AREA))
+                shrunk[id(layer)] = hit
+            layer = hit[1]
+        return _blend(dst, layer)
     fps_src = track.fps or 30.0
     n = len(frames)
     pace = style.pacing()
@@ -511,7 +538,7 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
         for _ in range(int(pace["practice_s"] * FPS)):
             yield blend(scene.draw(hold, trail=False), drill)
 
-    encode_frames(gen(), out_path, W, H, FPS)
+    encode_frames(gen(), out_path, scene.W, scene.H, FPS, preset=preset)
     return out_path
 
 
