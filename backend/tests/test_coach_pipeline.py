@@ -184,3 +184,58 @@ def test_a_warm_run_reuses_the_coached_clip_and_its_pose(tmp_path, monkeypatch):
                                                [Rally(4.0, 6.0, 4, times=np.array([5.0]))])
         assert clip.read_bytes() == b"clip" and tr.lm.shape == track.lm.shape
     assert made == ["clip", "pose"]
+
+
+def test_the_job_carries_the_coaching_notes_in_a_stable_field(pipeline):
+    """The page shows `coaching` (Markdown with the biggest fix and a drill), never the working
+    files; a drill the summary leaves out is added as its own line."""
+    from agent.fixed import run_fixed
+    from app import jobs
+    s, _ = pipeline
+    run_fixed(s, "fix my forehand")
+    job = jobs.load(s.job_id)
+    assert job["coaching"] == {
+        "markdown": "Your knees are 157°.\n\n**Biggest fix:** Sit low, meet front, end high.\n\n**Drill:** Shadow 20.",
+        "fix": "Sit low, meet front, end high.", "drill": "Shadow 20."}
+    assert job["warning"] is None and "/facts.json" not in job["coaching"]["markdown"]
+
+
+def test_no_stroke_means_no_notes_and_a_warning_instead(pipeline, monkeypatch):
+    from agent import fixed
+    from agent.tools import ToolError
+    from app import jobs
+    s, _ = pipeline
+
+    def no_stroke(*a):
+        raise ToolError("We couldn't see you hitting the ball clearly.")
+    monkeypatch.setattr(fixed, "analyse_stroke", no_stroke)
+    fixed.run_fixed(s, "fix my forehand")
+    job = jobs.load(s.job_id)
+    assert job["status"] == "done" and job.get("coaching") is None
+    assert job["warning"] == "We couldn't see you hitting the ball clearly."
+
+
+def test_the_offline_cards_write_markdown_with_the_fixes_and_the_drill(monkeypatch):
+    """Without a key, the notes have the same shape as the coaching call's: an opening line,
+    numbered fixes, a labelled drill."""
+    from agent import fixed, notes
+    step = lambda t, a, b: SimpleNamespace(title=t, lines=[a, b], callouts=["KNEE 157°"])
+    b = SimpleNamespace(steps=[step("LOAD LOW", "Knees bent", "Power from the legs"),
+                               step("MEET FRONT", "Contact in front", ""), step("END HIGH", "Finish high", "Reset")],
+                        headline="Sit low", grip="g", stance="s", swing_path="p", contact_point="c",
+                        follow_through="f", recap="Load low, meet front, end high.", drill="Shadow 20 swings.")
+    monkeypatch.setattr("technique.analyze.OfflineAnalyzer.from_video", lambda self, *a, **k: b)
+    facts = {"stroke": "forehand", "stroke_type": "forehand_topspin", "stroke_label": "Forehand topspin",
+             "key_times_s": [1, 2, 3], "at_contact": {"elbow_angle_deg": 128, "knee_angle_deg": None},
+             "closest_pros": [{"name": "Ma Long", "score": 84}]}
+    out = fixed.offline_report(facts, Path("clip"), None)
+    assert out.summary == ("Your forehand topspin, measured at contact: elbow about 128°. "
+                           "You play most like Ma Long (84% body match).\n\n"
+                           "**What to work on first:**\n"
+                           "1. **Load low.** Knees bent Power from the legs\n"
+                           "2. **Meet front.** Contact in front\n"
+                           "3. **End high.** Finish high Reset\n\n"
+                           "**Drill:** Shadow 20 swings.")
+    got = notes.build(out.summary, drill=out.drill)
+    assert got["fix"] == "**Load low.** Knees bent Power from the legs" and got["drill"] == "Shadow 20 swings."
+    assert got["markdown"] == out.summary   # nothing to add

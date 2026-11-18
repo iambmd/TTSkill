@@ -24,8 +24,10 @@ from pathlib import Path
 from typing import Optional
 
 import timing
+from app import jobs
 from technique import style
 
+from . import notes
 from .tools import TOOLS, Session, make_tools
 
 MODEL = os.environ.get("COACH_MODEL", "claude-opus-5-5")
@@ -141,7 +143,8 @@ def run_agent(s: Session, request: str, model=None) -> None:
         s.update(status="running", todos=todos, agentFiles=_files(state.get("files") or {}),
                  progress=_progress(todos))
     final = next((_text(m) for m in reversed(state.get("messages", [])) if m.type == "ai" and _text(m)), "")
-    s.update(status="done", progress=1.0, summary=final, message="Done.",
+    drill = ((jobs.load(s.job_id) or {}).get("breakdown") or {}).get("drill") or ""
+    s.update(status="done", progress=1.0, summary=final, message="Done.", coaching=notes.build(final, drill=drill),
              todos=[{**t, "status": "completed"} for t in _todos(state.get("todos"))])
 
 
@@ -226,7 +229,13 @@ def run_fallback(s: Session, request: str, why: str) -> None:
         push()
     summary = _summary(results, stroke)
     files["/notes.md"] = files.get("/notes.md", "") + summary
-    s.update(status="done", progress=1.0, summary=summary, message="Done.", todos=todos, agentFiles=_files(files))
+    rb = results.get("render_breakdown") or {}
+    errs = {k: v for k, v in results.items() if isinstance(v, dict) and "error" in v}
+    coaching = (notes.build(_summary({k: v for k, v in results.items() if k not in errs}, stroke),
+                            fix=rb["recap"] or "", drill=rb["drill"] or "") if "steps" in rb else None)
+    s.update(status="done", progress=1.0, summary=summary, message="Done.", todos=todos, agentFiles=_files(files),
+             coaching=coaching, warning=("Some steps failed: " + "; ".join(f"{k}: {v['error']}" for k, v in errs.items()))
+             if errs else None)
 
 
 def _summary(r: dict, stroke: str) -> str:
@@ -262,7 +271,7 @@ def _summary(r: dict, stroke: str) -> str:
                      + (f" {top['differences'][0]}" if top.get("differences") else ""))
     rb = r.get("render_breakdown")
     if rb and "steps" in rb:
-        lines.append(f"Work on: {rb['recap']} Then: {rb['drill']}")
+        lines.append(f"Work on: {rb['recap']} Drill: {rb['drill']}")
     errs = [f"{k}: {v['error']}" for k, v in r.items() if isinstance(v, dict) and "error" in v]
     if errs:
         lines.append("Some steps failed: " + "; ".join(errs))
@@ -276,7 +285,10 @@ def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: s
     """Background job: the deep agent when a key is set, the fixed plan otherwise or on failure."""
     s = Session(job_id, video=video, url=url, hand=hand_from_request(request), selection=selection,
                 only_me=only_me)
-    s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[])
+    # `coaching` is always in a Coach job's record (null until written): the page tells these jobs
+    # from older ones, whose notes were only in `summary`.
+    s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[], coaching=None,
+             warning=None)
     timer = timing.start()   # every stage and Claude call, saved as job["timings"]
     try:
         if os.environ.get("COACH_ENGINE") == "agent" and os.environ.get("ANTHROPIC_API_KEY"):

@@ -22,6 +22,7 @@ import numpy as np
 import timing
 from app import cache
 
+from . import notes
 from .tools import TOOLS, Session, ToolError
 
 LEAD, TAIL = 1.5, 0.9      # s of the coached stroke's clip before and after its hit
@@ -165,7 +166,8 @@ def run_fixed(s: Session, request: str) -> None:
                                         else None}
                 files["/facts.json"] = json.dumps(facts, indent=1, default=str)   # what the coaching is based on
                 report = write_coaching(s, request, facts, clip, track)
-                mark("coach", "completed", summary=report.summary)
+                mark("coach", "completed", summary=report.summary,
+                     coaching=notes.build(report.summary, fix=report.recap, drill=report.drill))
                 mark("render", "in_progress", message=f"Rendering your {noun}...")
                 render(s, facts, report, clip, track)
                 mark("render", "completed")
@@ -180,6 +182,7 @@ def run_fixed(s: Session, request: str) -> None:
         if errors:
             summary = (summary + "\n\n" if summary else "") + " ".join(errors)
         s.update(status="done", progress=1.0, message="Done.", summary=summary or "Done.",
+                 warning=" ".join(errors) or None,   # shown beside the coaching, not inside it
                  todos=[{**t, "status": "completed"} for t in todos], agentFiles=_files(files))
     finally:
         pool.shutdown(wait=False)
@@ -401,11 +404,17 @@ def offline_report(facts: dict, clip: Path, track):
     cards = [Card(moment=m, title=st.title, lines=(st.lines + ["", ""])[:2], callouts=st.callouts[:2])
              for m, st in zip(["preparation", "contact", "finish"], b.steps)]
     pros = facts.get("closest_pros") or []
-    summary = " ".join(filter(None, [
-        f"Your {facts['stroke_label'].lower()}, measured at contact: elbow about "
-        f"{facts['at_contact'].get('elbow_angle_deg')}°, knees about {facts['at_contact'].get('knee_angle_deg')}°.",
-        f"You play most like {pros[0]['name']} ({pros[0]['score']}% body match)." if pros else "",
-        f"Work on: {b.recap} Then: {b.drill}"]))
+    c = facts["at_contact"]
+    seen = [f"{name} about {c[k]}°" for name, k in (("elbow", "elbow_angle_deg"), ("knees", "knee_angle_deg"))
+            if c.get(k) is not None]
+    opening = " ".join(filter(None, [
+        f"Your {facts['stroke_label'].lower()}, measured at contact: {', '.join(seen)}." if seen
+        else f"Your {facts['stroke_label'].lower()}.",
+        f"You play most like {pros[0]['name']} ({pros[0]['score']}% body match)." if pros else ""]))
+    fixes = "\n".join(f"{i}. **{card.title.capitalize()}.** {' '.join(x for x in card.lines if x)}"
+                      for i, card in enumerate(cards, 1))
+    summary = "\n\n".join(filter(None, [opening, f"**What to work on first:**\n{fixes}" if cards else "",
+                                       f"**Drill:** {b.drill}" if b.drill else ""]))
     return CoachReport(summary=summary, headline=b.headline, stroke_type=facts["stroke_type"], grip=b.grip,
                        stance=b.stance, swing_path=b.swing_path, contact_point=b.contact_point,
                        follow_through=b.follow_through, cards=cards, recap=b.recap or "", drill=b.drill or "")

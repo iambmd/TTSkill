@@ -30,6 +30,7 @@ def test_agent_streams_todos_files_and_answer(tmp_path, monkeypatch):
     coach.run_agent(s, "show my best rallies", model=ScriptedModel(messages=script))
     done = jobs.load(job["id"])
     assert done["status"] == "done" and done["summary"] == "Here is what I found."
+    assert done["coaching"] == {"markdown": "Here is what I found.", "fix": "", "drill": ""}
     assert [t["content"] for t in done["todos"]] == ["Find the rallies", "Fix the forehand"]
     assert all(t["status"] == "completed" for t in done["todos"])
     assert any(f["name"] == "/plan.md" and "rallies" in f["preview"] for f in done["agentFiles"])
@@ -76,6 +77,9 @@ def test_fallback_runs_tools_with_a_live_plan(tmp_path, monkeypatch):
     assert calls == ["detect_rallies", "cut_highlights", "extract_pose", "render_breakdown"]
     assert done["status"] == "done" and done["engine"] == "fallback" and "pipeline broke" in done["engineNote"]
     assert "3 rallies" in done["summary"] and "Shadow 20 swings." in done["summary"]
+    notes = done["coaching"]
+    assert notes["fix"] == "Load low, lift through, end high." and notes["drill"] == "Shadow 20 swings."
+    assert notes["markdown"].count("Shadow 20 swings.") == 1 and done["warning"] is None
     assert {f["name"] for f in done["agentFiles"]} >= {"/plan.md", "/rallies.json", "/pose_summary.json", "/cards.md"}
 
 
@@ -103,6 +107,7 @@ def test_agent_failure_falls_back(tmp_path, monkeypatch):
     done = jobs.load(job["id"])
     assert done["status"] == "done" and done["engine"] == "fallback"
     assert "model unavailable" in done["agentError"] and done["summary"].startswith("I found 1 rally and cut it")
+    assert "coaching" in done and done["coaching"] is None   # no stroke was coached: the page says so
 
 
 def test_coach_rallies_use_non_play_filter(tmp_path, monkeypatch):
