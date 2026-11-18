@@ -146,6 +146,13 @@ def player_frames(frames: list[tuple[str | None, bytes]], times: str) -> list[tu
     return out
 
 
+def only_me(value: str) -> bool:
+    """The "Only me in the video" box: "1" when ticked, "" when not."""
+    if value not in LIMITS["choices"]["only_me"]:
+        raise Invalid("“Only me in the video” must be ticked or not.")
+    return value == "1"
+
+
 PICK_AGAIN = "The player you picked didn't come through. Pick the player again."
 
 

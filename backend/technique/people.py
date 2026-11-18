@@ -23,6 +23,15 @@ FRAMES = 12           # frames looked at, spread over the whole video
 # this is a count, not a share of the frames (a third of 12 dropped a player seen in 3).
 MIN_SIGHTINGS = 2
 MIN_SIZE = 0.3        # torso vs the biggest candidate's; smaller is another court or a spectator
+# Background people (Change player still shows them; auto mode ignores them):
+# - still: across their sightings the body box moves less than this (median abs deviation in box
+#   heights). Players measured 0.083-0.594 on the four samples; a table leg traced as a body
+#   0.045, a static figure 0.011.
+STILL = 0.05
+# - far from the table: further from its side than this many table widths, in every frame
+#   where a table is found (only blue/green tops are found; grey ones never count against anyone).
+FAR_TABLE = 0.5
+MAX_OTHERS = 4
 # Two skeletons in one frame whose shoulders are this close (x the larger torso) are one person:
 # a zoomed crop re-finds someone already found (measured 0.02-0.11; different people >= 1.8).
 SAME_PERSON = 0.25
@@ -130,7 +139,9 @@ def _merge_apart(players: list[list[Detection]]) -> list[list[Detection]]:
             for b in range(a + 1, len(players)):
                 if {d.frame for d in players[a]} & {d.frame for d in players[b]}:
                     continue
-                if min(signature_distance(x.look, y.look) for x in players[a] for y in players[b]) < STRICT:
+                # Average, not closest pair: on montages the closest pair chained a white shirt
+                # onto the teal user through one look-alike frame.
+                if np.mean([signature_distance(x.look, y.look) for x in players[a] for y in players[b]]) < STRICT:
                     players[a] += players.pop(b)
                     merged = True
                     break
@@ -139,11 +150,44 @@ def _merge_apart(players: list[list[Detection]]) -> list[list[Detection]]:
     return players
 
 
-def group(detections: list[Detection], n_frames: int) -> dict:
-    """Pure grouping and decision, given every frame's detections.
+def typical(pl: list[Detection]) -> Detection:
+    """The sighting that looks most like the rest of its group (the biggest of those within
+    0.05 of the best): the thumbnail and seed. The biggest alone was once a different person
+    the grouping had let in."""
+    if len(pl) < 3:
+        return max(pl, key=lambda d: d.torso)
+    mean = [np.mean([signature_distance(d.look, o.look) for o in pl if o is not d]) for d in pl]
+    best = min(mean)
+    return max((d for d, m in zip(pl, mean) if m <= best + 0.05), key=lambda d: d.torso)
 
-    Returns {"players": [[Detection, ...], ...] best first, "suggested": index or None,
-    "decisive": bool}."""
+
+def box_motion(pl: list[Detection]) -> float:
+    """How much a person's body box changes across their sightings, in box heights."""
+    b = np.array([d.box for d in pl])
+    height = float(np.median(b[:, 3] - b[:, 1])) or 1.0
+    return float(np.abs(b - np.median(b, axis=0)).mean() / height)
+
+
+def _far_from_table(pl: list[Detection], tables: list | None) -> bool:
+    """Further than FAR_TABLE table widths from the table's side in every frame it was found in."""
+    if not tables:
+        return False
+    gaps = []
+    for d in pl:
+        t = tables[d.frame] if d.frame < len(tables) else None
+        if t is None:
+            continue
+        x0, x1 = t[0], t[2]
+        gaps.append(max(0.0, x0 - d.box[2], d.box[0] - x1) / max(x1 - x0, 1e-6))
+    return bool(gaps) and min(gaps) > FAR_TABLE
+
+
+def group(detections: list[Detection], n_frames: int, tables: list | None = None) -> dict:
+    """Pure grouping and decision, given every frame's detections (and, when found, each
+    frame's table as a normalised box, else None).
+
+    Returns {"players": [[Detection, ...], ...] best first, "others": [(group, reason), ...]
+    (background people: "small", "still" or "far"), "suggested": index or None, "decisive": bool}."""
     players: list[list[Detection]] = []
     for f in range(n_frames):
         taken: set[int] = set()
@@ -159,10 +203,21 @@ def group(detections: list[Detection], n_frames: int) -> dict:
                 taken.add(len(players) - 1)
     players = _merge_apart(players)
     size = [float(np.median([d.torso for d in pl])) for pl in players]
-    biggest = max(size, default=0.0)
-    keep = [k for k, pl in enumerate(players)
-            if len({d.frame for d in pl}) >= min(MIN_SIGHTINGS, n_frames) and size[k] >= MIN_SIZE * biggest]
-    keep = sorted(keep, key=lambda k: (-len(players[k]), -size[k]))[:MAX_CANDIDATES]
+    seen = [k for k, pl in enumerate(players) if len({d.frame for d in pl}) >= min(MIN_SIGHTINGS, n_frames)]
+    reason: dict[int, str] = {}
+    for k in seen:
+        if len(players[k]) >= 2 and box_motion(players[k]) < STILL:
+            reason[k] = "still"
+    near_table = [k for k in seen if k not in reason and not _far_from_table(players[k], tables)]
+    if near_table:   # a misread "table" that everyone is far from rules nobody out
+        reason.update({k: "far" for k in seen if k not in reason and k not in near_table})
+    # Small next to the biggest player (not a still spectator near the camera): another court.
+    biggest = max((size[k] for k in seen if k not in reason), default=0.0)
+    reason.update({k: "small" for k in seen if k not in reason and size[k] < MIN_SIZE * biggest})
+    keep = sorted((k for k in seen if k not in reason), key=lambda k: (-len(players[k]), -size[k]))
+    others = [(players[k], reason.get(k, "more")) for k in
+              keep[MAX_CANDIDATES:] + sorted(reason, key=lambda k: (-len(players[k]), -size[k]))][:MAX_OTHERS]
+    keep = keep[:MAX_CANDIDATES]
     kept = [players[k] for k in keep]
     # Who is nearest the camera (biggest torso) in each frame with a kept player in it.
     near = [0] * len(kept)
@@ -173,12 +228,12 @@ def group(detections: list[Detection], n_frames: int) -> dict:
             frames_with += 1
             near[max(here)[1]] += 1
     if not kept:
-        return {"players": [], "suggested": None, "decisive": False, "near": []}
+        return {"players": [], "others": others, "suggested": None, "decisive": False, "near": []}
     order = sorted(range(len(kept)), key=lambda i: -near[i])
     top = near[order[0]]
     runner = near[order[1]] if len(order) > 1 else 0
     decisive = len(kept) == 1 or (frames_with >= 3 and top >= DECISIVE_SHARE * frames_with and top >= 2 * runner)
-    return {"players": kept, "suggested": order[0], "decisive": bool(decisive),
+    return {"players": kept, "others": others, "suggested": order[0], "decisive": bool(decisive),
             "near": [round(n / max(frames_with, 1), 2) for n in near]}
 
 
@@ -250,31 +305,49 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
         for p in done[f][1]:
             torso = float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
             detections.append(Detection(i, box_of(p), torso, signature(images[i], p)))
-    g = group(detections, len(frames))
-    candidates = []
-    for i, pl in enumerate(g["players"]):
-        best = max(pl, key=lambda d: d.torso)   # the clearest (largest) view of this player
-        candidates.append({"id": i, "time": round(frames[best.frame][0], 3),
-                           "box": [round(v, 4) for v in best.box], "thumb": _thumb(images[best.frame], best.box),
-                           "seen": round(len({d.frame for d in pl}) / len(frames), 2), "near": g["near"][i]})
+    g = group(detections, len(frames), [_table_box(im) for im in images])
+
+    def card(i: int, pl: list[Detection], **extra) -> dict:
+        best = typical(pl)
+        return {"id": i, "time": round(frames[best.frame][0], 3), "box": [round(v, 4) for v in best.box],
+                "thumb": _thumb(images[best.frame], best.box), "seen": round(len({d.frame for d in pl}) / len(frames), 2),
+                **extra}
+
+    candidates = [card(i, pl, near=g["near"][i]) for i, pl in enumerate(g["players"])]
+    n = len(candidates)
+    others = [card(n + j, pl, background=why) for j, (pl, why) in enumerate(g["others"])]
+    everyone = g["players"] + [pl for pl, _ in g["others"]]
     frame = None
-    if g["players"]:
-        # The frame that shows the most players, the biggest of them on a tie, for tapping.
-        def shown(f: int) -> tuple[int, float]:
+    if everyone:
+        # The frame that shows the most players (then anyone), the biggest on a tie, for tapping.
+        def shown(f: int) -> tuple[int, int, float]:
             here = [d for pl in g["players"] for d in pl if d.frame == f]
-            return len(here), sum(d.torso for d in here)
+            return len(here), sum(d.frame == f for pl, _ in g["others"] for d in pl), sum(d.torso for d in here)
         f = max(range(len(frames)), key=shown)
         image = images[f]
         if image.shape[1] > FRAME_W:
             image = cv2.resize(image, (FRAME_W, round(image.shape[0] * FRAME_W / image.shape[1])))
         frame = {"time": round(frames[f][0], 3), "image": _jpeg(image),
                  "boxes": [{"id": i, "box": [round(v, 4) for v in d.box]}
-                           for i, pl in enumerate(g["players"]) for d in pl if d.frame == f]}
+                           for i, pl in enumerate(everyone) for d in pl if d.frame == f]}
     timing = {"seconds": round(time.monotonic() - start, 2), "model_load_s": round(loaded, 2),
               "frames": len(images), "zoomed_frames": zoomed}
-    return {"candidates": candidates, "frame": frame, "suggested": g["suggested"], "decisive": g["decisive"],
+    return {"candidates": candidates, "others": others, "frame": frame, "suggested": g["suggested"],
+            "decisive": g["decisive"],
             "frames": [{"time": round(t, 3), "people": len(done[f][1])} for (t, _), f in zip(frames, used)],
             "timing": timing}
+
+
+def _table_box(image: np.ndarray) -> tuple[float, float, float, float] | None:
+    """The table top as a normalised box, when its colour is found (blue or green)."""
+    from players.table import find_table
+
+    t = find_table(image)
+    if t is None:
+        return None
+    h, w = image.shape[:2]
+    x, y, bw, bh = t["bbox"]
+    return (x / w, y / h, (x + bw) / w, (y + bh) / h)
 
 
 def warm() -> None:
@@ -337,3 +410,78 @@ def sample_frames(video: str, count: int = FRAMES) -> list[tuple[float, np.ndarr
     with ThreadPoolExecutor(max_workers=6) as pool:
         images = list(pool.map(lambda t: grab_frame(video, t), times))
     return [(t, im) for t, im in zip(times, images) if im is not None]
+
+
+SOLO_MOMENTS = 16     # moments looked at for "Only me in the video", mostly inside rallies
+PAIR_GAP = 0.2        # s between a moment's two frames: a stroke moves the arms a lot in that time
+LIMBS = [13, 14, 15, 16, 25, 26, 27, 28]   # elbows, wrists, knees, ankles
+
+
+def limb_motion(a: np.ndarray, b: np.ndarray, w: int, h: int) -> float:
+    """How far the limbs moved between two skeletons of one person, in torso lengths."""
+    torso = max(_torso(a, w, h), 1.0)
+    return float(np.linalg.norm((a[LIMBS, :2] - b[LIMBS, :2]) * [w, h], axis=1).mean()) / torso
+
+
+def most_active(video: str, moments: int = SOLO_MOMENTS) -> np.ndarray | None:
+    """"Only me in the video": the tracker seed for the person who plays the most. At each
+    moment two frames PAIR_GAP apart show who is moving; a person's activity is their limb
+    motion summed over the video, so being there and playing both count. Each moment counts in
+    proportion to the person's size next to the biggest person then: landmark jitter on a far
+    body reads as motion (coach_demo's far partner outscored the near user 4.19 to 3.38), and
+    whoever films themselves is the one nearer the camera. Background people (still, far from
+    the table, tiny next to the biggest) only win when nobody else is seen.
+    None when nobody is seen (the caller falls back to the usual seed)."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from . import audio, media
+    from .pose import QUARTERS, _pose_candidates
+
+    duration = float(media.probe(video)["duration"])
+    try:
+        rallies = [(r["start"], r["end"]) for r in audio.find_rallies(video)]
+    except Exception:
+        rallies = []
+    times = frame_times(max(0.0, duration - PAIR_GAP), rallies, moments)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        firsts = list(pool.map(lambda t: grab_frame(video, t), times))
+        seconds = list(pool.map(lambda t: grab_frame(video, t + PAIR_GAP), times))
+    landmarker, mp = _landmarker()
+    detections: list[Detection] = []
+    activity: dict[int, float] = {}
+    images: list[np.ndarray] = []
+    for i, (a, b) in enumerate(zip(firsts, seconds)):
+        if a is None:
+            a = np.zeros((360, 640, 3), np.uint8)
+        images.append(a)
+        h, w = a.shape[:2]
+        found = lambda im: one_per_person([p for p in _pose_candidates(im, landmarker, mp, extra=QUARTERS)[0]
+                                           if not lying(p, w, h)], w, h)
+        now = found(a)
+        later = found(b) if b is not None and b.shape == a.shape else []
+        for p in now:
+            torso = _torso(p, w, h)
+            d = Detection(i, box_of(p), torso, signature(a, p))
+            shoulders = p[[11, 12], :2].mean(0) * [w, h]
+            # The same person 0.2 s later: the skeleton whose shoulders are nearest (within a torso).
+            match = min(later, key=lambda q: np.linalg.norm(q[[11, 12], :2].mean(0) * [w, h] - shoulders), default=None)
+            moved = 0.0
+            if match is not None and np.linalg.norm(match[[11, 12], :2].mean(0) * [w, h] - shoulders) < torso:
+                moved = limb_motion(p, match, w, h)
+            detections.append(d)
+            activity[id(d)] = moved
+    for i in range(len(images)):
+        here = [d for d in detections if d.frame == i]
+        biggest = max((d.torso for d in here), default=1.0)
+        for d in here:
+            activity[id(d)] *= d.torso / biggest
+    g = group(detections, len(images), [_table_box(im) for im in images])
+    pool = g["players"] or [pl for pl, _ in g["others"]]
+    if not pool:
+        return None
+    best = max(pool, key=lambda pl: sum(activity[id(d)] for d in pl))
+    clearest = typical(best)
+    print(f"only me: following the person seen in {len({d.frame for d in best})}/{len(images)} moments, "
+          f"activity {sum(activity[id(d)] for d in best):.2f} (others: "
+          f"{[round(sum(activity[id(d)] for d in pl), 2) for pl in pool if pl is not best]})", flush=True)
+    return clearest.look

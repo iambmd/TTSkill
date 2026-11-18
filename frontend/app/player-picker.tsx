@@ -11,9 +11,12 @@
 import { useEffect, useState } from "react";
 
 type Box = [number, number, number, number];
-type Candidate = { id: number; time: number; box: Box; thumb: string; seen: number; near: number };
+type Candidate = { id: number; time: number; box: Box; thumb: string; seen: number; near?: number; background?: string };
 type Found = {
   candidates: Candidate[];
+  /** People who look like background (still, far from the table, tiny): ignored when counting,
+   * shown behind "Show everyone we saw" in case we got it wrong. */
+  others?: Candidate[];
   frame: { time: number; image: string; boxes: { id: number; box: Box }[] } | null;
   suggested?: number | null;
   decisive?: boolean;
@@ -143,17 +146,19 @@ export type View = "hidden" | "nobody" | "one" | "pick";
 
 /** What to show for an answer, by how many players were found: nobody -> say so and offer
  * "Analyse anyway"; one -> analyse them (Change player opens the picker); two or more -> ask. */
-export function pickerView(found: Pick<Found, "candidates" | "available"> | null, open: boolean): View {
+export function pickerView(found: Pick<Found, "candidates" | "others" | "available"> | null, open: boolean): View {
   if (!found || found.available === false) return "hidden";
   const n = found.candidates.length;
-  if (n === 0) return "nobody";
+  if (n === 0) return open && found.others?.length ? "pick" : "nobody";
   return n > 1 || open ? "pick" : "one";
 }
 
 /** Whether the user has to tap someone before submitting. */
-export function needsChoice(found: Pick<Found, "candidates" | "available"> | null, open: boolean): boolean {
+export function needsChoice(found: Pick<Found, "candidates" | "others" | "available"> | null, open: boolean): boolean {
   return pickerView(found, open) === "pick";
 }
+
+const WHY: Record<string, string> = { still: "barely moves", far: "far from the table", small: "far away", more: "also seen" };
 
 export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobId, onChoice }: {
   /** The chosen file's object URL and length, once the preview has loaded. */
@@ -174,6 +179,7 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
   const [attempt, setAttempt] = useState(0);
   const [choice, setChoice] = useState<Choice | null>(null);
   const [open, setOpen] = useState(false);
+  const [everyone, setEveryone] = useState(false);
 
   // Look for players whenever the video changes (or on "Try again"). Every step has a time
   // limit; leaving, changing the video or giving up aborts the request, and the backend stops.
@@ -181,6 +187,7 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     setFound(null);
     setChoice(null);
     setOpen(false);
+    setEveryone(false);
     setFailed(null);
     setSkipped(false);
     setFinding(false);
@@ -283,7 +290,11 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     );
   }
   if (!found || view === "hidden") return null;
-  const chosen = choice ? found.candidates.find((c) => c.id === choice.id) : undefined;
+  const others = found.others ?? [];
+  const showOthers = everyone || found.candidates.length === 0;
+  const people = showOthers ? [...found.candidates, ...others] : found.candidates;
+  const chosen = choice ? people.find((c) => c.id === choice.id) : undefined;
+  const showEveryone = () => { setEveryone(true); setOpen(true); };
 
   if (view === "nobody") {
     return (
@@ -291,7 +302,14 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
         <p className="text-sm">
           {NOBODY} <span className="text-muted">Film with your whole body in view, or analyse anyway and we&apos;ll look through the whole video.</span>
         </p>
-        {anyway}
+        <div className="flex flex-wrap gap-5">
+          {anyway}
+          {others.length > 0 && (
+            <button type="button" onClick={showEveryone} className="text-sm font-bold text-muted hover:text-white">
+              Show everyone we saw ({others.length})
+            </button>
+          )}
+        </div>
       </div>
     );
   }
@@ -325,7 +343,7 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
         <div className="relative overflow-hidden rounded-2xl border border-line bg-black">
           <img src={found.frame.image} alt="A frame from your video" className="block w-full" />
           {found.frame.boxes.map(({ id, box }) => {
-            const c = found.candidates.find((x) => x.id === id);
+            const c = people.find((x) => x.id === id);
             if (!c) return null;
             const on = choice?.id === id;
             return (
@@ -333,25 +351,35 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
                 key={id} type="button" aria-pressed={on} aria-label={`Player ${id + 1}`}
                 onClick={() => select(c, found.frame!.time, box)}
                 style={{ left: pct(box[0]), top: pct(box[1]), width: pct(box[2] - box[0]), height: pct(box[3] - box[1]) }}
-                className={`absolute rounded-lg border-2 ${on ? "border-accent bg-accent/20 shadow-[0_0_24px_rgb(255_107_44/0.6)]" : "border-white/80 bg-white/5 hover:border-accent"}`}
+                className={`absolute rounded-lg border-2 ${on ? "border-accent bg-accent/20 shadow-[0_0_24px_rgb(255_107_44/0.6)]" : `${c.background ? "border-dashed border-white/50" : "border-white/80"} bg-white/5 hover:border-accent`}`}
               />
             );
           })}
         </div>
       )}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {found.candidates.map((c) => {
+        {people.map((c) => {
           const on = choice?.id === c.id;
           return (
             <button
               key={c.id} type="button" aria-pressed={on} onClick={() => select(c)}
-              className={`shrink-0 overflow-hidden rounded-xl border-2 ${on ? "border-accent" : "border-line hover:border-white/40"}`}
+              className={`relative shrink-0 overflow-hidden rounded-xl border-2 ${on ? "border-accent" : "border-line hover:border-white/40"}`}
             >
-              <img src={c.thumb} alt={`Player ${c.id + 1}`} className="h-24 w-auto" />
+              <img src={c.thumb} alt={`Player ${c.id + 1}${c.background ? `, ${WHY[c.background] ?? "background"}` : ""}`} className={`h-24 w-auto ${c.background && !on ? "opacity-70" : ""}`} />
+              {c.background && (
+                <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-muted">
+                  {WHY[c.background] ?? "background"}
+                </span>
+              )}
             </button>
           );
         })}
       </div>
+      {!showOthers && others.length > 0 && (
+        <button type="button" onClick={showEveryone} className="text-sm font-bold text-muted hover:text-white">
+          Not here? Show everyone we saw ({others.length} more)
+        </button>
+      )}
       {!choice && <p role="alert" className="text-sm text-red-200">{PICK_PLAYER}</p>}
     </fieldset>
   );

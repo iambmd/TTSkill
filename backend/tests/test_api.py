@@ -29,8 +29,9 @@ def ran(monkeypatch):
     calls: dict[str, list] = {}
 
     def recorder(name):
-        def run(job_id, *args):
-            calls.setdefault(name, []).append(args)
+        def run(job_id, *args, **kwargs):
+            # Keyword arguments (only_me) are recorded after the positional ones, only when given.
+            calls.setdefault(name, []).append(args + ((kwargs,) if kwargs else ()))
             jobs.update(job_id, status="done", progress=1.0)
         return run
 
@@ -659,3 +660,26 @@ def test_startup_loads_the_pose_model_on_every_detection_thread(monkeypatch):
             break
         threading.Event().wait(0.05)
     assert len(set(warmed)) == main.PLAYER_THREADS
+
+
+
+def test_only_me_skips_the_pick_and_follows_whoever_plays_the_most(api, ran, upload):
+    r = api.post("/jobs/breakdown", files=upload(), data={"only_me": "1"})
+    assert r.status_code == 201 and r.json()["params"]["only_me"] is True
+    assert ran["run_breakdown"][-1][-1] == {"only_me": True}
+    r = api.post("/jobs/coach", files=upload(), data={"request": "fix my forehand", "only_me": "1"})
+    assert r.json()["params"]["only_me"] is True and ran["run_coach"][-1][-1] == {"only_me": True}
+    # Unticked: nothing changes for the pipelines.
+    api.post("/jobs/breakdown", files=upload(), data={"only_me": ""})
+    assert not isinstance(ran["run_breakdown"][-1][-1], dict)
+
+
+def test_a_tapped_player_wins_over_only_me(api, ran, upload):
+    pick = {"player_time": "2", "player_box": "0.1,0.2,0.4,0.9", "only_me": "1"}
+    r = api.post("/jobs/coach", files=upload(), data={"request": "fix my forehand", **pick})
+    assert "only_me" not in r.json()["params"] and ran["run_coach"][-1][-1] == (2.0, (0.1, 0.2, 0.4, 0.9))
+
+
+def test_only_me_must_be_ticked_or_not(api, ran, upload):
+    r = api.post("/jobs/breakdown", files=upload(), data={"only_me": "yes"})
+    assert r.status_code == 422 and "Only me in the video" in _error(r) and not ran

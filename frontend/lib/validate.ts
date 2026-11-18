@@ -131,6 +131,12 @@ export function playerFramesProblem(form: FormData): string | null {
   return null;
 }
 
+/** The "Only me in the video" box: "1" when ticked, missing or "" when not. Same rule as the API. */
+export function onlyMeProblem(form: FormData): string | null {
+  const allowed: readonly string[] = LIMITS.choices.only_me;
+  return allowed.includes(String(form.get("only_me") ?? "")) ? null : "“Only me in the video” must be ticked or not.";
+}
+
 /** The player tapped in "Which one is you?" (player_time + player_box "x0,y0,x1,y1", 0-1).
  * Both missing is fine: the analysis then picks the player itself. Same rule as the API. */
 export function playerSelectionProblem(form: FormData): string | null {

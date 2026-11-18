@@ -64,12 +64,12 @@ def get(job_id: str) -> dict[str, Any] | None:
         return job
 
 
-def run(fn: Callable[..., None], job_id: str, *args: Any) -> None:
+def run(fn: Callable[..., None], job_id: str, *args: Any, **kwargs: Any) -> None:
     """Run a pipeline as a background task. Whatever happens inside, the job ends done or
     failed: an uncaught error, or a pipeline that returns without a final status, fails it."""
     ACTIVE.add(job_id)
     try:
-        fn(job_id, *args)
+        fn(job_id, *args, **kwargs)
     except Exception as exc:
         traceback.print_exc()
         update(job_id, status="failed", message=str(exc) or type(exc).__name__)

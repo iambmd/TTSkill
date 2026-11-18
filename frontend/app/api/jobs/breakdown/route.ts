@@ -1,6 +1,6 @@
 import { createJob } from "@/lib/jobs";
 import { STROKE_TYPE_VALUES } from "@/lib/strokes";
-import { choiceProblem, invalid, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
+import { choiceProblem, invalid, onlyMeProblem, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
 
 // "" means auto-detect; the named strokes are kept for API callers that still send them.
 const STROKES = new Set(["", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"]);
@@ -17,6 +17,7 @@ export async function POST(req: Request) {
   // A description alone is enough; a clip or link, when given, must be usable.
   const problem =
     playerSelectionProblem(form) ??
+    onlyMeProblem(form) ??
     (!hasInput && !text ? "Upload a clip, paste a YouTube link, or describe the training." : null) ??
     (hasInput ? videoInputProblem(form, "") : null) ??
     (STROKES.has(stroke) ? null : `Unknown stroke: ${stroke}. Leave it blank to auto-detect.`) ??

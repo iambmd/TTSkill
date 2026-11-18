@@ -17,7 +17,7 @@ type Meta = { duration: number; width: number; height: number };
  * checked as they change; the problem is shown here and passed to `onProblem` so the form can
  * disable its submit button.
  */
-export function VideoPicker({ name = "video", linkName = "url", title, hint, kind, onProblem, findPlayer = false }: {
+export function VideoPicker({ name = "video", linkName = "url", title, hint, kind, onProblem, findPlayer = false, onlyMeOption = false }: {
   name?: string;
   linkName?: string;
   title: string;
@@ -27,6 +27,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   onProblem?: (problem: string | null) => void;
   /** Ask "Which one is you?" when the video shows more than one player (Breakdown, Match, Coach). */
   findPlayer?: boolean;
+  /** Offer "Only me in the video": skip finding players and follow whoever plays the most (Coach, Breakdown). */
+  onlyMeOption?: boolean;
 }) {
   const id = useId();
   const linkInputId = useId();
@@ -42,7 +44,9 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   const linkError = !file && link.trim() ? linkProblem(link) : null;
   const fileError = file ? fileProblem(file) ?? (meta ? mediaProblem(meta) : null) : null;
   const [playerProblem, setPlayerProblem] = useState<string | null>(null);
-  const problem = fileError ?? linkError ?? (findPlayer ? playerProblem : null);
+  const [onlyMe, setOnlyMe] = useState(false);
+  const onlyMeId = useId();
+  const problem = fileError ?? linkError ?? (findPlayer && !onlyMe ? playerProblem : null);
 
   // Revoke each preview URL once it is replaced or the picker unmounts.
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
@@ -166,7 +170,19 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
           </label>
         )}
       </div>
-      {findPlayer && kind !== "autocut" && !fileError && !linkError && (
+      {onlyMeOption && (
+        <label htmlFor={onlyMeId} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-panel px-4 py-2">
+          <input
+            id={onlyMeId} type="checkbox" name="only_me" value="1" checked={onlyMe}
+            onChange={(e) => setOnlyMe(e.target.checked)} className="size-5 shrink-0 accent-accent"
+          />
+          <span className="text-sm">
+            <span className="font-semibold">Only me in the video</span>
+            <span className="block text-xs text-muted">Skip choosing a player: we follow whoever plays the most, at the table.</span>
+          </span>
+        </label>
+      )}
+      {findPlayer && !onlyMe && kind !== "autocut" && !fileError && !linkError && (
         <PlayerPicker
           previewUrl={file && meta ? url : null} duration={file && meta ? meta.duration : null}
           link={!file && ytId ? link.trim() : null} kind={kind} onProblem={setPlayerProblem}

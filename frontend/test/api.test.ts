@@ -195,6 +195,14 @@ describe("POST /api/jobs/coach", () => {
     expect(res.status).toBe(201);
     expect((await res.json()).kind).toBe("coach");
   });
+  it("takes 'Only me in the video' ticked or not, on Coach and Breakdown", async () => {
+    const coach = await route("coach");
+    expect((await coach.POST!(post({ request: "fix my forehand", url: SHORT, only_me: "1" }))).status).toBe(201);
+    await expectError(await coach.POST!(post({ request: "fix my forehand", url: SHORT, only_me: "yes" })), 422, "Only me in the video");
+    const breakdown = await route("breakdown");
+    expect((await breakdown.POST!(post({ url: SHORT, only_me: "1" }))).status).toBe(201);
+    await expectError(await breakdown.POST!(post({ url: SHORT, only_me: "on" })), 422, "Only me in the video");
+  });
 });
 
 // ------------------------------------------------------------------ reading jobs (stub mode)

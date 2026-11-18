@@ -15,6 +15,14 @@ OLIVE = np.r_[np.eye(48)[9], np.eye(48)[30]]
 
 
 def det(frame, look, torso, x=.5):
+    """A player in a frame: their box shifts a little from frame to frame, as players do."""
+    # Box movement ~0.09 box heights (people.STILL is 0.05; real players measured 0.083-0.594).
+    return Detection(frame, (x - .05 + .15 * (frame % 3), .2 + .05 * (frame % 2), x + .05 + .15 * (frame % 3) + .06 * (frame % 2), .9),
+                     torso, look)
+
+
+def sitting(frame, look, torso, x=.5):
+    """A spectator: the same box in every frame."""
     return Detection(frame, (x - .05, .2, x + .05, .9), torso, look)
 
 
@@ -86,13 +94,15 @@ def _fake_detector(monkeypatch, delay: float = 0.0):
         time.sleep(delay)
         lm = np.zeros((33, 4), np.float32)
         lm[:, 3] = 1
-        lm[:, 0] = .5
+        lm[:, 0] = .3 + .2 * (len(calls) % 3)   # a player moves about between frames (not "still")
         lm[:, 1] = np.linspace(.1, .9, 33)
         lm[[11, 12], 1], lm[[23, 24], 1] = .3, .5
+        lm[[25, 26], 1], lm[[27, 28], 1] = .7, .9
         return [lm], [np.zeros((33, 3), np.float32)]
     monkeypatch.setattr(people, "_landmarker", lambda: (None, None))
     monkeypatch.setattr(pose, "_pose_candidates", candidates)
-    frames = [(float(i), np.full((360, 640, 3), 120, np.uint8)) for i in range(6)]
+    # Coloured, so the person's colour signature isn't empty and their sightings group.
+    frames = [(float(i), np.full((360, 640, 3), (40, 120, 200), np.uint8)) for i in range(6)]
     return people, frames, calls, threading
 
 
@@ -227,3 +237,92 @@ def test_finds_a_player_who_is_only_in_the_last_quarter(late_entry):
         assert r["candidates"], "the late player was dropped"
         assert all(c["time"] >= 30 for c in r["candidates"])
         assert r["frame"]["time"] >= 30
+
+
+
+# ------------------------------------------------------------------ background people, "Only me"
+
+moving = det
+
+
+def test_people_who_barely_move_are_background_not_players():
+    ds = [moving(f, TEAL, 120, .5) for f in range(12)]
+    ds += [sitting(f, OLIVE, 100, .85) for f in (2, 5, 8, 11)]   # a spectator on a bench: the same box every time
+    g = group(ds, 12)
+    assert len(g["players"]) == 1 and [why for _, why in g["others"]] == ["still"]
+
+
+def test_people_far_from_the_table_are_background():
+    table = (.35, .45, .65, .6)   # 0.3 wide
+    ds = [moving(f, TEAL, 120, .3) for f in range(6)] + [moving(f, BLACK, 90, .7) for f in range(6)]
+    ds += [moving(f, OLIVE, 100, -.25) for f in range(6)]   # at least 0.19 (0.6 table widths) off the table's side
+    g = group(ds, 6, [table] * 6)
+    assert len(g["players"]) == 2 and [why for _, why in g["others"]] == ["far"]
+    # A "table" everyone is far from (a blue banner, say) rules nobody out.
+    assert len(group(ds, 6, [(1.5, .0, 1.6, .05)] * 6)["players"]) == 3
+
+
+def test_a_still_spectator_near_the_camera_does_not_make_the_players_small():
+    ds = [moving(f, TEAL, 60, .3) for f in range(6)] + [moving(f, BLACK, 50, .6) for f in range(6)]
+    ds += [sitting(f, OLIVE, 250, .9) for f in range(6)]   # big and motionless, right by the phone
+    g = group(ds, 6)
+    assert len(g["players"]) == 2 and [why for _, why in g["others"]] == ["still"]
+
+
+def _fake_video(monkeypatch, people_at):
+    """most_active without a video or MediaPipe: people_at(t) -> skeletons at time t."""
+    from technique import audio, media, people, pose
+    monkeypatch.setattr(media, "probe", lambda v: {"duration": 20.0})
+    monkeypatch.setattr(audio, "find_rallies", lambda v: [])
+    monkeypatch.setattr(people, "grab_frame", lambda v, t: np.full((360, 640, 3), int(t * 10) % 255, np.uint8))
+    monkeypatch.setattr(people, "_landmarker", lambda: (None, None))
+    monkeypatch.setattr(people, "_table_box", lambda im: None)
+    looks = {}
+
+    def candidates(image, landmarker, mp, extra=None, first=None):
+        t = image[0, 0, 0] / 10
+        found = people_at(t)
+        return found, [np.zeros((33, 3), np.float32) for _ in found]
+
+    def sig(image, p):
+        return looks[round(float(p[0, 0]), 1)]
+    monkeypatch.setattr(pose, "_pose_candidates", candidates)
+    monkeypatch.setattr(people, "signature", sig)
+    return people, looks
+
+
+def swinging(x: float, t: float, scale: float = 1.0, amount: float = .1) -> np.ndarray:
+    """A player at x whose arms swing: the wrists move with time."""
+    p = skeleton(x, .5 - .2 * scale, .5, .5 + .2 * scale, .5 + .4 * scale)
+    p[[13, 14, 15, 16], 0] += amount * np.sin(t * 15)
+    p[0, 0] = x   # the fake signature is keyed on this
+    return p
+
+
+def test_only_me_follows_whoever_plays_the_most(monkeypatch):
+    def at(t):
+        bench = skeleton(.9)                   # sits still the whole video, nearest the camera
+        bench[0, 0] = .9
+        return [swinging(.3, t, .8), bench]
+    people, looks = _fake_video(monkeypatch, at)
+    looks.update({.3: TEAL, .9: OLIVE})
+    assert people.most_active("v.mp4") is TEAL
+
+
+def test_only_me_prefers_the_near_player_over_a_jittery_far_one(monkeypatch):
+    def at(t):
+        return [swinging(.3, t, 1.0, .08), swinging(.7, t, .4, .06)]   # far: small, landmarks jump
+    people, looks = _fake_video(monkeypatch, at)
+    looks.update({.3: TEAL, .7: BLACK})
+    assert people.most_active("v.mp4") is TEAL
+
+
+def test_coach_seeds_from_whoever_plays_the_most_with_only_me(monkeypatch):
+    from agent.tools import Session
+    from technique import people, pose
+    monkeypatch.setattr(people, "most_active", lambda v: "active")
+    monkeypatch.setattr(pose, "initial_identity", lambda v: "nearest")
+    assert Session("j", only_me=True).seed(Path("v.mp4")) == "active"
+    assert Session("j").seed(Path("v.mp4")) == "nearest"
+    monkeypatch.setattr(people, "most_active", lambda v: None)   # nobody seen: the usual seed
+    assert Session("j", only_me=True).seed(Path("v.mp4")) == "nearest"

@@ -1,5 +1,5 @@
 import { createJob } from "@/lib/jobs";
-import { invalid, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
+import { invalid, onlyMeProblem, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
 
 export async function POST(req: Request) {
   const form = await req.formData();
@@ -7,6 +7,7 @@ export async function POST(req: Request) {
   if (!request) return invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.");
   const problem =
     playerSelectionProblem(form) ??
+    onlyMeProblem(form) ??
     textProblem(request, "coach_request", "Your request") ??
     videoInputProblem(form, "Add a video: upload a clip or paste a YouTube link.");
   if (problem) return invalid(problem);

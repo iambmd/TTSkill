@@ -163,6 +163,7 @@ def create_breakdown(
     url: str = Form(""),
     player_time: str = Form(""),
     player_box: str = Form(""),
+    only_me: str = Form(""),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
@@ -170,6 +171,7 @@ def create_breakdown(
         raise validate.Invalid(f"Unknown stroke type: {stroke_type}. Pick one from the list, or leave it blank to auto-detect.")
     validate.choice(hand, "hand", "Bat hand")
     selection = validate.player_selection(player_time, player_box)
+    solo = validate.only_me(only_me) and not selection   # a tapped player wins
     player = validate.text(player, "player", "The player's name")
     text = validate.text(text, "training_text", "The training description")
     staged = stage_upload(video) if has_file(video) else None
@@ -181,14 +183,18 @@ def create_breakdown(
               "url": link and link["url"]}
     if selection and (staged or link):
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
+    solo = solo and bool(staged or link)
+    if solo:
+        params["only_me"] = True
     job = jobs.create("breakdown", params)
     # The tapped player goes last, and only when there is one, so other calls are unchanged.
     args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
+    kwargs = {"only_me": True} if solo else {}
     if link:
-        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_breakdown, *args)
+        background.add_task(jobs.run, fetch_then, job["id"], link["url"], run_breakdown, *args, **kwargs)
     else:
         path = adopt(staged, job["id"]) if staged else None
-        background.add_task(jobs.run, run_breakdown, job["id"], path, *args)
+        background.add_task(jobs.run, run_breakdown, job["id"], path, *args, **kwargs)
     return job
 
 
@@ -234,6 +240,7 @@ def create_coach(
     url: str = Form(""),
     player_time: str = Form(""),
     player_box: str = Form(""),
+    only_me: str = Form(""),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
@@ -241,6 +248,7 @@ def create_coach(
 
     request = validate.text(request, "coach_request", "Your request")
     selection = validate.player_selection(player_time, player_box)
+    solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
         raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
     staged = stage_upload(video) if has_file(video) else None
@@ -251,10 +259,12 @@ def create_coach(
               "url": link and link["url"]}
     if selection:
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
+    if solo:
+        params["only_me"] = True
     job = jobs.create("coach", params)
     path = adopt(staged, job["id"]) if staged else None
     background.add_task(jobs.run, run_coach, job["id"], path, link and link["url"], request,
-                        *((selection,) if selection else ()))
+                        *((selection,) if selection else ()), **({"only_me": True} if solo else {}))
     return job
 
 

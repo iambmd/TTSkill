@@ -40,13 +40,19 @@ class Session:
     window: Optional[dict] = None
     identity: object = None
     selection: Optional[tuple] = None   # (time, box) of the player tapped in "Which one is you?"
+    only_me: bool = False               # "Only me in the video": follow whoever plays the most
 
     def seed(self, video: Path) -> object:
-        """The tracker seed, once per job: the tapped player, else the video-wide vote."""
+        """The tracker seed, once per job: the tapped player; with "Only me", whoever plays
+        the most; else the video-wide vote."""
         if self.identity is None:
-            from technique import pose
-            self.identity = (pose.identity_from_box(video, *self.selection) if self.selection
-                             else pose.initial_identity(video))
+            from technique import people, pose
+            if self.selection:
+                self.identity = pose.identity_from_box(video, *self.selection)
+            elif self.only_me:
+                self.identity = people.most_active(str(video))
+            if self.identity is None:
+                self.identity = pose.initial_identity(video)
         return self.identity
 
     @property

@@ -23,6 +23,12 @@ describe("player picker: what to show by how many players we found", () => {
     expect(pickerView({ candidates: players(2), decisive: true } as never, false)).toBe("pick");
     expect(pickerView({ candidates: players(3) as never }, false)).toBe("pick");
   });
+  it("counts only real players; background people are one tap away", () => {
+    const bench = [{ id: 1, background: "still" }] as never;
+    expect(pickerView({ candidates: players(1) as never, others: bench }, false)).toBe("one");
+    expect(pickerView({ candidates: [], others: bench }, false)).toBe("nobody");
+    expect(pickerView({ candidates: [], others: bench }, true)).toBe("pick");   // "Show everyone we saw"
+  });
   it("stays out of the way when nothing could look (stub or demo mode)", () => {
     expect(pickerView(null, false)).toBe("hidden");
     expect(pickerView({ candidates: [], available: false }, false)).toBe("hidden");

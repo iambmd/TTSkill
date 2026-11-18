@@ -15,7 +15,7 @@ from .download import download
 from .rally import detect_rallies
 
 
-def fetch_then(job_id: str, url: str, run: Callable[..., None], *args) -> None:
+def fetch_then(job_id: str, url: str, run: Callable[..., None], *args, **kwargs) -> None:
     """Downloads a pasted link into the job folder as the upload would be, runs the normal
     pipeline on it, then deletes the full download (the result video stays)."""
     seen = {"pct": -1}
@@ -34,7 +34,7 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args) -> None:
         jobs.update(job_id, status="failed", progress=1.0, message=str(exc))
         return
     try:
-        run(job_id, path, *args)
+        run(job_id, path, *args, **kwargs)
     finally:
         path.unlink(missing_ok=True)
 
@@ -108,7 +108,8 @@ def _progress(job_id: str):
 
 
 def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, player: str,
-                  hand: str = "auto", stroke_type: str = "", selection: tuple | None = None) -> None:
+                  hand: str = "auto", stroke_type: str = "", selection: tuple | None = None,
+                  only_me: bool = False) -> None:
     """Runs backend/technique and copies its breakdown.mp4 to result.mp4 for the job page."""
     try:
         from technique.pipeline import run_text, run_video  # heavy imports (MediaPipe, OpenCV)
@@ -118,9 +119,16 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
         report = _progress(job_id)
         report("starting technique pipeline")
         if video is not None:
-            # The player the user tapped, when they had to choose; otherwise the video-wide seed.
-            from technique import pose
-            seed = pose.identity_from_box(video, *selection) if selection else None
+            # The player the user tapped; with "Only me in the video", whoever plays the most;
+            # otherwise the video-wide seed.
+            from technique import people, pose
+            if selection:
+                seed = pose.identity_from_box(video, *selection)
+            elif only_me:
+                report("only me in the video: finding who plays the most")
+                seed = people.most_active(str(video))
+            else:
+                seed = None
             res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand,
                             stroke_type=stroke_type or None, identity=seed, picked=bool(selection))
         else:
