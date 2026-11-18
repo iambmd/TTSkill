@@ -62,14 +62,30 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
  * or demo mode) there is nobody to find, so the answer is decisive and the picker stays hidden. */
 export async function detectPlayers(form: FormData, signal?: AbortSignal): Promise<Response> {
   if (DEMO_MODE || !BACKEND_URL) return Response.json({ candidates: [], frame: null, suggested: null, decisive: true });
+  const start = Date.now();
   // Pass the browser's abort on, so the backend stops working for a page that left.
   const res = await backend("/players/detect", { method: "POST", body: form, signal });
   const data = await res.json().catch(() => ({}));
+  const ms = Date.now() - start;
+  console.info(detectLog(form, res.status, ms, data));
   if (!res.ok) {
     const detail = typeof data.detail === "string" ? data.detail : data.error ?? "Backend rejected the request";
     return Response.json({ error: detail }, { status: res.status });
   }
+  if (data.timing) data.timing.next_s = Number((ms / 1000).toFixed(2));
   return Response.json(data);
+}
+
+/** One line per "Which one is you?" lookup in the Next.js log: what the browser sent and how
+ * long it spent drawing frames, against the backend's own split of the time. */
+export function detectLog(form: FormData, status: number, ms: number, data: { timing?: Record<string, number>; candidates?: unknown[] }): string {
+  const frames = form.getAll("frames").filter((f): f is File => f instanceof File);
+  const kb = Math.round(frames.reduce((n, f) => n + f.size, 0) / 1024);
+  const sent = frames.length ? `${frames.length} frames, ${kb} KB, drawn in ${form.get("grab_ms") ?? "?"} ms`
+    : form.get("job") ? "a past job's video" : "a link";
+  const t = data.timing;
+  const backendPart = t ? `backend ${t.total_s ?? t.seconds} s (detect ${t.seconds} s)` : "no timing";
+  return `[players/detect] ${sent} -> ${status} in ${ms} ms; ${backendPart}; ${data.candidates?.length ?? 0} players`;
 }
 
 /** "Change player": the same job on the same video, following the newly tapped player. */

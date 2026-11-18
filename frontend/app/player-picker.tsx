@@ -15,6 +15,9 @@ type Found = {
   frame: { time: number; image: string; boxes: { id: number; box: Box }[] } | null;
   suggested: number | null;
   decisive: boolean;
+  /** People found in each frame, and where the time went (for the console log). */
+  frames?: { time: number; people: number }[];
+  timing?: Record<string, number>;
 };
 type Choice = { id: number; time: number; box: Box };
 
@@ -22,8 +25,12 @@ const FRAMES = 6;
 const MAX_W = 1280;
 export const PICK_PLAYER = "Tap the player to analyse.";
 const FINDING = "Finding the players in your video...";
+const FETCHING = "Fetching the video from YouTube to find the players...";
 /** The whole lookup (drawing frames + the request) never keeps the page waiting longer. */
 export const LOOKUP_TIMEOUT_MS = 30_000;
+/** A link is probed (~10 s) and downloaded whole before frames exist: a 3-minute video took
+ * longer than the 30 s limit, which looked like a hang. */
+export const LINK_TIMEOUT_MS = 120_000;
 const LOAD_MS = 10_000;   // a playable file decodes its first frame well within this
 const SEEK_MS = 6_000;
 export const TOO_LONG = "Finding the players took too long.";
@@ -99,6 +106,15 @@ async function findPlayers(body: FormData, signal: AbortSignal): Promise<Found> 
   return data as Found;
 }
 
+/** The browser console's line for one lookup, so a slow one shows where its time went. */
+export function lookupLog(s: { grabMs: number | null; frames: number; bytes: number; requestMs: number; found: Pick<Found, "candidates" | "timing" | "frames"> }): string {
+  const t = s.found.timing ?? {};
+  const grab = s.grabMs === null ? "" : `drew ${s.frames} frames (${Math.round(s.bytes / 1024)} KB) in ${(s.grabMs / 1000).toFixed(2)} s, `;
+  const people = s.found.frames?.map((f) => `${f.time.toFixed(1)}s:${f.people}`).join(" ") ?? "";
+  return `[players] ${grab}answer in ${(s.requestMs / 1000).toFixed(2)} s (Next.js ${t.next_s ?? "?"} s, backend ${t.total_s ?? "?"} s, detect ${t.seconds ?? "?"} s); `
+    + `people per frame ${people || "-"}; ${s.found.candidates.length} players`;
+}
+
 /** What blocks the submit button. The "Analyse anyway" button is always on screen while a
  * lookup runs or after it fails, so the form can never be stuck. */
 export function pickerProblem(s: { finding: boolean; failed: string | null; skipped: boolean; asking: boolean; chosen: boolean }): string | null {
@@ -152,19 +168,28 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
     const run = async () => {
       const body = new FormData();
       body.append("kind", kind);
+      let grabMs: number | null = null;
+      let sent = { frames: 0, bytes: 0 };
       if (jobId) {
         body.append("job", jobId);
       } else if (previewUrl && duration) {
+        const started = performance.now();
         const frames = await drawFrames(previewUrl, duration, controller.signal);
+        grabMs = performance.now() - started;
         frames.forEach((f, i) => body.append("frames", new File([f.blob], `frame${i}.jpg`, { type: "image/jpeg" })));
         body.append("times", frames.map((f) => f.time).join(","));
+        body.append("grab_ms", String(Math.round(grabMs)));
+        sent = { frames: frames.length, bytes: frames.reduce((n, f) => n + f.blob.size, 0) };
       } else {
         body.append("url", link!);
       }
-      return findPlayers(body, controller.signal);
+      const asked = performance.now();
+      const found = await findPlayers(body, controller.signal);
+      console.info(lookupLog({ grabMs, ...sent, requestMs: performance.now() - asked, found }));
+      return found;
     };
     const timer = setTimeout(() => {
-      withTimeout(run(), LOOKUP_TIMEOUT_MS, TOO_LONG)
+      withTimeout(run(), link && !jobId ? LINK_TIMEOUT_MS : LOOKUP_TIMEOUT_MS, TOO_LONG)
         .then((r) => {
           if (stale) return;
           setFound(r);
@@ -212,7 +237,7 @@ export function PlayerPicker({ previewUrl, duration, link, kind, onProblem, jobI
   if (finding) {
     return (
       <div className="stripes flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
-        <p aria-live="polite" className="flex-1 text-sm text-muted">{FINDING}</p>
+        <p aria-live="polite" className="flex-1 text-sm text-muted">{link && !previewUrl && !jobId ? FETCHING : FINDING}</p>
         {anyway}
       </div>
     );

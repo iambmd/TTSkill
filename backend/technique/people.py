@@ -131,13 +131,14 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
     {"candidates": [{id, time, box, thumb, seen, near}], "frame": {time, image, boxes},
      "suggested": id or None, "decisive": bool, "timing": {...}}.
     cancel: set when the browser disconnects; raises Cancelled at the next frame."""
+    start = time.monotonic()   # before the imports: the first call pays ~1 s for them
     from .pose import QUARTERS, _pose_candidates
 
-    start = time.monotonic()
     landmarker, mp = _landmarker()
     loaded = time.monotonic() - start
     images = []
     detections: list[Detection] = []
+    found: list[int] = []   # people per frame, for the log
     zoomed = 0
     for f, (_, image) in enumerate(frames):
         if cancel is not None and cancel.is_set():
@@ -153,6 +154,7 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
         extra = QUARTERS if spent < budget / 2 else None
         zoomed += extra is not None
         people, _ = _pose_candidates(image, landmarker, mp, extra=extra)
+        found.append(len(people))
         for p in people:
             torso = float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
             detections.append(Detection(f, box_of(p), torso, signature(image, p)))
@@ -178,7 +180,16 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
     timing = {"seconds": round(time.monotonic() - start, 2), "model_load_s": round(loaded, 2),
               "frames": len(images), "zoomed_frames": zoomed}
     return {"candidates": candidates, "frame": frame, "suggested": g["suggested"], "decisive": g["decisive"],
+            "frames": [{"time": round(t, 3), "people": n} for (t, _), n in zip(frames, found)],
             "timing": timing}
+
+
+def warm() -> None:
+    """Load the model on this thread and run it once, so the first picker doesn't pay for it."""
+    from . import pose  # noqa: F401  (the import alone is ~1 s)
+
+    landmarker, mp = _landmarker()
+    landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=np.zeros((256, 256, 3), np.uint8)))
 
 
 def sample_frames(video: str, count: int = 6) -> list[tuple[float, np.ndarray]]:

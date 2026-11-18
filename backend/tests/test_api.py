@@ -595,3 +595,67 @@ def test_detect_returns_while_connected():
     async def go():
         return await main.run_while_connected(Browser(), lambda x, cancel: x * 2, 21)
     assert asyncio.run(go()) == 42
+
+
+def test_detect_reports_where_the_time_went(api, monkeypatch, caplog):
+    import logging
+    from technique import people
+
+    def fake(frames, cancel=None):
+        return {"candidates": [{"id": 0}], "frame": None, "suggested": 0, "decisive": True,
+                "frames": [{"time": t, "people": 1} for t, _ in frames], "timing": {"seconds": 0.0, "frames": len(frames)}}
+    monkeypatch.setattr(people, "detect", fake)
+    files = [("frames", ("a.jpg", _jpeg(), "image/jpeg")), ("frames", ("b.jpg", _jpeg(), "image/jpeg"))]
+    with caplog.at_level(logging.INFO, logger="uvicorn.error"):
+        t = api.post("/players/detect", files=files, data={"times": "1.5,30", "grab_ms": "480"}).json()["timing"]
+    assert {"read_s", "wait_s", "decode_s", "total_s", "seconds"} <= set(t) and t["total_s"] >= t["seconds"] - 0.01
+    line = next(r.getMessage() for r in caplog.records if "players/detect" in r.getMessage())
+    assert "2 frames [1.5s:1 30.0s:1] -> 1 players" in line and "decode" in line
+
+
+def test_a_link_is_probed_off_the_event_loop(api, monkeypatch):
+    """yt-dlp's probe takes seconds; on the event loop it froze every other request."""
+    import asyncio
+    from technique import people
+    where = {}
+
+    def probe(url, kind):
+        try:
+            asyncio.get_running_loop()
+            where["on_loop"] = True
+        except RuntimeError:
+            where["on_loop"] = False
+        return {"id": "x", "title": "t", "duration": 30, "url": download.canonical(url)}
+    monkeypatch.setattr(download, "probe", probe)
+    monkeypatch.setattr(download, "download", lambda url, folder, progress=None: folder / "input.mp4")
+    monkeypatch.setattr(people, "sample_frames", lambda path, count=6: [])
+    monkeypatch.setattr(people, "detect", lambda frames, cancel=None: {"candidates": [], "timing": {"seconds": 0}})
+    r = api.post("/players/detect", data={"url": SHORT, "kind": "coach"})
+    assert r.status_code == 200 and where == {"on_loop": False} and "probe_s" in r.json()["timing"]
+
+
+def test_a_link_download_stops_when_the_browser_leaves(tmp_path, monkeypatch):
+    from technique import people
+    monkeypatch.setattr(jobs, "DATA_DIR", tmp_path)
+    cancel = threading.Event()
+
+    def fetch(url, folder, progress=None):
+        cancel.set()          # the browser leaves mid-download...
+        progress(0.3)         # ...and the next progress report stops it
+        raise AssertionError("the download kept going")
+    monkeypatch.setattr(download, "download", fetch)
+    with pytest.raises(people.Cancelled):
+        main._detect_video(None, CANONICAL, 0.0, cancel=cancel)
+    assert not any((tmp_path / ".players").iterdir())   # its folder is gone too
+
+
+def test_startup_loads_the_pose_model_on_every_detection_thread(monkeypatch):
+    from technique import people
+    warmed = []
+    monkeypatch.setattr(people, "warm", lambda: warmed.append(threading.current_thread().name))
+    main.warm_players()
+    for _ in range(50):
+        if len(warmed) == main.PLAYER_THREADS:
+            break
+        threading.Event().wait(0.05)
+    assert len(set(warmed)) == main.PLAYER_THREADS

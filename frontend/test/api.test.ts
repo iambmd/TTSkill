@@ -429,6 +429,21 @@ describe("POST /api/players/detect", () => {
   });
 });
 
+describe("the Next.js log line for a lookup", () => {
+  it("puts what the browser sent next to the backend's split of the time", async () => {
+    const { detectLog } = await import("@/lib/jobs");
+    const form = new FormData();
+    form.append("frames", new File([new Uint8Array(2048)], "a.jpg", { type: "image/jpeg" }));
+    form.append("frames", new File([new Uint8Array(1024)], "b.jpg", { type: "image/jpeg" }));
+    form.append("grab_ms", "480");
+    const line = detectLog(form, 200, 1300, { timing: { total_s: 1.2, seconds: 1.1 }, candidates: [{}, {}] });
+    expect(line).toBe("[players/detect] 2 frames, 3 KB, drawn in 480 ms -> 200 in 1300 ms; backend 1.2 s (detect 1.1 s); 2 players");
+    const link = new FormData();
+    link.append("url", "https://youtu.be/x");
+    expect(detectLog(link, 499, 30000, {})).toContain("a link -> 499 in 30000 ms; no timing");
+  });
+});
+
 describe("POST /api/jobs/[id]/rerun (Change player)", () => {
   const ID = "0123456789abcdef0123456789abcdef";
   it("needs a complete pick", async () => {

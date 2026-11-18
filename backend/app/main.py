@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
+import os
 import re
 import shutil
 import threading
+import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
 
@@ -13,6 +17,7 @@ from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
+from starlette.concurrency import run_in_threadpool
 
 from equipment import recommend as rubbers
 from technique.strokes import STROKE_TYPES
@@ -20,7 +25,17 @@ from technique.strokes import STROKE_TYPES
 from . import download, jobs, validate
 from .pipelines import fetch_then, run_autocut, run_breakdown, run_match
 
-app = FastAPI(title="TTSkill backend")
+log = logging.getLogger("uvicorn.error")   # configured by uvicorn, so INFO lines show in `make backend`
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if os.environ.get("TTSKILL_WARM", "1") != "0":
+        warm_players()
+    yield
+
+
+app = FastAPI(title="TTSkill backend", lifespan=lifespan)
 # Browsers call us directly from the Vercel frontend (uploads are over Vercel's 4.5 MB function limit),
 # through a Cloudflare quick tunnel; localhost is for dev. Starlette full-matches the whole origin.
 ALLOWED_ORIGINS = r"https://([a-z0-9-]+\.)+(vercel\.app|trycloudflare\.com)|http://(localhost|127\.0\.0\.1)(:\d+)?"
@@ -245,7 +260,28 @@ def create_coach(
 
 # Finding players runs here, off the event loop, so the API keeps answering and two pickers
 # don't wait on each other (1.6-2.0 s each when run together). Two threads: each loads a model.
-PLAYER_POOL = ThreadPoolExecutor(max_workers=2, thread_name_prefix="players")
+PLAYER_THREADS = 2
+PLAYER_POOL = ThreadPoolExecutor(max_workers=PLAYER_THREADS, thread_name_prefix="players")
+
+
+def warm_players() -> None:
+    """Load the pose model on every detection thread at startup. Cold, the first picker paid
+    ~2.7 s for imports and the model (measured 2026-11-18), on top of a 1.1 s Next.js compile."""
+    barrier = threading.Barrier(PLAYER_THREADS)
+
+    def load() -> None:
+        try:
+            from technique import people
+            people.warm()
+        except Exception as exc:   # detection still works, just slower the first time
+            log.warning("players: warm-up failed: %s", exc)
+        try:
+            barrier.wait(timeout=30)   # hold this thread so the next task warms the other one
+        except threading.BrokenBarrierError:
+            pass
+
+    for _ in range(PLAYER_THREADS):
+        PLAYER_POOL.submit(load)
 
 
 class ClientGone(Exception):
@@ -267,7 +303,8 @@ async def run_while_connected(request: Request, fn, *args):
             raise ClientGone()
 
 
-def _detect_frames(sent: list[tuple[float, bytes]], cancel: threading.Event) -> dict:
+def _detect_frames(sent: list[tuple[float, bytes]], queued: float, cancel: threading.Event) -> dict:
+    start = time.monotonic()
     import cv2
     import numpy as np
 
@@ -279,21 +316,52 @@ def _detect_frames(sent: list[tuple[float, bytes]], cancel: threading.Event) -> 
         if image is None:
             raise validate.Invalid("A frame couldn't be read as an image.")
         images.append((t, image))
-    return people.detect(images, cancel=cancel)
+    decoded = time.monotonic()
+    result = people.detect(images, cancel=cancel)
+    result.setdefault("timing", {}).update(wait_s=round(start - queued, 2), decode_s=round(decoded - start, 2))
+    return result
 
 
-def _detect_video(path: Path | None, url: str | None, cancel: threading.Event) -> dict:
+def _stop_if(cancel: threading.Event) -> None:
+    if cancel.is_set():
+        from technique.people import Cancelled
+        raise Cancelled()
+
+
+def _detect_video(path: Path | None, url: str | None, queued: float, cancel: threading.Event) -> dict:
     """A stored upload, or a link downloaded just for finding the players and then deleted."""
+    start = time.monotonic()
     from technique import people
 
-    if path is not None:
-        return people.detect(people.sample_frames(str(path)), cancel=cancel)
-    folder = jobs.DATA_DIR / ".players" / uuid.uuid4().hex
-    folder.mkdir(parents=True, exist_ok=True)
+    folder = None
     try:
-        return people.detect(people.sample_frames(str(download.download(url, folder))), cancel=cancel)
+        if path is None:
+            folder = jobs.DATA_DIR / ".players" / uuid.uuid4().hex
+            folder.mkdir(parents=True, exist_ok=True)
+            # A page that leaves stops the download too (it used to hold a detection thread).
+            path = download.download(url, folder, progress=lambda f: _stop_if(cancel))
+        fetched = time.monotonic()
+        _stop_if(cancel)
+        frames = people.sample_frames(str(path))
+        sampled = time.monotonic()
+        result = people.detect(frames, cancel=cancel)
     finally:
-        shutil.rmtree(folder, ignore_errors=True)
+        if folder is not None:
+            shutil.rmtree(folder, ignore_errors=True)
+    result.setdefault("timing", {}).update(wait_s=round(start - queued, 2), download_s=round(fetched - start, 2),
+                            sample_s=round(sampled - fetched, 2))
+    return result
+
+
+def _detect_summary(source: str, r: dict) -> str:
+    """One log line per lookup: what came in, who was found in each frame, where the time went."""
+    t = r.get("timing", {})
+    phases = " + ".join(f"{k[:-2]} {t[k]:.2f}" for k in ("probe_s", "read_s", "wait_s", "download_s", "sample_s",
+                                                          "decode_s") if k in t)
+    per_frame = " ".join(f"{f['time']:.1f}s:{f['people']}" for f in r.get("frames", []))
+    return (f"players/detect {source}: {t.get('frames', 0)} frames [{per_frame}] -> "
+            f"{len(r.get('candidates', []))} players; {t.get('total_s', 0):.2f} s = {phases} + "
+            f"detect {t.get('seconds', 0):.2f} (model {t.get('model_load_s', 0):.2f}, zoomed {t.get('zoomed_frames', 0)})")
 
 
 @app.post("/players/detect")
@@ -312,6 +380,8 @@ async def detect_players(
 
     if kind not in ("breakdown", "match", "coach"):
         raise validate.Invalid("kind must be breakdown, match or coach.")
+    t0 = time.monotonic()
+    extra: dict = {}
     try:
         if job:
             # "Change player" on a result: the job's stored upload, or its link downloaded again.
@@ -319,14 +389,28 @@ async def detect_players(
             link_url = None if stored else (jobs.load(job) or {}).get("params", {}).get("url")
             if stored is None and not link_url:
                 raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
-            return await run_while_connected(request, _detect_video, stored, link_url)
-        sent = [(f.filename, await f.read()) for f in (frames or []) if has_file(f)]
-        if sent or not url.strip():
-            return await run_while_connected(request, _detect_frames, validate.player_frames(sent, times))
-        link = check_link(url, kind)
-        return await run_while_connected(request, _detect_video, None, link["url"])
+            source = "job video" if stored else "job link"
+            result = await run_while_connected(request, _detect_video, stored, link_url, time.monotonic())
+        else:
+            sent = [(f.filename, await f.read()) for f in (frames or []) if has_file(f)]
+            extra["read_s"] = round(time.monotonic() - t0, 2)
+            if sent or not url.strip():
+                source = f"browser frames ({sum(len(d) for _, d in sent) // 1024} KB)"
+                result = await run_while_connected(request, _detect_frames, validate.player_frames(sent, times),
+                                                   time.monotonic())
+            else:
+                # yt-dlp's probe is a blocking network call (~10 s): off the event loop, or every
+                # other request (job polling, other pickers) waits for it.
+                link = await run_in_threadpool(check_link, url, kind)
+                extra["probe_s"] = round(time.monotonic() - t0 - extra["read_s"], 2)
+                source = "link"
+                result = await run_while_connected(request, _detect_video, None, link["url"], time.monotonic())
     except (ClientGone, Cancelled):
+        log.info("players/detect: the browser left after %.2f s; stopped", time.monotonic() - t0)
         return Response(status_code=499)   # nginx's "client closed request"; nobody reads it
+    result.setdefault("timing", {}).update(extra, total_s=round(time.monotonic() - t0, 2))
+    log.info(_detect_summary(source, result))
+    return result
 
 
 def job_input(job_id: str) -> Path | None:

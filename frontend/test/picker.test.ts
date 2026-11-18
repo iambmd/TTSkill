@@ -1,7 +1,8 @@
 /** "Which one is you?": auto first, ask only when the choice is unclear. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  CANT_READ, CHOOSE, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, needsChoice, nextEvent, pickerProblem, withTimeout,
+  CANT_READ, CHOOSE, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
+  pickerProblem, withTimeout,
 } from "@/app/player-picker";
 
 const players = (n: number) => Array.from({ length: n }, (_, id) => ({ id }));
@@ -67,5 +68,17 @@ describe("what blocks the submit button", () => {
     expect(pickerProblem({ ...base, asking: true })).toBe(PICK_PLAYER);
     expect(pickerProblem({ ...base, asking: true, chosen: true })).toBeNull();
     expect(pickerProblem(base)).toBeNull();
+  });
+});
+
+describe("where a lookup's time went", () => {
+  it("logs the frame grab, the request and the backend's part in the console", () => {
+    const found = { candidates: [{}, {}] as never, frames: [{ time: 11.7, people: 2 }, { time: 35.1, people: 1 }], timing: { next_s: 1.2, total_s: 1.19, seconds: 1.16 } };
+    expect(lookupLog({ grabMs: 470, frames: 2, bytes: 2048, requestMs: 1450, found })).toBe(
+      "[players] drew 2 frames (2 KB) in 0.47 s, answer in 1.45 s (Next.js 1.2 s, backend 1.19 s, detect 1.16 s); people per frame 11.7s:2 35.1s:1; 2 players");
+  });
+  it("gives a link time to download: a 3-minute video took longer than the 30 s limit", () => {
+    expect(LINK_TIMEOUT_MS).toBeGreaterThanOrEqual(90_000);
+    expect(LOOKUP_TIMEOUT_MS).toBe(30_000);
   });
 });

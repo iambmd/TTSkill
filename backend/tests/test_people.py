@@ -118,3 +118,9 @@ def test_the_pose_model_is_loaded_once_per_thread():
     a, _ = people._landmarker()
     b, _ = people._landmarker()
     assert a is b
+
+
+def test_detection_reports_people_per_frame(monkeypatch):
+    people, frames, _, _ = _fake_detector(monkeypatch)
+    r = people.detect(frames)
+    assert r["frames"] == [{"time": float(i), "people": 1} for i in range(6)]
