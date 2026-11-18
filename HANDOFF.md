@@ -58,6 +58,11 @@ left this clip's top 3.
    on frames (labels give table side, not hand), `eval/extract_strokes.py`, delete the raw video.
    Train a small model (logistic regression with an abstain threshold) on calibration only;
    freeze; score once on test_6/test_3 against `eval/geometry_protocol.json`'s gates.
+   State on 2026-11-17: raw test_2/3/6/7 videos deleted (pose windows for 3/6/7 stay cached in
+   `backend/eval/work/accuracy-next/`). `data/openttgames/test_5.mp4` (720 MB) is downloaded, not
+   yet extracted. Its left (orange) player looks right-handed (watch on the arm hanging at his
+   side; confirm), the right (dark shirt) player is unverified. test_1 is 1.05 GB, test_4 2.25 GB.
+   No scikit-learn in the venv: write the logistic regression in numpy rather than add it.
 3. **1c: block stroke type**, after 1b and measured the same way: `technique/strokes.py`,
    offline template in `technique/analyze.py`, `frontend/lib/strokes.ts`.
 
