@@ -60,6 +60,10 @@ class ClaudeAnalyzer:
         # Structured output (the schema is the pydantic model) instead of a forced tool
         # call, which current models reject. "default" fallbacks retry a declined request
         # on Anthropic's recommended model inside the same call.
+        import time
+
+        import timing
+        begin = time.monotonic()
         msg = self.client.beta.messages.parse(
             model=self.model,
             max_tokens=16000,
@@ -69,6 +73,7 @@ class ClaudeAnalyzer:
             betas=["server-side-fallback-2026-07-01"],
             fallbacks="default",
         )
+        timing.record_anthropic("claude vision analyzer", msg, begin)
         if msg.stop_reason == "refusal":
             raise RuntimeError("model declined the request")
         b = msg.parsed_output

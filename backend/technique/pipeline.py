@@ -15,6 +15,8 @@ from typing import Callable, Optional
 import numpy as np
 from scipy.ndimage import uniform_filter1d
 
+import timing
+
 from . import audio, media, pose, strokes
 from .analyze import OfflineAnalyzer, get_analyzer, normalize_stroke
 from .render import render_breakdown, render_text_only
@@ -218,24 +220,29 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     _log(progress, f"input {info['width']}x{info['height']} {info['duration']:.1f}s")
 
     if identity is None:
-        identity = pose.initial_identity(src)
+        with timing.stage("seed (initial_identity)"):
+            identity = pose.initial_identity(src)
     if chosen:
         win = chosen
     elif window:
         win = {"start": window[0], "end": window[1], "reason": "user"}
     else:
-        win = choose_window(src, info["duration"], window_s, out, progress, identity=identity)
+        with timing.stage("choose_window"):
+            win = choose_window(src, info["duration"], window_s, out, progress, identity=identity)
     _log(progress, f"window {win['start']:.1f}-{win['end']:.1f}s ({win['reason']})")
 
-    clip = str(media.make_proxy(src, out / "clip.mp4", height=720, fps=30,
-                                start=win["start"], end=win["end"]))
+    with timing.stage("proxy 720p"):
+        clip = str(media.make_proxy(src, out / "clip.mp4", height=720, fps=30,
+                                    start=win["start"], end=win["end"]))
     _log(progress, "running MediaPipe pose")
-    track = pose.extract_pose(clip, identity=identity)
+    with timing.stage("pose (MediaPipe, full rate)"):
+        track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track, picked=picked)
     hits = [h - win["start"] for h in win.get("hit_times", [])
             if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand,
-                              pooled=win.get("paddle"))
+    with timing.stage("bat_side"):
+        side, how = pose.bat_side(clip, track, hand, trust_hand, hit_times=hits, assume=assume_hand,
+                                  pooled=win.get("paddle"))
     _log(progress, f"bat hand: {side} ({how})")
     stroke_type, detected = _stroke_plan(track, side, hits, stroke, stroke_type)
     st = strokes.STROKE_TYPES.get(stroke_type or "")
@@ -257,6 +264,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     a = get_analyzer(analyzer)
     _log(progress, f"analysing with {a.name}")
     kind = dict(stroke_type=stroke_type, detected=detected is not None)
+    analysing = timing.stage(f"analyzer ({a.name})")
+    analysing.__enter__()
     try:
         if isinstance(a, OfflineAnalyzer):
             b = a.from_video(clip, stroke, frame_times, summary, keys, player,
@@ -267,6 +276,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
         _log(progress, f"{a.name} failed ({e}); using offline analyzer")
         b = OfflineAnalyzer().from_video(clip, stroke, frame_times, summary, keys, player,
                                          contact_metrics=contact, **kind)
+    finally:
+        analysing.__exit__(None, None, None)
     if b.stroke_type not in strokes.STROKE_TYPES:  # Claude may correct a detected type
         b.stroke_type = stroke_type
     b.handedness = side if (how != "faster wrist") else b.handedness
@@ -281,7 +292,8 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     generated = generate_video(prompts, str(out / "generated.mp4"), t2v_provider)
 
     _log(progress, "rendering pose-overlay breakdown video")
-    overlay = render_breakdown(clip, track, b, str(out / "breakdown.mp4"), side)
+    with timing.stage("render"):
+        overlay = render_breakdown(clip, track, b, str(out / "breakdown.mp4"), side)
 
     result = {
         "kind": "technique_breakdown",

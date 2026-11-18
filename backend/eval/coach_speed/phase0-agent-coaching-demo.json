@@ -1,0 +1,611 @@
+{
+  "id": "a3cbb78235564a7bb89d0623cd226ea6",
+  "status": "done",
+  "engine": "deepagents",
+  "engineNote": null,
+  "summary": "Your forehand is a loop against backspin, and the main problem is that you stand too tall. Your legs aren't helping lift the ball.\n\n**Best rallies:** I found 18 rallies in the match and made a 42-second highlight reel of your 5 longest. The best one ran 13 shots.\n\n**Your forehand:** I measured three of your forehands and compared them with the right-handed pros whose build and style are closest to yours. You're closest to Ma Long, then Harimoto and Fan Zhendong. You also have a pro comparison video and a breakdown video of your own stroke with 3 coaching cards.\n\n**What to work on first:**\n1. **Sit lower.** Your knees are almost straight when you hit the ball, about 30\u00b0 straighter than Fan Zhendong's. Against backspin, the lift should come from your legs. Aim for a clearly bent knee as you hit.\n2. **Finish high.** Your bat stops around chest height. Harimoto's arm finishes about 47\u00b0 higher. Swing up to forehead height so the ball clears the net instead of going into it.\n3. **Bend your elbow more.** Your arm is a bit stiff when you hit, about 17\u00b0 straighter than Fan Zhendong's. A looser elbow lets your forearm snap and brush the ball.\n\n**Keep:** your wide stance (about twice your shoulder width) is a good base.\n\n**Drill:** do 3 sets of 20 shadow forehand loops from a low squat, holding the finish each time with the bat at your forehead.\n\nThe knee and elbow targets on the cards (about 125\u00b0 for the knee and 105\u00b0 for the elbow) are rough estimates. They're your angles adjusted by the gaps to Fan Zhendong, not exact pro figures.",
+  "outputs": [
+    {
+      "kind": "highlights",
+      "title": "Top 5 rallies",
+      "url": "/jobs/a3cbb78235564a7bb89d0623cd226ea6/files/highlights.mp4",
+      "summary": "42 s, most shots first"
+    },
+    {
+      "kind": "match",
+      "title": "You play like Ma Long",
+      "url": "/jobs/a3cbb78235564a7bb89d0623cd226ea6/files/pro_matches.mp4",
+      "summary": "Ma Long 73%, Tomokazu Harimoto 72%, Fan Zhendong 68%"
+    },
+    {
+      "kind": "breakdown",
+      "title": "Forehand loop backspin breakdown",
+      "url": "/jobs/a3cbb78235564a7bb89d0623cd226ea6/files/breakdown.mp4",
+      "summary": "Sit low, lift high"
+    }
+  ],
+  "breakdown": {
+    "player": "Ma Long",
+    "stroke": "forehand",
+    "stroke_type": "forehand_loop_backspin",
+    "handedness": "right",
+    "headline": "Sit low, lift high",
+    "grip": "Shakehand grip held loose. Index finger rests on the backhand edge, and the thumb stays relaxed on the forehand side. Let the wrist hang so the bat tip points down in the backswing.",
+    "stance": "Wide base, about 1.8x shoulder width. Right foot is back and the knees are flexed. Hips and shoulders turn right, so your chest faces the side line before the swing.",
+    "swing_path": "Bat drops below table height beside the right knee. The legs push up, then the hips and chest rotate. The forearm snaps steeply upward and forward, wrist last.",
+    "contact_point": "Contact in front of the right hip as the ball starts to drop from its peak. Brush the back-top of the ball with a slightly closed face.",
+    "follow_through": "Bat finishes high near the forehead with the elbow up. Then drop straight back to a balanced ready position with the knees still bent.",
+    "steps": [
+      {
+        "title": "SIT LOWER",
+        "lines": [
+          "Bend knees to ~125\u00b0, not 158\u00b0, at contact",
+          "Legs drive the lift that beats backspin"
+        ],
+        "highlight_words": [],
+        "key_time_s": 2.33,
+        "callouts": [
+          "KNEE 158\u00b0",
+          "+32\u00b0 BEND"
+        ]
+      },
+      {
+        "title": "BEND ELBOW",
+        "lines": [
+          "Elbow near 105\u00b0, not 123\u00b0, at contact",
+          "Loose arm snaps the forearm, no stiff push"
+        ],
+        "highlight_words": [],
+        "key_time_s": 2.5,
+        "callouts": [
+          "ELBOW 123\u00b0"
+        ]
+      },
+      {
+        "title": "FINISH HIGH",
+        "lines": [
+          "Bat ends at forehead, not chest height",
+          "Upward path lifts backspin over the net"
+        ],
+        "highlight_words": [],
+        "key_time_s": 2.73,
+        "callouts": [
+          "+47\u00b0 HIGHER"
+        ]
+      }
+    ],
+    "recap": "Sit lower, bend elbow, finish high.",
+    "drill": "Shadow 3x20 loops from a low squat; freeze each finish with the bat at your forehead.",
+    "source": "coach_writer"
+  },
+  "matches": [
+    {
+      "id": "ma-long",
+      "name": "Ma Long",
+      "country": "CHN",
+      "gender": "M",
+      "height_cm": 175,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 73,
+      "body_distance": 0.62,
+      "form_score": 73,
+      "differences": [
+        "Your legs are 18\u00b0 straighter (less knee bend) at the finish than Ma Long's."
+      ],
+      "breakdown": "ma-long/forehand_g3n9jVP0fMU/breakdown.mp4",
+      "source_url": "https://www.youtube.com/watch?v=g3n9jVP0fMU"
+    },
+    {
+      "id": "tomokazu-harimoto",
+      "name": "Tomokazu Harimoto",
+      "country": "JPN",
+      "gender": "M",
+      "height_cm": 178,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 72,
+      "body_distance": 0.67,
+      "form_score": 54,
+      "differences": [
+        "Your bat arm is 47\u00b0 lower at the finish than Tomokazu Harimoto's.",
+        "Your legs are 37\u00b0 straighter (less knee bend) at the finish than Tomokazu Harimoto's."
+      ],
+      "breakdown": "tomokazu-harimoto/forehand_RyaTg3GB_Wk/breakdown.mp4",
+      "source_url": "https://www.youtube.com/watch?v=RyaTg3GB_Wk"
+    },
+    {
+      "id": "fan-zhendong",
+      "name": "Fan Zhendong",
+      "country": "CHN",
+      "gender": "M",
+      "height_cm": 173,
+      "bat_hand": "right",
+      "grip": "shakehand",
+      "warnings": [],
+      "score": 68,
+      "body_distance": 0.78,
+      "form_score": 53,
+      "differences": [
+        "Your legs are 32\u00b0 straighter (less knee bend) at contact than Fan Zhendong's.",
+        "Your elbow is 17\u00b0 straighter at contact than Fan Zhendong's."
+      ],
+      "breakdown": "fan-zhendong/forehand_manual/breakdown.mp4",
+      "source_url": null
+    }
+  ],
+  "timings": {
+    "wall_s": 241.8,
+    "llm_calls": 19,
+    "llm_s": 105.1,
+    "tokens": {
+      "input": 35345,
+      "output": 10294,
+      "cache_write": 0,
+      "cache_read": 80368
+    },
+    "cost_usd": 0.3633,
+    "rows": [
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 1.2,
+        "seconds": 3.23,
+        "input": 5861,
+        "output": 370,
+        "cache_write": 0,
+        "cache_read": 0,
+        "cost": 0.030844
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 4.44,
+        "seconds": 7.73,
+        "input": 614,
+        "output": 350,
+        "cache_write": 0,
+        "cache_read": 5857,
+        "cost": 0.0106274
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:clip_analyst",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 12.18,
+        "seconds": 1.78,
+        "input": 2596,
+        "output": 154,
+        "cache_write": 0,
+        "cache_read": 0,
+        "cost": 0.013464
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:detect_rallies / audio hits -> rallies",
+        "depth": 1,
+        "start_s": 13.96,
+        "seconds": 0.42
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose / seed",
+        "depth": 1,
+        "start_s": 14.12,
+        "seconds": 4.37
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose / choose_window",
+        "depth": 1,
+        "start_s": 18.49,
+        "seconds": 27.6
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose / proxy 720p",
+        "depth": 1,
+        "start_s": 46.09,
+        "seconds": 0.76
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:detect_rallies / drop non-play (floor bounce)",
+        "depth": 1,
+        "start_s": 14.39,
+        "seconds": 44.97
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:detect_rallies",
+        "depth": 0,
+        "start_s": 13.96,
+        "seconds": 45.4
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose / pose (MediaPipe, full rate)",
+        "depth": 1,
+        "start_s": 46.85,
+        "seconds": 18.67
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose / bat_side",
+        "depth": 1,
+        "start_s": 65.52,
+        "seconds": 2.16
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:extract_pose",
+        "depth": 0,
+        "start_s": 13.96,
+        "seconds": 53.81
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:clip_analyst",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 67.77,
+        "seconds": 8.32,
+        "input": 1195,
+        "output": 1192,
+        "cache_write": 0,
+        "cache_read": 2592,
+        "cost": 0.029138400000000002
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights / cut + join (ffmpeg)",
+        "depth": 1,
+        "start_s": 76.15,
+        "seconds": 3.94
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:cut_highlights",
+        "depth": 0,
+        "start_s": 76.09,
+        "seconds": 4.0
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:clip_analyst",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 80.09,
+        "seconds": 6.49,
+        "input": 1489,
+        "output": 628,
+        "cache_write": 0,
+        "cache_read": 3785,
+        "cost": 0.019273
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 86.59,
+        "seconds": 3.53,
+        "input": 826,
+        "output": 399,
+        "cache_write": 0,
+        "cache_read": 6469,
+        "cost": 0.0125778
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 90.13,
+        "seconds": 2.51,
+        "input": 630,
+        "output": 240,
+        "cache_write": 0,
+        "cache_read": 7293,
+        "cost": 0.008778600000000001
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:player_matcher",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 92.65,
+        "seconds": 1.61,
+        "input": 2050,
+        "output": 51,
+        "cache_write": 0,
+        "cache_read": 0,
+        "cost": 0.00922
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / choose_window",
+        "depth": 1,
+        "start_s": 94.33,
+        "seconds": 0.0
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / proxy 720p",
+        "depth": 1,
+        "start_s": 94.33,
+        "seconds": 0.58
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / pose (MediaPipe, full rate)",
+        "depth": 1,
+        "start_s": 94.91,
+        "seconds": 16.61
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / bat_side",
+        "depth": 1,
+        "start_s": 111.52,
+        "seconds": 2.04
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / height from the table",
+        "depth": 1,
+        "start_s": 113.57,
+        "seconds": 0.23
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / match (distance + DTW)",
+        "depth": 1,
+        "start_s": 113.8,
+        "seconds": 0.01
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players / compile pros' video",
+        "depth": 1,
+        "start_s": 113.81,
+        "seconds": 1.8
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:match_players",
+        "depth": 0,
+        "start_s": 94.27,
+        "seconds": 21.4
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:player_matcher",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 115.67,
+        "seconds": 4.91,
+        "input": 590,
+        "output": 658,
+        "cache_write": 0,
+        "cache_read": 2046,
+        "cost": 0.0159292
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:player_matcher",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 120.58,
+        "seconds": 7.01,
+        "input": 674,
+        "output": 687,
+        "cache_write": 0,
+        "cache_read": 2634,
+        "cost": 0.0169628
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 127.6,
+        "seconds": 3.27,
+        "input": 866,
+        "output": 437,
+        "cache_write": 0,
+        "cache_read": 7921,
+        "cost": 0.0137882
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 130.87,
+        "seconds": 4.63,
+        "input": 686,
+        "output": 513,
+        "cache_write": 0,
+        "cache_read": 8785,
+        "cost": 0.014761
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:coach_writer",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 135.51,
+        "seconds": 2.14,
+        "input": 3008,
+        "output": 117,
+        "cache_write": 0,
+        "cache_read": 0,
+        "cost": 0.014372
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:coach_writer",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 137.66,
+        "seconds": 12.97,
+        "input": 1140,
+        "output": 1508,
+        "cache_write": 0,
+        "cache_read": 3004,
+        "cost": 0.035320800000000006
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown",
+        "depth": 0,
+        "start_s": 150.63,
+        "seconds": 0.0
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:coach_writer",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 150.63,
+        "seconds": 6.19,
+        "input": 1655,
+        "output": 735,
+        "cache_write": 0,
+        "cache_read": 4142,
+        "cost": 0.022148400000000002
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / proxy 720p",
+        "depth": 1,
+        "start_s": 156.89,
+        "seconds": 0.6
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / pose (MediaPipe, full rate)",
+        "depth": 1,
+        "start_s": 157.49,
+        "seconds": 16.47
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / bat_side",
+        "depth": 1,
+        "start_s": 173.96,
+        "seconds": 0.0
+      },
+      {
+        "kind": "llm",
+        "stage": "tool:render_breakdown / analyzer (claude) / claude vision analyzer",
+        "depth": 2,
+        "model": "claude-opus-5-5",
+        "start_s": 174.39,
+        "seconds": 13.99,
+        "input": 9121,
+        "output": 806,
+        "cache_write": 0,
+        "cache_read": 0,
+        "cost": 0.052604
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / analyzer (claude)",
+        "depth": 1,
+        "start_s": 173.99,
+        "seconds": 14.39
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / render",
+        "depth": 1,
+        "start_s": 188.39,
+        "seconds": 20.32
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown / render (coach's cards)",
+        "depth": 1,
+        "start_s": 208.77,
+        "seconds": 18.23
+      },
+      {
+        "kind": "stage",
+        "stage": "tool:render_breakdown",
+        "depth": 0,
+        "start_s": 156.83,
+        "seconds": 70.18
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:coach_writer",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 227.02,
+        "seconds": 6.24,
+        "input": 880,
+        "output": 644,
+        "cache_write": 0,
+        "cache_read": 5795,
+        "cost": 0.017559
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 233.26,
+        "seconds": 1.66,
+        "input": 1109,
+        "output": 187,
+        "cache_write": 0,
+        "cache_read": 9469,
+        "cost": 0.010069799999999999
+      },
+      {
+        "kind": "llm",
+        "stage": "llm:tt_coach",
+        "depth": 0,
+        "model": "claude-opus-5-5",
+        "start_s": 234.93,
+        "seconds": 6.85,
+        "input": 355,
+        "output": 618,
+        "cache_write": 0,
+        "cache_read": 10576,
+        "cost": 0.0158952
+      }
+    ]
+  },
+  "todos": [
+    {
+      "content": "Find rallies and cut highlight reel of best rallies",
+      "status": "completed"
+    },
+    {
+      "content": "Measure forehand pose",
+      "status": "completed"
+    },
+    {
+      "content": "Compare forehand to closest pros",
+      "status": "completed"
+    },
+    {
+      "content": "Write coaching cards and render forehand breakdown",
+      "status": "completed"
+    },
+    {
+      "content": "Summarize top fixes for user",
+      "status": "completed"
+    }
+  ]
+}

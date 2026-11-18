@@ -18,6 +18,7 @@ import traceback
 from pathlib import Path
 from typing import Optional
 
+import timing
 from technique import style
 
 from .tools import TOOLS, Session, make_tools
@@ -128,8 +129,9 @@ def run_agent(s: Session, request: str, model=None) -> None:
     where = (f"The user's video is uploaded and loaded." if s.video else
              f"The user's video link: {s.url} (call download_url first).")
     state: dict = {}
+    callbacks = [timing.callback()] if timing.current() else []
     for state in agent.stream({"messages": [{"role": "user", "content": f"{request}\n\n{where}"}]},
-                              stream_mode="values", config={"recursion_limit": 120}):
+                              stream_mode="values", config={"recursion_limit": 120, "callbacks": callbacks}):
         todos = _todos(state.get("todos"))
         s.update(status="running", todos=todos, agentFiles=_files(state.get("files") or {}),
                  progress=_progress(todos))
@@ -270,20 +272,24 @@ def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: s
     s = Session(job_id, video=video, url=url, hand=hand_from_request(request), selection=selection,
                 only_me=only_me)
     s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[])
-    if os.environ.get("ANTHROPIC_API_KEY"):
+    timer = timing.start()   # every stage and Claude call, saved as job["timings"]
+    try:
+        if os.environ.get("ANTHROPIC_API_KEY"):
+            try:
+                s.update(engine="deepagents")
+                run_agent(s, request)
+                return
+            except Exception as e:
+                traceback.print_exc()
+                why = f"the agent stopped: {type(e).__name__}"
+                s.update(agentError=str(e)[:300])
+        else:
+            why = "no ANTHROPIC_API_KEY"
+        s.update(engine="fallback", engineNote=why)
         try:
-            s.update(engine="deepagents")
-            run_agent(s, request)
-            return
+            run_fallback(s, request, why)
         except Exception as e:
             traceback.print_exc()
-            why = f"the agent stopped: {type(e).__name__}"
-            s.update(agentError=str(e)[:300])
-    else:
-        why = "no ANTHROPIC_API_KEY"
-    s.update(engine="fallback", engineNote=why)
-    try:
-        run_fallback(s, request, why)
-    except Exception as e:
-        traceback.print_exc()
-        s.update(status="failed", message=str(e))
+            s.update(status="failed", message=str(e))
+    finally:
+        s.update(timings=timer.summary())

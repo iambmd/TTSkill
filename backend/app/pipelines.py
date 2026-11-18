@@ -7,6 +7,7 @@ import traceback
 from pathlib import Path
 from typing import Callable
 
+import timing
 from limits import LIMITS
 
 from . import jobs
@@ -174,15 +175,20 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     # Same video-wide player seed as Breakdown and Coach, then fixed appearance tracking.
     # Coach passes the window and seed its pose step already chose (`chosen`, `identity`).
     if identity is None:
-        identity = pose.initial_identity(video)
-    win = chosen or choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
-                                  identity=identity)
-    clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
+        with timing.stage("seed (initial_identity)"):
+            identity = pose.initial_identity(video)
+    with timing.stage("choose_window"):
+        win = chosen or choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
+                                      identity=identity)
+    with timing.stage("proxy 720p"):
+        clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
     report(0.3, "Reading your body and swing with MediaPipe...")
-    track = pose.extract_pose(clip, identity=identity)
+    with timing.stage("pose (MediaPipe, full rate)"):
+        track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track, picked=picked)
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
-    side, how = pose.bat_side(clip, track, hand, hit_times=hits, pooled=win.get("paddle"))
+    with timing.stage("bat_side"):
+        side, how = pose.bat_side(clip, track, hand, hit_times=hits, pooled=win.get("paddle"))
     _, contact = key_moments(track, side, hits, direction="up")
     body = body_ratios(track)
     curves = angle_curves(track, side, contact)
@@ -190,14 +196,17 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
         height = {"height_cm": round(height_cm), "method": "entered"}
     else:
         report(0.55, "Estimating your height from the table...")
-        height = estimate_height_cm(str(clip), track)
+        with timing.stage("height from the table"):
+            height = estimate_height_cm(str(clip), track)
     user = {**body, "height_cm": height["height_cm"] if height else None}
     report(0.65, "Comparing you with the pros...")
-    matches = match(user, curves, stroke, side, grip=grip)
+    with timing.stage("match (distance + DTW)"):
+        matches = match(user, curves, stroke, side, grip=grip)
     if not matches:
         raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
     report(0.75, "Putting their breakdowns together...")
-    result = compile_matches(matches, stroke, out / "parts", dest)
+    with timing.stage("compile pros' video"):
+        result = compile_matches(matches, stroke, out / "parts", dest)
     return {"matches": [{k: v for k, v in m.items() if k != "form"} for m in matches],
             "you": {"bat_hand": side, "bat_hand_how": how, "height": height,
                     "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}},

@@ -14,6 +14,7 @@ from typing import Callable, Optional
 
 from pydantic import BaseModel, Field
 
+import timing
 from app import download as dl
 from app import jobs
 from app.cut import cut_and_concat
@@ -46,14 +47,18 @@ class Session:
         """The tracker seed, once per job: the tapped player; with "Only me", whoever plays
         the most; else the video-wide vote."""
         if self.identity is None:
-            from technique import people, pose
-            if self.selection:
-                self.identity = pose.identity_from_box(video, *self.selection)
-            elif self.only_me:
-                self.identity = people.most_active(str(video))
-            if self.identity is None:
-                self.identity = pose.initial_identity(video)
+            with timing.stage("seed"):
+                self._seed(video)
         return self.identity
+
+    def _seed(self, video: Path) -> None:
+        from technique import people, pose
+        if self.selection:
+            self.identity = pose.identity_from_box(video, *self.selection)
+        elif self.only_me:
+            self.identity = people.most_active(str(video))
+        if self.identity is None:
+            self.identity = pose.initial_identity(video)
 
     @property
     def dir(self) -> Path:
@@ -81,6 +86,7 @@ class Session:
 
 # ------------------------------------------------------------------ the six tools
 
+@timing.timed("tool:download_url")
 def download_url(s: Session, url: str) -> dict:
     info = dl.probe(url, "coach")
     s.update(message=f"Downloading {info['title']}...")
@@ -88,18 +94,22 @@ def download_url(s: Session, url: str) -> dict:
     return {"title": info["title"], "duration_s": info["duration"], "loaded": True}
 
 
+@timing.timed("tool:detect_rallies")
 def detect_rallies(s: Session, threshold: float = 3.0, gap: float = 1.6, min_hits: int = 4) -> dict:
     video = s.need_video()
     s.update(message="Listening for ball contacts...")
-    s.rallies = find_rallies(video, s.dir, threshold, gap, min_hits)
+    with timing.stage("audio hits -> rallies"):
+        s.rallies = find_rallies(video, s.dir, threshold, gap, min_hits)
     from app.floor_bounce import drop_non_play
-    s.rallies, _ = drop_non_play(video, s.rallies, min_hits=min_hits)
+    with timing.stage("drop non-play (floor bounce)"):
+        s.rallies, _ = drop_non_play(video, s.rallies, min_hits=min_hits)
     rs = [r.to_dict() for r in s.rallies]
     return {"count": len(rs), "rallies": rs[:25],
             "longest": max(rs, key=lambda r: r["shots"]) if rs else None,
             "hint": None if rs else "No rallies heard. Try threshold 2.5 or min_hits 3."}
 
 
+@timing.timed("tool:cut_highlights")
 def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict:
     video = s.need_video()
     if mode not in ("highlights", "full"):
@@ -110,7 +120,8 @@ def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict
         raise ToolError("No rallies found, so there is nothing to cut.")
     rallies, segments = pick_segments(s.rallies, video, mode, top_n)
     s.update(message=f"Cutting {len(segments)} rallies...")
-    cut_and_concat(video, segments, s.dir / "cut", s.dir / "highlights.mp4")
+    with timing.stage("cut + join (ffmpeg)"):
+        cut_and_concat(video, segments, s.dir / "cut", s.dir / "highlights.mp4")
     length = sum(e - b for b, e in segments)
     title = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
     s.add_output("highlights", title, "highlights.mp4",
@@ -118,6 +129,7 @@ def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict
     return {"video": "highlights.mp4", "rallies": [r.to_dict() for r in rallies], "length_s": round(length, 1)}
 
 
+@timing.timed("tool:extract_pose")
 def extract_pose(s: Session, stroke: str = "auto") -> dict:
     """Pose on the best ~8 s: bat hand, stroke type, key moments, joint angles at contact,
     body proportions."""
@@ -132,18 +144,22 @@ def extract_pose(s: Session, stroke: str = "auto") -> dict:
     out = s.dir / "pose"
     info = media.probe(video)
     if s.window is None:
-        s.window = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None,
-                                 identity=s.seed(video))
+        seed = s.seed(video)
+        with timing.stage("choose_window"):
+            s.window = choose_window(str(video), info["duration"], 8.0, out, progress=lambda m: None, identity=seed)
     identity, win = s.identity, s.window
-    clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
-    track = pose.extract_pose(clip, identity=identity)
+    with timing.stage("proxy 720p"):
+        clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
+    with timing.stage("pose (MediaPipe, full rate)"):
+        track = pose.extract_pose(clip, identity=identity)
     try:
         pose.require_player(track, picked=s.selection is not None)
     except pose.NoPlayer as e:
         raise ToolError(str(e)) from e
     hits = [h - win["start"] for h in win.get("hit_times", []) if win["start"] <= h <= win["end"]]
     # Coach can't ask which hand: with no decisive cue, state an assumption instead of failing.
-    side, how = pose.bat_side(clip, track, s.hand, hit_times=hits, assume="right", pooled=win.get("paddle"))
+    with timing.stage("bat_side"):
+        side, how = pose.bat_side(clip, track, s.hand, hit_times=hits, assume="right", pooled=win.get("paddle"))
     _, p0 = key_moments(track, side, hits, direction="any")
     wing = stroke if stroke in ("forehand", "backhand") else None
     stype, feats = strokes.detect(track, side, p0, wing=wing)
@@ -167,6 +183,7 @@ class Card(BaseModel):
     callouts: list[str] = Field(default_factory=list, description="0-2 tiny ALL-CAPS labels")
 
 
+@timing.timed("tool:render_breakdown")
 def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = "", player: str = "",
                      headline: str = "", cards: Optional[list[Card]] = None, recap: str = "",
                      drill: str = "") -> dict:
@@ -197,8 +214,9 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
         b.source = "coach_writer"
         (out / "breakdown.json").write_text(b.model_dump_json(indent=2))
         s.update(message="Rendering the coach's cards...")
-        render(res["outputs"]["clip"], pose.load_track(res["outputs"]["pose_track"]), b,
-               str(out / "breakdown.mp4"), res["bat_hand"]["side"])
+        with timing.stage("render (coach's cards)"):
+            render(res["outputs"]["clip"], pose.load_track(res["outputs"]["pose_track"]), b,
+                   str(out / "breakdown.mp4"), res["bat_hand"]["side"])
     shutil.copyfile(out / "breakdown.mp4", s.dir / "breakdown.mp4")
     s.add_output("breakdown", f"{b.stroke_type or b.stroke} breakdown".replace("_", " ").capitalize(),
                  "breakdown.mp4", b.headline)
@@ -207,6 +225,7 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
             "recap": b.recap, "drill": b.drill, "analyzer": b.source}
 
 
+@timing.timed("tool:match_players")
 def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[float] = None) -> dict:
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
