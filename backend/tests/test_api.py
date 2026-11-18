@@ -486,8 +486,8 @@ def _jpeg() -> bytes:
 
 def test_detect_players_validates_frames(api):
     assert "at least one frame" in _error(api.post("/players/detect", data={"times": ""}))
-    many = [("frames", (f"f{i}.jpg", _jpeg(), "image/jpeg")) for i in range(9)]
-    assert "at most 8 frames" in _error(api.post("/players/detect", files=many, data={"times": ",".join("1" * 9)}))
+    many = [("frames", (f"f{i}.jpg", _jpeg(), "image/jpeg")) for i in range(17)]
+    assert "at most 16 frames" in _error(api.post("/players/detect", files=many, data={"times": ",".join("1" * 17)}))
     one = [("frames", ("f.jpg", _jpeg(), "image/jpeg"))]
     assert "its time" in _error(api.post("/players/detect", files=one, data={"times": ""}))
     text = [("frames", ("f.jpg", b"not an image", "image/jpeg"))]

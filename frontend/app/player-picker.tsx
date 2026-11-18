@@ -21,7 +21,9 @@ type Found = {
 };
 type Choice = { id: number; time: number; box: Box };
 
-const FRAMES = 6;
+/** Frames drawn per video, spread over all of it: a player who walks into shot late is still
+ * in several, and the backend then picks the frame that shows the most players. */
+export const FRAMES = 12;
 const MAX_W = 1280;
 export const PICK_PLAYER = "Tap the player to analyse.";
 const FINDING = "Finding the players in your video...";
@@ -65,6 +67,11 @@ export function nextEvent(target: EventTarget, name: string, ms: number, message
   });
 }
 
+/** `count` times spread evenly over the whole video, from near the start to near the end. */
+export function frameTimes(duration: number, count = FRAMES): number[] {
+  return Array.from({ length: count }, (_, i) => Number((((i + 0.5) / count) * duration).toFixed(3)));
+}
+
 /** Grab `count` JPEG frames spread over a local video, with their times in seconds. */
 async function drawFrames(src: string, duration: number, signal: AbortSignal, count = FRAMES): Promise<{ time: number; blob: Blob }[]> {
   const video = document.createElement("video");
@@ -82,15 +89,14 @@ async function drawFrames(src: string, duration: number, signal: AbortSignal, co
     canvas.width = Math.round(video.videoWidth * scale);
     canvas.height = Math.round(video.videoHeight * scale);
     const out = [];
-    for (let i = 0; i < count; i++) {
+    for (const time of frameTimes(duration, count)) {
       if (signal.aborted) throw signal.reason ?? new Error(TOO_LONG);
-      const time = ((i + 0.5) / count) * duration;
       const seeked = nextEvent(video, "seeked", SEEK_MS, CANT_READ);
       video.currentTime = time;
       await seeked;
       canvas.getContext("2d")!.drawImage(video, 0, 0, canvas.width, canvas.height);
       const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.8));
-      if (blob) out.push({ time: Number(time.toFixed(3)), blob });
+      if (blob) out.push({ time, blob });
     }
     return out;
   } finally {

@@ -1,8 +1,8 @@
 /** "Which one is you?": auto first, ask only when the choice is unclear. */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  CANT_READ, CHOOSE, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
-  pickerProblem, withTimeout,
+  CANT_READ, CHOOSE, FRAMES, LINK_TIMEOUT_MS, LOOKUP_TIMEOUT_MS, PICK_PLAYER, TOO_LONG, lookupLog, needsChoice, nextEvent,
+  pickerProblem, withTimeout, frameTimes,
 } from "@/app/player-picker";
 
 const players = (n: number) => Array.from({ length: n }, (_, id) => ({ id }));
@@ -80,5 +80,16 @@ describe("where a lookup's time went", () => {
   it("gives a link time to download: a 3-minute video took longer than the 30 s limit", () => {
     expect(LINK_TIMEOUT_MS).toBeGreaterThanOrEqual(90_000);
     expect(LOOKUP_TIMEOUT_MS).toBe(30_000);
+  });
+});
+
+describe("which frames the browser draws", () => {
+  it("spreads 12 over the whole video, so a player who walks in late is in several", () => {
+    const times = frameTimes(215);   // IMG_8782, 3:35
+    expect(times).toHaveLength(FRAMES);
+    expect(FRAMES).toBe(12);
+    expect(times[0]).toBeLessThan(215 * 0.05);
+    expect(times.at(-1)!).toBeGreaterThan(215 * 0.95);
+    expect(times.filter((t) => t >= 215 * 0.75)).toHaveLength(3);   // in the last quarter alone
   });
 });

@@ -1,9 +1,10 @@
-"""Find the players in a few frames of a clip, for "tap the player to analyze".
+"""Find the players in frames spread over a clip, for "tap the player to analyze".
 
 Each frame goes through the same person detector and plausibility rules as tracking
-(pose._pose_candidates). People are grouped across frames by torso and thigh colours, and
-spectators and other courts are dropped by size. The answer says whether a picker is needed:
-one player, or a clear "nearest the camera" winner, needs no question."""
+(pose._pose_candidates); two skeletons of one person in a frame are merged. People are
+grouped across frames by torso and thigh colours, and passers-by, spectators and other
+courts are dropped. The answer gives one thumbnail per distinct person and the frame that
+shows the most of them."""
 from __future__ import annotations
 
 import base64
@@ -17,8 +18,14 @@ import numpy as np
 from .identity import STRICT, signature, signature_distance
 
 MAX_CANDIDATES = 4    # a table has 2 (doubles 4) players; more boxes would be spectators
-MIN_SEEN = 1 / 3      # share of frames a player appears in; passers-by appear once
+FRAMES = 12           # frames looked at, spread over the whole video
+# A passer-by is in one frame. A player who comes into shot late is only in the last few, so
+# this is a count, not a share of the frames (a third of 12 dropped a player seen in 3).
+MIN_SIGHTINGS = 2
 MIN_SIZE = 0.3        # torso vs the biggest candidate's; smaller is another court or a spectator
+# Two skeletons in one frame whose shoulders are this close (x the larger torso) are one person:
+# a zoomed crop re-finds someone already found (measured 0.02-0.11; different people >= 1.8).
+SAME_PERSON = 0.25
 DECISIVE_SHARE = 2 / 3  # nearest in this share of frames, and twice as often as anyone else
 THUMB_H = 160
 FRAME_W = 960
@@ -70,6 +77,68 @@ def box_of(lm: np.ndarray) -> tuple[float, float, float, float]:
             float(np.clip(x1 + pw, 0, 1)), float(np.clip(y1 + ph, 0, 1)))
 
 
+def _torso(p: np.ndarray, w: int, h: int) -> float:
+    return float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
+
+
+def _thighs(p: np.ndarray, w: int, h: int) -> tuple[float, float]:
+    """How far the knees sit below the hips, and how long the thighs are, in torso lengths."""
+    torso = max(_torso(p, w, h), 1.0)
+    d = (p[[25, 26], :2] - p[[23, 24], :2]) * [w, h]
+    return float(d[:, 1].mean()) / torso, float(np.linalg.norm(d, axis=1).mean()) / torso
+
+
+def lying(p: np.ndarray, w: int, h: int) -> bool:
+    """A body traced over the table's legs: long thighs that don't go down. On the montage's
+    arched table bases these measured knee drop -1.7 to 0.15, thighs 0.77-1.83 torsos; real
+    players stand (drop >= 0.3), and misfits on real people have short thighs (0.33-0.43)."""
+    drop, thigh = _thighs(p, w, h)
+    return drop < 0.3 and thigh > 0.6
+
+
+def one_per_person(people: list[np.ndarray], w: int, h: int) -> list[np.ndarray]:
+    """Drop the second skeleton of a person found twice in one frame (a zoomed quarter often
+    re-finds a near player as a partial body). An upright skeleton beats a sprawled one, then
+    the more complete one stays."""
+    torso = lambda p: _torso(p, w, h)
+
+    def inside(a: tuple, b: tuple) -> float:
+        """Share of box a that lies inside box b."""
+        iw = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+        ih = max(0.0, min(a[3], b[3]) - max(a[1], b[1]))
+        return iw * ih / max((a[2] - a[0]) * (a[3] - a[1]), 1e-9)
+
+    kept: list[np.ndarray] = []
+    for p in sorted(people, key=lambda p: (_thighs(p, w, h)[0] < 0.3, -float(p[[11, 12, 23, 24, 25, 26, 27, 28], 3].sum()))):
+        shoulders = p[[11, 12], :2].mean(0) * [w, h]
+        same = any(np.linalg.norm(shoulders - q[[11, 12], :2].mean(0) * [w, h]) < SAME_PERSON * max(torso(p), torso(q))
+                   # a skeleton wholly inside another's box (legs only, say): a far player stands
+                   # further back, so their box reaches above the near one's
+                   or inside(box_of(p), box_of(q)) >= 0.9 for q in kept)
+        if not same:
+            kept.append(p)
+    return kept
+
+
+def _merge_apart(players: list[list[Detection]]) -> list[list[Detection]]:
+    """Join groups that are never in the same frame and match on colours: the greedy pass
+    can split one person when a frame's best match was already taken."""
+    merged = True
+    while merged:
+        merged = False
+        for a in range(len(players)):
+            for b in range(a + 1, len(players)):
+                if {d.frame for d in players[a]} & {d.frame for d in players[b]}:
+                    continue
+                if min(signature_distance(x.look, y.look) for x in players[a] for y in players[b]) < STRICT:
+                    players[a] += players.pop(b)
+                    merged = True
+                    break
+            if merged:
+                break
+    return players
+
+
 def group(detections: list[Detection], n_frames: int) -> dict:
     """Pure grouping and decision, given every frame's detections.
 
@@ -88,10 +157,11 @@ def group(detections: list[Detection], n_frames: int) -> dict:
             else:
                 players.append([d])
                 taken.add(len(players) - 1)
+    players = _merge_apart(players)
     size = [float(np.median([d.torso for d in pl])) for pl in players]
     biggest = max(size, default=0.0)
     keep = [k for k, pl in enumerate(players)
-            if len({d.frame for d in pl}) >= max(1, MIN_SEEN * n_frames) and size[k] >= MIN_SIZE * biggest]
+            if len({d.frame for d in pl}) >= min(MIN_SIGHTINGS, n_frames) and size[k] >= MIN_SIZE * biggest]
     keep = sorted(keep, key=lambda k: (-len(players[k]), -size[k]))[:MAX_CANDIDATES]
     kept = [players[k] for k in keep]
     # Who is nearest the camera (biggest torso) in each frame with a kept player in it.
@@ -125,40 +195,61 @@ def _thumb(frame: np.ndarray, box: tuple[float, float, float, float]) -> str:
     return _jpeg(cv2.resize(crop, (max(1, round(crop.shape[1] * scale)), THUMB_H)))
 
 
+def spread_order(n: int) -> list[int]:
+    """0, n/2, n/4, 3n/4, ...: frames in an order that covers the whole video early, so a
+    budget cut still leaves frames from the start, middle and end (it used to keep only the first)."""
+    order: list[int] = []
+    j = 0
+    while len(order) < n:
+        v, f, k = 0.0, 0.5, j   # the j-th van der Corput number: 0, .5, .25, .75, .125, ...
+        while k:
+            v += f * (k & 1)
+            k >>= 1
+            f /= 2
+        i = min(n - 1, int(v * n))
+        if i not in order:
+            order.append(i)
+        j += 1
+    return order
+
+
 def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | None = None,
            budget: float = BUDGET_S) -> dict:
-    """frames: (time in s, BGR image). Returns the picker's data:
+    """frames: (time in s, BGR image), in time order. Returns the picker's data:
     {"candidates": [{id, time, box, thumb, seen, near}], "frame": {time, image, boxes},
-     "suggested": id or None, "decisive": bool, "timing": {...}}.
+     "suggested": id or None, "decisive": bool, "frames": [{time, people}], "timing": {...}}.
     cancel: set when the browser disconnects; raises Cancelled at the next frame."""
     start = time.monotonic()   # before the imports: the first call pays ~1 s for them
     from .pose import QUARTERS, _pose_candidates
 
     landmarker, mp = _landmarker()
     loaded = time.monotonic() - start
-    images = []
-    detections: list[Detection] = []
-    found: list[int] = []   # people per frame, for the log
+    done: dict[int, tuple[np.ndarray, list[np.ndarray]]] = {}
     zoomed = 0
-    for f, (_, image) in enumerate(frames):
+    for k, f in enumerate(spread_order(len(frames))):
         if cancel is not None and cancel.is_set():
             raise Cancelled()
         spent = time.monotonic() - start
-        if spent > budget and f >= 2:
+        if spent > budget and k >= 2:
             break   # answer with the frames done so far rather than keep the page waiting
+        image = frames[f][1]
         h, w = image.shape[:2]
         if h > 720:   # the same working size as the seed and tracking
             image = cv2.resize(image, (round(w * 720 / h), 720))
             h, w = image.shape[:2]
-        images.append(image)
         extra = QUARTERS if spent < budget / 2 else None
         zoomed += extra is not None
         people, _ = _pose_candidates(image, landmarker, mp, extra=extra)
-        found.append(len(people))
-        for p in people:
+        done[f] = (image, one_per_person([p for p in people if not lying(p, w, h)], w, h))
+    used = sorted(done)                       # back in time order
+    frames = [frames[f] for f in used]
+    images = [done[f][0] for f in used]
+    detections: list[Detection] = []
+    for i, f in enumerate(used):
+        h, w = images[i].shape[:2]
+        for p in done[f][1]:
             torso = float(np.linalg.norm((p[[11, 12], :2].mean(0) - p[[23, 24], :2].mean(0)) * [w, h]))
-            detections.append(Detection(f, box_of(p), torso, signature(image, p)))
-    frames = frames[:len(images)]
+            detections.append(Detection(i, box_of(p), torso, signature(images[i], p)))
     g = group(detections, len(frames))
     candidates = []
     for i, pl in enumerate(g["players"]):
@@ -168,9 +259,11 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
                            "seen": round(len({d.frame for d in pl}) / len(frames), 2), "near": g["near"][i]})
     frame = None
     if g["players"]:
-        # One frame that shows as many candidates as possible, for tapping.
-        f = max(range(len(frames)), key=lambda f: (sum(any(d.frame == f for d in pl) for pl in g["players"]),
-                                                     -f))
+        # The frame that shows the most players, the biggest of them on a tie, for tapping.
+        def shown(f: int) -> tuple[int, float]:
+            here = [d for pl in g["players"] for d in pl if d.frame == f]
+            return len(here), sum(d.torso for d in here)
+        f = max(range(len(frames)), key=shown)
         image = images[f]
         if image.shape[1] > FRAME_W:
             image = cv2.resize(image, (FRAME_W, round(image.shape[0] * FRAME_W / image.shape[1])))
@@ -180,7 +273,7 @@ def detect(frames: list[tuple[float, np.ndarray]], cancel: threading.Event | Non
     timing = {"seconds": round(time.monotonic() - start, 2), "model_load_s": round(loaded, 2),
               "frames": len(images), "zoomed_frames": zoomed}
     return {"candidates": candidates, "frame": frame, "suggested": g["suggested"], "decisive": g["decisive"],
-            "frames": [{"time": round(t, 3), "people": n} for (t, _), n in zip(frames, found)],
+            "frames": [{"time": round(t, 3), "people": len(done[f][1])} for (t, _), f in zip(frames, used)],
             "timing": timing}
 
 
@@ -192,16 +285,55 @@ def warm() -> None:
     landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=np.zeros((256, 256, 3), np.uint8)))
 
 
-def sample_frames(video: str, count: int = 6) -> list[tuple[float, np.ndarray]]:
-    """Frames spread over a video on disk (pasted links), as the browser does for uploads."""
-    cap = cv2.VideoCapture(str(video))
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    n = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    out = []
-    for idx in ((np.arange(count) + .5) / count * max(n - 1, 1)).astype(int):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
-        ok, frame = cap.read()
-        if ok:
-            out.append((float(idx / fps), frame))
-    cap.release()
-    return out
+RALLY_SHARE = 0.75   # of the frames go inside rallies (players in shot and playing), the rest anywhere
+
+
+def frame_times(duration: float, rallies: list[tuple[float, float]], count: int = FRAMES) -> list[float]:
+    """When to look for players: most frames spread over the rallies the sound found, the
+    rest over the whole video (so a player who is never in a heard rally still shows up)."""
+    even = lambda n, a, b: [a + (i + .5) / n * (b - a) for i in range(n)]
+    spans = [(max(0.0, a), min(duration, b)) for a, b in rallies if min(duration, b) > max(0.0, a)]
+    total = sum(b - a for a, b in spans)
+    if total < 3.0:   # no real rallies heard: spread over the whole video, as the browser does
+        return [round(t, 3) for t in even(count, 0.0, duration)]
+    n_rally = round(count * RALLY_SHARE)
+    times = []
+    for x in even(n_rally, 0.0, total):   # positions along the rallies laid end to end
+        for a, b in spans:
+            if x <= b - a:
+                times.append(a + x)
+                break
+            x -= b - a
+    times += even(count - n_rally, 0.0, duration)
+    return sorted(round(t, 3) for t in times)
+
+
+def grab_frame(video: str, t: float) -> np.ndarray | None:
+    """One frame at `t` s, at most 720 px high, decoded by ffmpeg (any codec it reads: iPhone
+    HEVC included, and rotation applied, as the browser shows it)."""
+    import subprocess
+
+    # 2 decoder threads each, 6 at once: 12 frames of IMG_8782 (1080p HEVC) in 1.0 s; ffmpeg's
+    # default (a thread per core in every process) took 1.9-4.2 s.
+    out = subprocess.run(["ffmpeg", "-v", "error", "-threads", "2", "-ss", f"{max(0.0, t):.3f}", "-i", str(video), "-frames:v", "1",
+                          "-vf", "scale=-2:'min(720,ih)'", "-f", "image2pipe", "-c:v", "bmp", "-"],
+                         check=True, capture_output=True).stdout
+    return cv2.imdecode(np.frombuffer(out, np.uint8), cv2.IMREAD_COLOR) if out else None
+
+
+def sample_frames(video: str, count: int = FRAMES) -> list[tuple[float, np.ndarray]]:
+    """Frames of a video on disk (a pasted link, a past job, an upload the browser couldn't
+    read), at frame_times: the audio pass costs ~1 s on a 3.5-minute match."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    from . import audio, media
+
+    duration = float(media.probe(video)["duration"])
+    try:
+        rallies = [(r["start"], r["end"]) for r in audio.find_rallies(video)]
+    except Exception:   # no usable sound: spread over the whole video
+        rallies = []
+    times = frame_times(duration, rallies, count)
+    with ThreadPoolExecutor(max_workers=6) as pool:
+        images = list(pool.map(lambda t: grab_frame(video, t), times))
+    return [(t, im) for t, im in zip(times, images) if im is not None]

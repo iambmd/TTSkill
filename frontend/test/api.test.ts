@@ -403,7 +403,7 @@ describe("POST /api/players/detect", () => {
   it("checks the frames like the backend", async () => {
     const { POST } = await route("players");
     await expectError(await POST!(post({})), 422, "at least one frame");
-    await expectError(await POST!(frames(9, "1,2,3,4,5,6,7,8,9")), 422, "at most 8 frames");
+    await expectError(await POST!(frames(17, Array.from({ length: 17 }, (_, i) => i + 1).join(","))), 422, "at most 16 frames");
     await expectError(await POST!(frames(2, "1")), 422, "its time");
     await expectError(await POST!(post({ frames: frame("text/plain"), times: "1" })), 422, "JPEG or PNG");
     await expectError(await POST!(post({ url: "https://example.com/v" })), 422, "YouTube");

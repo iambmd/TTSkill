@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 from technique.identity import signature_distance
-from technique.people import Detection, box_of, group
+from technique.people import (Detection, box_of, frame_times, group, lying, one_per_person, spread_order)
 
 TEAL = np.r_[np.eye(48)[3], np.eye(48)[40]]      # torso colour 3, shorts colour 40
 BLACK = np.r_[np.eye(48)[20], np.eye(48)[40]]    # a different shirt over the same shorts
@@ -65,7 +65,8 @@ SAMPLES = Path(__file__).resolve().parents[2] / "samples"
 @pytest.mark.skipif(not (SAMPLES / "IMG_8782.MOV").exists(), reason="put IMG_8782.MOV in samples/")
 def test_finds_both_players_on_the_wide_match():
     from technique import people
-    r = people.detect(people.sample_frames(str(SAMPLES / "IMG_8782.MOV"), 6))
+    r = people.detect(people.sample_frames(str(SAMPLES / "IMG_8782.MOV")))
+    # 3 before 2026-11-18: a zoomed crop found the user twice in a frame, which split him in two.
     assert len(r["candidates"]) == 2 and r["decisive"]
     near, far = sorted(r["candidates"], key=lambda c: -c["near"])
     assert near["box"][3] - near["box"][1] > far["box"][3] - far["box"][1]   # the user is the bigger one
@@ -124,3 +125,105 @@ def test_detection_reports_people_per_frame(monkeypatch):
     people, frames, _, _ = _fake_detector(monkeypatch)
     r = people.detect(frames)
     assert r["frames"] == [{"time": float(i), "people": 1} for i in range(6)]
+
+
+# ------------------------------------------------------------------ 12 frames over the whole video
+
+def skeleton(x: float, shoulder_y: float = .3, hip_y: float = .5, knee_y: float = .7, ankle_y: float = .9,
+             knee_dx: float = 0.0, vis: float = 1.0) -> np.ndarray:
+    """A standing person at x (normalised), with joints at the given heights."""
+    lm = np.zeros((33, 4), np.float32)
+    lm[:, 0], lm[:, 3] = x, vis
+    lm[:, 1] = np.linspace(shoulder_y - .1, ankle_y, 33)
+    lm[[11, 12], 1], lm[[23, 24], 1] = shoulder_y, hip_y
+    lm[[25, 26], 1], lm[[27, 28], 1] = knee_y, ankle_y
+    lm[[11, 23, 25, 27], 0] -= .02
+    lm[[12, 24, 26, 28], 0] += .02
+    lm[[25, 26], 0] += knee_dx
+    return lm
+
+
+def test_two_skeletons_of_one_person_in_a_frame_count_once():
+    # IMG_8782 at 161 s: a zoomed quarter re-found the user as a partial body (shoulders 2 px apart).
+    whole = skeleton(.5)
+    partial = skeleton(.505, hip_y=.45, knee_y=.6, vis=.3)
+    far = skeleton(.2, .25, .32, .4, .48)   # the opponent across the table: elsewhere, smaller
+    kept = one_per_person([partial, whole, far], 1280, 720)
+    assert len(kept) == 2 and any(k is whole for k in kept) and any(k is far for k in kept)
+
+
+def test_a_skeleton_inside_someone_elses_box_is_that_person():
+    legs_only = skeleton(.5, shoulder_y=.62, hip_y=.7, knee_y=.8, ankle_y=.88, vis=.6)
+    assert len(one_per_person([skeleton(.5), legs_only], 1280, 720)) == 1
+
+
+def test_a_body_traced_over_the_table_legs_is_not_a_person():
+    assert not lying(skeleton(.5), 1280, 720)                                   # standing
+    assert lying(skeleton(.5, knee_y=.5, knee_dx=-.2), 1280, 720)              # thighs flat along a table leg
+    assert not lying(skeleton(.5, knee_y=.52, knee_dx=-.03), 1280, 720)        # a squashed fit on a real person
+
+
+def test_a_player_who_comes_into_shot_late_is_still_a_candidate():
+    ds = [det(f, TEAL, 120, .3) for f in range(12)]
+    ds += [det(f, BLACK, 90, .7) for f in (9, 10, 11)]   # walks in for the last quarter of the video
+    ds += [det(4, OLIVE, 100, .5)]                       # a passer-by, once
+    g = group(ds, 12)
+    assert [pl[0].look is BLACK for pl in g["players"]] == [False, True]
+
+
+def test_one_person_split_by_the_greedy_pass_is_joined_again():
+    near_teal = np.r_[np.eye(48)[3] * .9 + np.eye(48)[4] * .1, np.eye(48)[40]]
+    ds = [det(f, TEAL, 120) for f in range(3)] + [det(f, near_teal, 118) for f in range(3, 6)]
+    ds += [det(f, BLACK, 90, .2) for f in range(6)]
+    assert len(group(ds, 6)["players"]) == 2
+
+
+def test_frames_are_looked_at_start_middle_and_end_first():
+    order = spread_order(12)
+    assert sorted(order) == list(range(12))
+    assert order[0] == 0 and order[1] == 6 and {order[2], order[3]} == {3, 9}
+
+
+def test_a_budget_cut_still_covers_the_whole_video(monkeypatch):
+    people, _, _, _ = _fake_detector(monkeypatch, delay=0.1)
+    frames = [(float(t), np.full((360, 640, 3), 120, np.uint8)) for t in range(0, 120, 10)]
+    r = people.detect(frames, budget=0.25)
+    times = [f["time"] for f in r["frames"]]
+    assert 2 <= len(times) < 12 and min(times) < 30 and max(times) >= 60   # not just the first frames
+
+
+def test_frame_times_prefer_the_rallies_and_reach_the_end():
+    times = frame_times(200.0, [(20.0, 30.0), (150.0, 170.0)])
+    inside = [t for t in times if 20 <= t <= 30 or 150 <= t <= 170]
+    assert len(times) == 12 and len(inside) >= 9 and max(times) > 150
+    assert frame_times(60.0, []) == [round((i + .5) / 12 * 60, 3) for i in range(12)]   # no rallies: even
+
+
+def test_sample_frames_reads_any_video_with_ffmpeg(media):
+    from technique import people
+    frames = people.sample_frames(str(media["ok"]))
+    assert len(frames) == 12 and frames[0][1].shape == (360, 640, 3)
+    assert frames[0][0] < .3 and frames[-1][0] > 2.7   # spread over the whole 3 s
+
+
+@pytest.fixture(scope="module")
+def late_entry(tmp_path_factory) -> Path:
+    """40 s of IMG_8782 whose first 30 s are black and silent: the players are only in the last 10 s."""
+    import subprocess
+    out = tmp_path_factory.mktemp("late") / "late.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-ss", "110", "-t", "40", "-i", str(SAMPLES / "IMG_8782.MOV"),
+                    "-vf", "scale=-2:360,drawbox=enable='lt(t,30)':color=black:t=fill",
+                    "-af", "volume=enable='lt(t,30)':volume=0", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-c:a", "aac", str(out)], check=True)
+    return out
+
+
+@pytest.mark.skipif(not (SAMPLES / "IMG_8782.MOV").exists(), reason="put IMG_8782.MOV in samples/")
+def test_finds_a_player_who_is_only_in_the_last_quarter(late_entry):
+    from technique import people
+    even = [(t, people.grab_frame(str(late_entry), t)) for t in frame_times(40.0, [])]   # as the browser draws them
+    for frames in (even, people.sample_frames(str(late_entry))):
+        r = people.detect(frames)
+        assert r["candidates"], "the late player was dropped"
+        assert all(c["time"] >= 30 for c in r["candidates"])
+        assert r["frame"]["time"] >= 30
