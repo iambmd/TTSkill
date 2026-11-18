@@ -8,21 +8,27 @@ export type Job = {
   resultUrl?: string | null;
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
-  /** Auto-Cut: advice when too few rallies were heard (the job still counts as done). */
+  /** Advice beside a job that still counts as done: Auto-Cut heard too few rallies; Coach skipped a step. */
   warning?: string | null;
   strokeType?: { key: string | null; label: string; detected: boolean } | null;
   matches?: ProMatch[];
   todos?: { content: string; status: "pending" | "in_progress" | "completed" }[];
+  /** Coach's internal working files (/facts.json, /rallies.json...): shown only in development, under Debug. */
   agentFiles?: { name: string; preview: string }[];
   outputs?: { kind: string; title: string; url: string; summary: string }[];
   /** pipeline: the fixed steps + one Claude call (default); deepagents: COACH_ENGINE=agent; fallback: the old fixed plan. */
   engine?: "pipeline" | "deepagents" | "fallback";
   engineNote?: string;
   summary?: string;
+  /** Coach: the notes the page shows, in Markdown with the biggest fix and a drill. Null until written, or when
+   * there was no stroke to coach. Jobs from before this field (the cached demo) only have `summary`. */
+  coaching?: CoachNotes | null;
   you?: { bat_hand: string; height: { height_cm: number; method: string } | null };
   /** Who was analysed: a crop of the tracked player, and whether the user tapped them. */
   player?: { thumb: string | null; picked: boolean } | null;
 };
+
+export type CoachNotes = { markdown: string; fix: string; drill: string };
 
 export type ProMatch = {
   id: string;

@@ -1,7 +1,8 @@
 /** The Coach page's example: a real request and match, then the coach's saved plan, reply and videos. */
 
 import type { Job } from "@/lib/submit";
-import { BoldText, CheckIcon } from "../ui";
+import { Markdown } from "../markdown";
+import { CheckIcon } from "../ui";
 import { ExampleSection } from "../examples";
 // Same fields as a coach job record, so a finished job.json can be copied in. Empty means "coming soon".
 import saved from "@/lib/coach-example.json";
@@ -35,7 +36,7 @@ function After() {
           {after.summary && (
             <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
               <h3 className="eyebrow">Coach says</h3>
-              <p className="mt-1 text-base leading-snug whitespace-pre-line"><BoldText text={after.summary} /></p>
+              <Markdown text={after.summary} className="mt-1 text-base leading-snug" />
             </section>
           )}
           {after.outputs.map((o) => (
