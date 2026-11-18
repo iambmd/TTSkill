@@ -326,3 +326,28 @@ def test_coach_seeds_from_whoever_plays_the_most_with_only_me(monkeypatch):
     assert Session("j").seed(Path("v.mp4")) == "nearest"
     monkeypatch.setattr(people, "most_active", lambda v: None)   # nobody seen: the usual seed
     assert Session("j", only_me=True).seed(Path("v.mp4")) == "nearest"
+
+
+@pytest.fixture(scope="module")
+def alone(tmp_path_factory) -> Path:
+    """30 s of IMG_8782 cropped to its right side: the user alone, the opponent cut out."""
+    import subprocess
+    out = tmp_path_factory.mktemp("alone") / "alone.mp4"
+    subprocess.run(["ffmpeg", "-v", "error", "-ss", "95", "-t", "30", "-i", str(SAMPLES / "IMG_8782.MOV"),
+                    "-vf", "crop=iw*0.56:ih:iw*0.44:0,scale=-2:540", "-c:v", "libx264", "-preset", "ultrafast",
+                    "-c:a", "aac", str(out)], check=True)
+    return out
+
+
+@pytest.mark.skipif(not (SAMPLES / "IMG_8782.MOV").exists(), reason="put IMG_8782.MOV in samples/")
+def test_one_person_in_the_video_is_one_candidate(alone):
+    from technique import people
+    r = people.detect(people.sample_frames(str(alone)))
+    assert len(r["candidates"]) == 1 and r["candidates"][0]["seen"] >= .75
+
+
+def test_nobody_in_the_video_is_no_candidate(media):
+    from technique import people
+    r = people.detect(people.sample_frames(str(media["ok"])))   # a test pattern
+    assert r["candidates"] == [] and r["others"] == [] and r["frame"] is None
+    assert [f["people"] for f in r["frames"]] == [0] * 12
