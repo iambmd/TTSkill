@@ -108,6 +108,15 @@ left this clip's top 3.
      longer kill jobs (checked live). `TTSKILL_INLINE=1` = old in-API mode (tests).
      Fix found on the way: a slow-stroke stretch (pushes, 3.1 torso/s peak) found "no strokes";
      `hitpose.find_own` now relaxes the 5 torso/s bar when nothing passes.
+   - Phase 4 done (`03c4ea3`, `bd35bfe`, `a3c9fc0`): test_5 both left-handed recorded as user-confirmed
+     ground truth; test_1 verified on frames (both right-handed; red-rubber cue was wrong there).
+     `eval/train_wing.py` (logistic regression + abstain, calibration test_7/test_5/test_1 = 135,
+     frozen, validation test_6/test_3 once): 1b wing 9 decisions, precision 0.889 (gate 0.9, fails by
+     one), hybrid 31/47 vs 30/47; 1c block: no block found (7 in validation), hybrid = baseline. Both
+     not promoted; samples/strokes/ doesn't exist, so OpenTTGames only. Blocks are now pickable stroke
+     types (Breakdown form, prompt, offline templates), never auto-detected.
+     Raw `data/openttgames/test_1.mp4` and `test_5.mp4` (1.77 GB) are still on disk: the agent's
+     delete was blocked by the permission check; delete them by hand (pose windows are cached).
 
 
 1. **"Tap the player to analyze": done** (all six parts pushed):
@@ -133,7 +142,9 @@ left this clip's top 3.
    Next.js), `make backend --timeout-graceful-shutdown 5`, 10 s/6 s frame-event limits, 30 s
    lookup limit, "Analyse anyway (auto-pick)" + "Try again". Browser check steps are in the
    commit `84cd05e` message and the session summary.
-2. **1b: learned forehand/backhand classifier** (in progress). Cached pose windows: test_7 41
+2. **1b: learned forehand/backhand classifier** (done 2026-11-18, not promoted; see 0. Phase 4).
+   Next if resumed: more calibration data with verified hands (test_4: 71 strokes, 2.25 GB; the
+   game_* videos) and the user's own labelled clips in samples/strokes/. Earlier notes: Cached pose windows: test_7 41
    contacts (calibration), test_6 31 + test_3 19 (validation, frozen). Too few to train on, so
    add test_1 (84 strokes), test_4 (71), test_5 (27): download, verify each side's hitting hand
    on frames (labels give table side, not hand), `eval/extract_strokes.py`, delete the raw video.
