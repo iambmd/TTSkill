@@ -1,0 +1,234 @@
+{
+ "IMG_8782": {
+  "mediapipe": {
+   "s_per_frame": 0.11,
+   "frames": 1076,
+   "followed": 0.95,
+   "far_coverage_in_play": 0.26,
+   "two_people_in_play": 0.32,
+   "identity": {
+    "correct": 11,
+    "wrong": 0,
+    "missing": 0
+   },
+   "strokes": [
+    {
+     "hit": 63.76,
+     "wrist_seen": 0.97,
+     "peak_speed": 5.5,
+     "elbow": 110,
+     "knee": 160
+    },
+    {
+     "hit": 65.54,
+     "wrist_seen": 0.33,
+     "peak_speed": 5.0,
+     "elbow": 146,
+     "knee": 166
+    },
+    {
+     "hit": 187.45,
+     "wrist_seen": 0.03,
+     "peak_speed": 0.1,
+     "elbow": 139,
+     "knee": 171
+    },
+    {
+     "hit": 189.88,
+     "wrist_seen": 0.47,
+     "peak_speed": 8.1,
+     "elbow": 176,
+     "knee": 157
+    }
+   ],
+   "stroke_s_per_frame": 0.101,
+   "bench_s_per_frame": 0.0935
+  },
+  "rtmpose": {
+   "s_per_frame": 0.579,
+   "frames": 1076,
+   "followed": 0.95,
+   "far_coverage_in_play": 0.75,
+   "two_people_in_play": 0.89,
+   "identity": {
+    "correct": 11,
+    "wrong": 0,
+    "missing": 0
+   },
+   "strokes": [
+    {
+     "hit": 63.76,
+     "wrist_seen": 1.0,
+     "peak_speed": 5.1,
+     "elbow": 107,
+     "knee": 159
+    },
+    {
+     "hit": 65.54,
+     "wrist_seen": 0.61,
+     "peak_speed": 14.7,
+     "elbow": 108,
+     "knee": 146
+    },
+    {
+     "hit": 187.45,
+     "wrist_seen": 1.0,
+     "peak_speed": 1.1,
+     "elbow": 146,
+     "knee": 176
+    },
+    {
+     "hit": 189.88,
+     "wrist_seen": 0.58,
+     "peak_speed": 9.9,
+     "elbow": 178,
+     "knee": 150
+    }
+   ],
+   "stroke_s_per_frame": 0.506,
+   "bench_s_per_frame": 0.5801
+  },
+  "rtmpose-lite": {
+   "s_per_frame": 0.381,
+   "frames": 1076,
+   "followed": 0.93,
+   "far_coverage_in_play": 0.68,
+   "two_people_in_play": 0.87,
+   "identity": {
+    "correct": 11,
+    "wrong": 0,
+    "missing": 0
+   },
+   "strokes": [
+    {
+     "hit": 63.76,
+     "wrist_seen": 1.0,
+     "peak_speed": 5.3,
+     "elbow": 113,
+     "knee": 159
+    },
+    {
+     "hit": 65.54,
+     "wrist_seen": 0.53,
+     "peak_speed": 2.9,
+     "elbow": 161,
+     "knee": 151
+    },
+    {
+     "hit": 187.45,
+     "wrist_seen": 0.94,
+     "peak_speed": 0.9,
+     "elbow": 140,
+     "knee": 175
+    },
+    {
+     "hit": 189.88,
+     "wrist_seen": 0.67,
+     "peak_speed": 6.8,
+     "elbow": 178,
+     "knee": 151
+    }
+   ],
+   "stroke_s_per_frame": 0.163,
+   "bench_s_per_frame": 0.148
+  },
+  "rtmo": {
+   "s_per_frame": 0.81,
+   "frames": 1076,
+   "followed": 0.93,
+   "far_coverage_in_play": 0.61,
+   "two_people_in_play": 0.71,
+   "identity": {
+    "correct": 10,
+    "wrong": 0,
+    "missing": 1
+   },
+   "strokes": [
+    {
+     "hit": 63.76,
+     "wrist_seen": 1.0,
+     "peak_speed": 5.4,
+     "elbow": 111,
+     "knee": 162
+    },
+    {
+     "hit": 65.54,
+     "wrist_seen": 0.75,
+     "peak_speed": 12.6,
+     "elbow": 103,
+     "knee": 153
+    },
+    {
+     "hit": 187.45,
+     "wrist_seen": 0.94,
+     "peak_speed": 1.2,
+     "elbow": 158,
+     "knee": 174
+    },
+    {
+     "hit": 189.88,
+     "wrist_seen": 0.61,
+     "peak_speed": 7.8,
+     "elbow": 143,
+     "knee": 142
+    }
+   ],
+   "stroke_s_per_frame": 0.289,
+   "bench_s_per_frame": 0.2774
+  }
+ },
+ "match_b": {
+  "mediapipe": {
+   "s_per_frame": 0.181,
+   "frames": 701,
+   "followed": 0.8,
+   "far_coverage_in_play": 0.42,
+   "two_people_in_play": 0.53,
+   "identity": {
+    "correct": 9,
+    "wrong": 0,
+    "missing": 2
+   },
+   "bench_s_per_frame": 0.0935
+  },
+  "rtmpose": {
+   "s_per_frame": 1.04,
+   "frames": 701,
+   "followed": 0.64,
+   "far_coverage_in_play": 0.87,
+   "two_people_in_play": 0.97,
+   "identity": {
+    "correct": 3,
+    "wrong": 4,
+    "missing": 4
+   },
+   "bench_s_per_frame": 0.5801
+  },
+  "rtmpose-lite": {
+   "s_per_frame": 0.241,
+   "frames": 701,
+   "followed": 0.57,
+   "far_coverage_in_play": 0.79,
+   "two_people_in_play": 0.91,
+   "identity": {
+    "correct": 2,
+    "wrong": 5,
+    "missing": 4
+   },
+   "bench_s_per_frame": 0.148
+  },
+  "rtmo": {
+   "s_per_frame": 0.284,
+   "frames": 701,
+   "followed": 0.61,
+   "far_coverage_in_play": 0.52,
+   "two_people_in_play": 0.55,
+   "identity": {
+    "correct": 3,
+    "wrong": 5,
+    "missing": 3
+   },
+   "bench_s_per_frame": 0.2774
+  }
+ }
+}
