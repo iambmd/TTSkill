@@ -34,8 +34,8 @@ function After() {
             </ol>
           )}
           {after.summary && (
-            <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
-              <h3 className="eyebrow">Coach says</h3>
+            <section className="coach-notes min-w-0">
+              <h3 className="headline">Coach says</h3>
               <Markdown text={after.summary} className="mt-1 text-base leading-snug" />
             </section>
           )}

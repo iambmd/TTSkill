@@ -59,13 +59,13 @@ export default function CoachPage() {
 
   return (
     <>
-      <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
+      <form onSubmit={onSubmit} noValidate className="coach-surface coach-form">
         <PageIntro
           eyebrow="TT Coach"
           title="Ask your coach."
           body="One request, one video. The coach finds your rallies and your best strokes, compares you with the pros, and shows each result as soon as it's ready."
         />
-        <div>
+        <div className="coach-request">
           <div className="flex items-end justify-between">
             <label className={labelClass} htmlFor="request">What do you want?</label>
             <span aria-hidden className={`mb-2 text-xs tabular-nums ${askError ? "font-bold text-red-200" : "text-muted"}`}>
@@ -79,22 +79,24 @@ export default function CoachPage() {
             placeholder="e.g. Show my best rallies and fix my forehand"
           />
           <FieldError id="request-error">{askError}</FieldError>
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="coach-prompts mt-3 grid gap-2">
             {EXAMPLES.map((x) => (
               <button
                 key={x} type="button"
                 onClick={() => { setAsk(x); askRef.current?.focus(); }}
-                className="rounded-full border border-line px-3 py-1.5 text-left text-xs font-semibold text-muted hover:border-accent hover:text-white"
+                className="min-h-12 border px-3 py-2 text-left text-sm font-semibold"
               >
                 {x}
               </button>
             ))}
           </div>
         </div>
-        <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
+        <div className="coach-upload">
+          <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
+        </div>
         <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
       </form>
-      <CoachExample />
+      <div className="coach-surface coach-example"><CoachExample /></div>
     </>
   );
 }

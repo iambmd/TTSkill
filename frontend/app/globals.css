@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./coach/coach.css";
 
 /* `light:` for the rare spot that needs its own light-mode style. */
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
@@ -93,4 +94,31 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
+}
+
+/* Training surfaces opt into these tokens independently of the app shell. */
+:root {
+  --training-surface: #101319;
+  --training-field: #191e26;
+  --training-ink: #f4f4f6;
+  --training-muted: #aeb5c2;
+  --training-line: #343b46;
+  --training-accent: #ff6b2c;
+  --training-action: #ff6b2c;
+  --training-on-action: #17100c;
+  --training-error: #fecaca;
+  --training-media: #090b0e;
+  --training-control-radius: 0.5rem;
+  --training-panel-radius: 0.75rem;
+  --training-feedback: 160ms;
+}
+
+:root[data-theme="light"] {
+  --training-surface: #fff8f6;
+  --training-field: #ffefeb;
+  --training-ink: #291310;
+  --training-muted: #684641;
+  --training-line: #d9b6ae;
+  --training-accent: #a9300c;
+  --training-error: #9f2020;
 }

@@ -1,0 +1,207 @@
+.coach-surface {
+  --color-fg: var(--training-ink);
+  --color-muted: var(--training-muted);
+  --color-panel: var(--training-surface);
+  --color-line: var(--training-line);
+  --color-accent: var(--training-accent);
+  color: var(--training-ink);
+}
+
+.coach-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  padding-top: 1.5rem;
+  border-top: 3px solid var(--training-action);
+}
+
+.coach-form > :first-child h1 {
+  color: var(--training-accent);
+  font-size: clamp(3rem, 7.5vw, 5.5rem);
+}
+
+.coach-form > :first-child > p:last-child {
+  max-inline-size: 62ch;
+  line-height: 1.55;
+}
+
+.coach-form > :last-child {
+  padding-top: 1rem;
+}
+
+.coach-form :is(textarea, input[type="url"]) {
+  background: var(--training-field);
+  border-radius: var(--training-control-radius);
+}
+
+.coach-form :is(textarea, input[type="url"])::placeholder {
+  color: var(--training-muted);
+}
+
+.coach-request textarea {
+  min-block-size: 7rem;
+}
+
+.coach-request label {
+  font-family: var(--font-display);
+  color: var(--training-ink);
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-style: italic;
+  letter-spacing: 0;
+}
+
+.coach-prompts button {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  background: var(--training-surface);
+  border-color: var(--training-line);
+  border-radius: var(--training-control-radius);
+  transition: border-color var(--training-feedback), background-color var(--training-feedback);
+}
+
+.coach-prompts button::before {
+  content: "";
+  width: 0.45rem;
+  height: 0.9rem;
+  flex-shrink: 0;
+  border-inline: 2px solid var(--training-accent);
+  transform: skewX(-22deg);
+}
+
+.coach-prompts button:hover {
+  border-color: var(--training-accent);
+  background: var(--training-field);
+}
+
+.coach-upload .hatch {
+  min-height: 10.5rem;
+  gap: 0.625rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--training-accent);
+  border-radius: var(--training-panel-radius);
+  background-color: var(--training-surface);
+  background-image:
+    linear-gradient(147deg, transparent 20%, var(--training-line) 20.25%, transparent 20.75%),
+    linear-gradient(18deg, transparent 80%, var(--training-line) 80.5%, transparent 81%);
+  color: var(--training-ink);
+  box-shadow: none;
+}
+
+.coach-upload .hatch:hover {
+  background-color: var(--training-field);
+}
+
+.coach-upload .hatch > span:first-child {
+  width: 3rem;
+  height: 3rem;
+  border-radius: var(--training-control-radius);
+  background: var(--training-action);
+  color: var(--training-on-action);
+}
+
+.coach-upload .hatch svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.coach-upload .hatch .headline {
+  font-size: 2rem;
+}
+
+.coach-upload .hatch > span:last-child {
+  color: var(--training-muted);
+}
+
+.coach-form button[type="submit"] {
+  border-radius: var(--training-control-radius);
+  background: var(--training-action);
+  color: var(--training-on-action);
+}
+
+.coach-form button[type="submit"]:enabled:hover {
+  background: var(--color-accent-hot);
+}
+
+.coach-form button[type="submit"].cursor-not-allowed {
+  background: color-mix(in srgb, var(--training-action) 14%, var(--training-field));
+  color: var(--training-muted);
+  opacity: 1;
+}
+
+.coach-surface :is([role="alert"], .text-red-200, .text-red-300) {
+  color: var(--training-error);
+}
+
+.coach-example > section {
+  max-width: none;
+  margin-top: 2rem;
+}
+
+.coach-result {
+  padding-top: 1.5rem;
+  border-top: 3px solid var(--training-action);
+}
+
+.coach-plan {
+  background-color: var(--training-surface);
+  border-color: var(--training-line);
+  border-radius: var(--training-panel-radius);
+}
+
+.coach-progress {
+  background-color: var(--training-line);
+}
+
+.coach-surface :where(.bg-accent.text-black) {
+  background-color: var(--training-action);
+  color: var(--training-on-action);
+}
+
+.coach-notes {
+  padding: clamp(1rem, 3vw, 1.75rem);
+  border-inline-start: 4px solid var(--training-action);
+  background: var(--training-surface);
+  overflow-wrap: anywhere;
+}
+
+.coach-notes > .headline {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+}
+
+.coach-output {
+  padding-top: 1rem;
+  border-top: 1px solid var(--training-line);
+}
+
+.coach-video,
+.coach-upload video,
+.coach-example video {
+  display: block;
+  border-color: var(--training-line);
+  border-radius: var(--training-panel-radius);
+  background-color: var(--training-media);
+  color-scheme: dark;
+}
+
+@media (min-width: 48rem) {
+  .coach-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2rem;
+  }
+
+  .coach-form > :is(:first-child, :last-child) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coach-surface :is(button, .hatch, .coach-progress > div) {
+    transition: none;
+  }
+
+  .coach-surface .animate-pulse {
+    animation: none;
+  }
+}

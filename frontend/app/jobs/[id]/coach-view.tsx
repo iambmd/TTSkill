@@ -32,7 +32,7 @@ function StepIcon({ status, stopped }: { status: Todo["status"]; stopped: boolea
       <span className="grid size-5 shrink-0 place-items-center rounded-full border-2 border-accent"><span className="size-1.5 animate-pulse rounded-full bg-accent" /></span>
     );
   }
-  return <span className="size-5 shrink-0 rounded-full border-2 border-white/15" />;
+  return <span className="size-5 shrink-0 rounded-full border-2 border-line" />;
 }
 
 function StepList({ todos, stopped }: { todos: Todo[]; stopped: boolean }) {
@@ -59,7 +59,7 @@ export function Plan({ job }: { job: Job }) {
   const failed = job.status === "failed";
   if (!todos.length) {
     return (
-      <div className={`${running ? "stripes" : ""} rounded-2xl border border-line bg-panel p-4 text-sm text-muted`}>
+      <div className={`${running ? "stripes" : ""} coach-plan border p-4 text-sm text-muted`}>
         {running ? "The coach is planning..." : "No plan was recorded."}
       </div>
     );
@@ -67,7 +67,7 @@ export function Plan({ job }: { job: Job }) {
   const finished = todos.filter((t) => t.status === "completed").length;
   if (job.status === "done") {
     return (
-      <details className="group rounded-2xl border border-line bg-panel">
+      <details className="group coach-plan border">
         <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
           <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-3" /></span>
           <span className="min-w-0 flex-1">{finished === todos.length ? "All steps done" : `${finished} of ${todos.length} steps done`}</span>
@@ -80,7 +80,7 @@ export function Plan({ job }: { job: Job }) {
   }
   const pct = Math.round(job.progress * 100);
   return (
-    <section aria-label="The plan" className="rounded-2xl border border-line bg-panel p-4">
+    <section aria-label="The plan" className="coach-plan border p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="eyebrow">The plan</h2>
         <span className={`shrink-0 text-sm font-bold tabular-nums ${failed ? "text-red-300" : ""}`}>
@@ -89,8 +89,8 @@ export function Plan({ job }: { job: Job }) {
       </div>
       {!failed && (
         <div role="progressbar" aria-label="Coach progress" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}
-          className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />
+          className="coach-progress mt-3 h-1.5 overflow-hidden rounded-full">
+          <div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: `${pct}%` }} />
         </div>
       )}
       <div className="-mx-1.5 mt-3"><StepList todos={todos} stopped={failed} /></div>
@@ -107,8 +107,8 @@ export function CoachNotesSection({ job, notes }: { job: Job; notes: CoachNotes 
       : job.warning || "The coach didn't find a stroke of yours to coach. Try a clip where you're closer to the camera.";
   }
   return (
-    <section aria-labelledby="coach-notes" className="rounded-3xl border border-accent/40 bg-accent/10 p-5">
-      <h2 id="coach-notes" className="eyebrow">Your coaching</h2>
+    <section aria-labelledby="coach-notes" className="coach-notes min-w-0">
+      <h2 id="coach-notes" className="headline">Your coaching</h2>
       {notes ? (
         <Markdown text={notes.markdown} className="mt-2" />
       ) : missing ? (
@@ -151,7 +151,7 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
   const notes = coachingOf(job);
   const files = job.agentFiles ?? [];
   return (
-    <div className="mx-auto max-w-5xl space-y-6 lg:grid lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] lg:items-start lg:gap-10 lg:space-y-0">
+    <div className="coach-surface coach-result mx-auto max-w-5xl space-y-8 lg:grid lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)] lg:items-start lg:gap-10 lg:space-y-0">
       <div className="min-w-0 space-y-4 lg:sticky lg:top-20">
         <div className="space-y-3">
           <p className="eyebrow">TT Coach{job.engine === "deepagents" ? " · deep agent" : ""}</p>
@@ -168,11 +168,11 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
           <p className="text-xs text-muted [overflow-wrap:anywhere]">Ran the same tools on a fixed plan ({job.engineNote}).</p>
         )}
       </div>
-      <div className="min-w-0 space-y-8">
+      <div className="coach-result-content grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
         <CoachNotesSection job={job} notes={notes} />
         {notes && job.warning && <Warning>{job.warning}</Warning>}
         {(job.outputs ?? []).map((o) => (
-          <section key={o.kind} className="space-y-3">
+          <section key={o.kind} className="coach-output min-w-0 space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="headline text-3xl [overflow-wrap:anywhere]">{o.title}</h2>
@@ -182,17 +182,17 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
             </div>
             <video
               src={`${o.url}#t=0.001`} controls playsInline preload="metadata"
-              className={`mx-auto block w-full rounded-3xl border border-line bg-black object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
+              className={`coach-video mx-auto block w-full border object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
             />
           </section>
         ))}
-        {running && !(job.outputs ?? []).length && <div className="stripes aspect-video rounded-3xl border border-line bg-panel" />}
+        {running && !(job.outputs ?? []).length && <div className="stripes coach-plan aspect-video border" />}
         <AnalysedPlayer job={job} />
         {/* The notes already hold the drill, so the breakdown doesn't repeat it. */}
         {job.breakdown && <Steps b={job.breakdown} drill={!notes} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {debug && files.length > 0 && <DebugFiles files={files} />}
-        {!running && <Link href="/coach" className={secondaryButtonClass}>Ask again</Link>}
+        {!running && <Link href="/coach" className={`${secondaryButtonClass} justify-self-start`}>Ask again</Link>}
       </div>
     </div>
   );

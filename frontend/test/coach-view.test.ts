@@ -116,7 +116,7 @@ describe("the plan", () => {
 
   it("collapses to one line when done, and opens to the steps", () => {
     const html = render(job());
-    const plan = /<details class="group rounded-2xl border border-line bg-panel">([\s\S]*?)<\/details>/.exec(html)?.[1] ?? "";
+    const plan = /<details class="group coach-plan border">([\s\S]*?)<\/details>/.exec(html)?.[1] ?? "";
     expect(plan).toContain("All steps done");
     expect(plan).toContain("6 steps");
     for (const label of LABELS) expect(plan).toContain(label);
@@ -135,8 +135,8 @@ describe("the plan", () => {
 describe("no horizontal scroll", () => {
   it("lets both columns shrink below their content", () => {
     const html = render(job(), true);
-    expect(html).toContain("lg:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]");
-    const grid = /<div class="mx-auto max-w-5xl[^"]*">(<div class="([^"]*)">)/.exec(html);
+    expect(html).toContain("lg:grid-cols-[minmax(0,18rem)_minmax(0,1fr)]");
+    const grid = /<div class="coach-surface coach-result[^"]*">(<div class="([^"]*)">)/.exec(html);
     expect(grid?.[2]).toContain("min-w-0");
   });
 

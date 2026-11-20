@@ -240,3 +240,12 @@ none is wrong. Coach on IMG_8782 now reports right by bat colour instead of an a
 Coach also chose its window three times (pose, render, pro match). It now chooses once:
 coach_demo 111 -> 88 s, IMG_8782 with rallies 220 -> 170 s, same window, hand and stroke.
 Backend: **336 passed, 2 network skips, 1 known xfail**.
+
+## Coach visual restyle (2026-11-20)
+
+- Restyled the Coach form and Coach job view with a court-marked upload target, ball orange, existing Barlow fonts, and light and dark training tokens in the global stylesheet. The Coach stylesheet scopes their use to this feature. See [the style guide](docs/STYLE.md).
+- Coaching notes and videos occupy separate shrinkable grid rows. The result still uses the existing plan disclosure and native video controls.
+- Compared the generated concept with the Playwright render for headline hierarchy, palette, form columns, upload framing, notes separation, and native media controls. The implementation keeps the existing copy, navigation, and real demo footage. One visual correction narrowed an accent selector that had turned the whole upload target orange and gave the mobile link field more space above the submit bar.
+- Playwright Chromium ran against the local demo-mode dev server at 390 and 1440 px. Both widths passed the upload-to-demo-result flow, plan disclosure, video playback and seek, and geometry checks for horizontal overflow and notes/video overlap. The theme toggle and light surfaces were checked at 1440 px. [Mobile](docs/screenshots/coach/dark-390.png) · [Desktop](docs/screenshots/coach/dark-1440.png)
+- Frontend tests passed (172). ESLint with a temporary Next.js configuration reported zero errors and five existing image warnings. The repository's lint script prompts for first-time configuration.
+- The Next.js production build passed.
