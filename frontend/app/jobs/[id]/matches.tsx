@@ -8,9 +8,9 @@ export function Matches({ matches, stroke }: { matches: ProMatch[]; stroke?: str
       <h2 className="eyebrow">Your closest pros</h2>
       <ol className="space-y-2">
         {matches.map((m, i) => (
-          <li key={m.id} className="rounded-2xl border border-line bg-panel p-4">
+          <li key={m.id} className="surface-card p-4">
             <div className="flex items-start gap-4">
-              <span className="headline text-4xl leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
+              <span className="text-3xl font-bold leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
               <div className="min-w-0 flex-1">
                 <p className="text-lg font-bold">{m.name}</p>
                 <p className="text-sm text-muted">
@@ -18,7 +18,7 @@ export function Matches({ matches, stroke }: { matches: ProMatch[]; stroke?: str
                 </p>
               </div>
               <div className="text-right">
-                <p className="headline text-4xl tabular-nums text-accent">{m.score}%</p>
+                <p className="text-3xl font-bold tabular-nums text-accent">{m.score}%</p>
                 <p className="text-[0.65rem] font-bold uppercase tracking-widest text-muted">body match</p>
               </div>
             </div>

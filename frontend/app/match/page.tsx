@@ -27,7 +27,7 @@ const UNITS = [
   { value: "ft", label: "ft / in" },
 ] as const;
 
-const optional = <span className="font-medium tracking-normal normal-case text-white/40">optional</span>;
+const optional = <span className="font-medium tracking-normal normal-case text-muted">optional</span>;
 const unitTag = (u: string) => (
   <span className="pointer-events-none absolute top-1/2 right-4 -translate-y-1/2 text-sm font-semibold text-muted">{u}</span>
 );
@@ -76,7 +76,7 @@ export default function MatchPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
+    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
       <PageIntro
         eyebrow="Find my pro match"
         title="Who do you play like?"
@@ -86,71 +86,73 @@ export default function MatchPage() {
         kind="match" onProblem={setVideoProblem}
         title="Upload your swing" hint="Full body in frame, a few forehands or backhands. Side-on with the table visible works best."
       />
-      <fieldset>
-        <legend className={labelClass}>Stroke to compare</legend>
-        <RadioTiles name="stroke" options={STROKES} defaultValue="forehand" className="grid-cols-2" />
-      </fieldset>
-      <fieldset>
-        <legend className={labelClass}>Your grip</legend>
-        <RadioTiles name="grip" options={GRIPS} defaultValue="shakehand" className="grid-cols-2" />
-        <p className="mt-2 text-xs text-muted">Pros with your grip come first.</p>
-      </fieldset>
-      <div>
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <label className={`${labelClass} mb-0`} htmlFor={unit === "cm" ? "height_cm" : "height_ft"}>
-            Your height {optional}
-          </label>
-          <div role="radiogroup" aria-label="Height unit" className="flex rounded-lg border border-line p-0.5 text-xs font-bold">
-            {UNITS.map((u) => (
-              <button
-                key={u.value} type="button" role="radio" aria-checked={unit === u.value} onClick={() => setUnit(u.value)}
-                className={`h-9 rounded-md px-3 ${unit === u.value ? "bg-accent text-black" : "text-muted hover:text-white"}`}
-              >
-                {u.label}
-              </button>
-            ))}
+      <div className="min-w-0 space-y-6">
+        <fieldset>
+          <legend className={labelClass}>Stroke to compare</legend>
+          <RadioTiles name="stroke" options={STROKES} defaultValue="forehand" className="grid-cols-2" />
+        </fieldset>
+        <fieldset>
+          <legend className={labelClass}>Your grip</legend>
+          <RadioTiles name="grip" options={GRIPS} defaultValue="shakehand" className="grid-cols-2" />
+          <p className="mt-2 text-xs text-muted">Pros with your grip come first.</p>
+        </fieldset>
+        <div>
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <label className={`${labelClass} mb-0`} htmlFor={unit === "cm" ? "height_cm" : "height_ft"}>
+              Your height {optional}
+            </label>
+            <div role="radiogroup" aria-label="Height unit" className="flex rounded-lg border border-line p-0.5 text-xs font-bold">
+              {UNITS.map((u) => (
+                <button
+                  key={u.value} type="button" role="radio" aria-checked={unit === u.value} onClick={() => setUnit(u.value)}
+                  className={`h-9 rounded-md px-3 ${unit === u.value ? "action-fill" : "text-muted hover:text-white"}`}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
           </div>
+          {unit === "cm" ? (
+            <div className="relative">
+              <input
+                id="height_cm" type="text" inputMode="decimal" autoComplete="off" value={cm} onChange={(e) => setCm(e.target.value)}
+                placeholder="e.g. 175" aria-invalid={!!heightError} aria-describedby="height-error"
+                className={`${inputClass} pr-14 ${heightError ? "border-red-500/50" : ""}`}
+              />
+              {unitTag("cm")}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-2">
+              <div className="relative">
+                <input
+                  id="height_ft" type="text" inputMode="numeric" autoComplete="off" value={ft} onChange={(e) => setFt(e.target.value)}
+                  placeholder="5" aria-label="Feet" aria-invalid={!!heightError} aria-describedby="height-error"
+                  className={`${inputClass} pr-12 ${heightError ? "border-red-500/50" : ""}`}
+                />
+                {unitTag("ft")}
+              </div>
+              <div className="relative">
+                <input
+                  type="text" inputMode="decimal" autoComplete="off" value={inch} onChange={(e) => setInch(e.target.value)}
+                  placeholder="10" aria-label="Inches" aria-invalid={!!heightError} aria-describedby="height-error"
+                  className={`${inputClass} pr-12 ${heightError ? "border-red-500/50" : ""}`}
+                />
+                {unitTag("in")}
+              </div>
+            </div>
+          )}
+          <FieldError id="height-error">{heightError}</FieldError>
+          {!heightError && (
+            <p className="mt-2 text-xs text-muted">
+              {LIMITS.height_cm.min}–{LIMITS.height_cm.max} cm. Leave it empty and we estimate it from the table in the frame (76 cm high, 274 cm long).
+            </p>
+          )}
         </div>
-        {unit === "cm" ? (
-          <div className="relative">
-            <input
-              id="height_cm" type="text" inputMode="decimal" autoComplete="off" value={cm} onChange={(e) => setCm(e.target.value)}
-              placeholder="e.g. 175" aria-invalid={!!heightError} aria-describedby="height-error"
-              className={`${inputClass} pr-14 ${heightError ? "border-red-500/50" : ""}`}
-            />
-            {unitTag("cm")}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <div className="relative">
-              <input
-                id="height_ft" type="text" inputMode="numeric" autoComplete="off" value={ft} onChange={(e) => setFt(e.target.value)}
-                placeholder="5" aria-label="Feet" aria-invalid={!!heightError} aria-describedby="height-error"
-                className={`${inputClass} pr-12 ${heightError ? "border-red-500/50" : ""}`}
-              />
-              {unitTag("ft")}
-            </div>
-            <div className="relative">
-              <input
-                type="text" inputMode="decimal" autoComplete="off" value={inch} onChange={(e) => setInch(e.target.value)}
-                placeholder="10" aria-label="Inches" aria-invalid={!!heightError} aria-describedby="height-error"
-                className={`${inputClass} pr-12 ${heightError ? "border-red-500/50" : ""}`}
-              />
-              {unitTag("in")}
-            </div>
-          </div>
-        )}
-        <FieldError id="height-error">{heightError}</FieldError>
-        {!heightError && (
-          <p className="mt-2 text-xs text-muted">
-            {LIMITS.height_cm.min}–{LIMITS.height_cm.max} cm. Leave it empty and we estimate it from the table in the frame (76 cm high, 274 cm long).
-          </p>
-        )}
+        <fieldset>
+          <legend className={labelClass}>Bat hand</legend>
+          <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
+        </fieldset>
       </div>
-      <fieldset>
-        <legend className={labelClass}>Bat hand</legend>
-        <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
-      </fieldset>
       <SubmitBar
         label="Find my match" progress={progress} error={error} startingLabel={starting}
         blocked={!!videoProblem || !!heightError}
