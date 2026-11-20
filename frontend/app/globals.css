@@ -6,7 +6,8 @@
 
 @theme {
   /* Ball orange on near-black. */
-  --color-accent: #ff6b2c;
+  --color-ball: #ff6b2c;
+  --color-accent: var(--color-ball);
   --color-accent-hot: #ff8547;
   --color-ink: #07090d;
   --color-panel: #0e1218;
@@ -75,12 +76,13 @@
 
 html {
   color-scheme: dark;
+  --accent-glow: var(--color-ball);
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   background:
-    radial-gradient(70rem 28rem at 50% -10rem, rgb(255 107 44 / 0.16), transparent 70%) no-repeat,
+    radial-gradient(70rem 28rem at 50% -10rem, color-mix(in srgb, var(--color-ball) 16%, transparent), transparent 70%) no-repeat,
     var(--color-ink);
   color: var(--color-fg);
 }
@@ -96,30 +98,48 @@ body {
   outline-offset: 2px;
 }
 
-/* Training surfaces opt into these tokens independently of the app shell. */
+/* Table and rubber palette used by Coach. */
 :root {
-  --training-surface: #101319;
-  --training-field: #191e26;
-  --training-ink: #f4f4f6;
-  --training-muted: #aeb5c2;
-  --training-line: #343b46;
-  --training-accent: #ff6b2c;
-  --training-action: #ff6b2c;
-  --training-action-disabled: #db9270;
-  --training-on-action: #17100c;
-  --training-error: #fecaca;
+  --training-bg: #0a0d12;
+  --training-surface: #0e2a47;
+  --training-field: #122f4d;
+  --training-ink: #f5f7fa;
+  --training-muted: #b8c9d9;
+  --training-line: #395672;
+  --training-control-line: #778fa8;
+  --training-accent: #ff8190;
+  --training-secondary: var(--training-accent);
+  --training-action: #d7262e;
+  --training-action-hover: #b91e2b;
+  --training-action-disabled: #bf7883;
+  --training-on-action: #fff;
+  --training-on-disabled: #25141a;
+  --training-error: #ffbdc5;
   --training-media: #090b0e;
+  --training-forehand: var(--training-action);
+  --training-backhand: #20242b;
+  --training-backhand-line: #b8c6d5;
+  --training-good: #1e7f4f;
   --training-control-radius: 0.5rem;
   --training-panel-radius: 0.75rem;
   --training-feedback: 160ms;
 }
 
 :root[data-theme="light"] {
-  --training-surface: #fff8f6;
-  --training-field: #ffefeb;
-  --training-ink: #291310;
-  --training-muted: #684641;
-  --training-line: #d9b6ae;
-  --training-accent: #a9300c;
-  --training-error: #9f2020;
+  --training-bg: #f7f5fc;
+  --training-surface: #eeeaf8;
+  --training-field: #fcfaff;
+  --training-ink: #1b1722;
+  --training-muted: #51485f;
+  --training-line: #cec5df;
+  --training-control-line: #897e9d;
+  --training-accent: #a51b2a;
+  --training-secondary: #6958a3;
+  --training-action: #b81f26;
+  --training-action-hover: #941722;
+  --training-action-disabled: #e4a5ae;
+  --training-error: #8d1526;
+  --training-backhand: #2b2a30;
+  --training-backhand-line: #776e85;
+  --training-good: #17663f;
 }

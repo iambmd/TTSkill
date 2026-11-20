@@ -444,7 +444,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
                 key={id} type="button" aria-pressed={on} aria-label={`Player ${id + 1}`}
                 onClick={() => select(c, found.frame!.time, box)}
                 style={{ left: pct(box[0]), top: pct(box[1]), width: pct(box[2] - box[0]), height: pct(box[3] - box[1]) }}
-                className={`absolute rounded-lg border-2 ${on ? "border-accent bg-accent/20 shadow-[0_0_24px_rgb(255_107_44/0.6)]" : `${c.background ? "border-dashed border-white/50" : "border-white/80"} bg-white/5 hover:border-accent`}`}
+                className={`absolute rounded-lg border-2 ${on ? "border-accent bg-accent/20 shadow-[0_0_24px_color-mix(in_srgb,var(--accent-glow)_60%,transparent)]" : `${c.background ? "border-dashed border-white/50" : "border-white/80"} bg-white/5 hover:border-accent`}`}
               />
             );
           })}

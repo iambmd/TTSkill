@@ -17,7 +17,7 @@ function ExampleVideo({ clip }: { clip: Clip }) {
         <span className="text-right text-xs text-muted">{clip.caption}</span>
       </figcaption>
       {clip.message && (
-        <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm font-semibold text-black shadow-[0_0_24px_rgb(255_107_44/0.35)]">
+        <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-accent px-4 py-2.5 text-sm font-semibold text-black shadow-[0_0_24px_color-mix(in_srgb,var(--accent-glow)_35%,transparent)]">
           {clip.message}
         </p>
       )}

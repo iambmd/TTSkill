@@ -139,7 +139,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
               {/* YouTube's own thumbnail; nothing is downloaded until the form is sent. */}
               <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-80" />
               <span aria-hidden className="absolute inset-0 grid place-items-center">
-                <span className="grid size-16 place-items-center rounded-full bg-accent text-black shadow-[0_0_30px_rgb(255_107_44/0.6)]">
+                <span className="video-link-play grid size-16 place-items-center rounded-full bg-accent text-black shadow-[0_0_30px_color-mix(in_srgb,var(--color-ball)_60%,transparent)]">
                   <PlayIcon className="size-7" />
                 </span>
               </span>
@@ -158,7 +158,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
         ) : (
           <label
             htmlFor={id}
-            className={`hatch relative flex min-h-64 w-full cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl bg-accent px-6 py-10 text-center text-black shadow-[0_24px_60px_-24px_rgb(255_107_44/0.7)] transition hover:bg-accent-hot active:scale-[.99] ${dragging ? "scale-[1.01] ring-4 ring-white" : ""}`}
+            className={`hatch relative flex min-h-64 w-full cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl bg-accent px-6 py-10 text-center text-black shadow-[0_24px_60px_-24px_color-mix(in_srgb,var(--accent-glow)_70%,transparent)] transition hover:bg-accent-hot active:scale-[.99] ${dragging ? "scale-[1.01] ring-4 ring-white" : ""}`}
           >
             <span className="grid size-20 place-items-center rounded-full bg-black text-accent">
               <UploadIcon className="size-9" />

@@ -257,3 +257,11 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 - Playwright checked both widths for clipping, the disabled hint, demo submission, and notes/video separation. Updated the [390 px](docs/screenshots/coach/dark-390.png) and [1440 px](docs/screenshots/coach/dark-1440.png) dark screenshots.
 - Committed the Next.js ESLint configuration and locked its development dependencies. `npm run lint` completed without prompting with zero errors and five existing image warnings. All 172 frontend tests passed.
 - The Next.js production build passed.
+
+## Coach table and rubber palette (2026-11-20)
+
+- Coach uses near-black and table blue in dark mode, lavender-tinted surfaces in light mode, and rubber red for primary controls. Orange marks the brand ball and the video-link preview. The [style guide](docs/STYLE.md) records both palettes and the forehand, backhand, and improvement tokens.
+- Playwright checked the form and demo result at 390 and 1440 px in each theme. All six tabs fit at 390 px. The header has one divider, the disabled hint appears below the button, and notes and video stay in separate rows. Retook all four screenshots in [the Coach screenshot folder](docs/screenshots/coach).
+- Rendered text, placeholder, input-boundary, and keyboard-focus contrast checks passed the applicable WCAG AA thresholds. The lowest sampled small-text contrast was 4.89:1 in dark and 4.96:1 in light.
+- All 172 frontend tests passed. The committed ESLint config ran without prompting and reported five existing image warnings.
+- The Next.js production build passed.
