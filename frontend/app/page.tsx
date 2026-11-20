@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HeroVideo } from "./hero-video";
-import { ArrowIcon } from "./ui";
+import { ArrowIcon, secondaryButtonClass } from "./ui";
 
 const tools = [
   {
@@ -35,30 +35,27 @@ const tools = [
 
 export default function Home() {
   return (
-    <div className="space-y-12">
-      <section className="grid items-center gap-8 lg:grid-cols-[1fr_auto] lg:gap-16">
-        <div className="space-y-4">
+    <div className="training-page space-y-12">
+      <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-12">
+        <div className="page-intro space-y-3">
           <p className="eyebrow">AI coaching for table tennis</p>
           <h1 className="headline text-[3.4rem] sm:text-8xl">
-            Learn the stroke.<br /><span className="text-accent">Keep the rally.</span>
+            Learn the stroke.<br />Keep the rally.
           </h1>
-          <p className="max-w-md text-lg text-muted">
+          <p className="text-muted">
             Break down how the pros swing, and turn your own matches into highlight reels. Straight from your phone.
           </p>
         </div>
         <HeroVideo />
       </section>
-      <section className="grid gap-3 sm:grid-cols-2">
-        {tools.map((t, i) => (
+      <section className="grid gap-4 border-t border-line pt-8 sm:grid-cols-2">
+        {tools.map((t) => (
           <Link
             key={t.href} href={t.href}
-            className="group relative flex flex-col gap-3 overflow-hidden rounded-3xl border border-line bg-panel p-6 transition hover:border-accent/60 active:scale-[.99]"
+            className="surface-card group flex min-w-0 flex-col gap-2.5 p-5 transition hover:border-accent motion-safe:active:scale-[.99]"
           >
-            <span aria-hidden className="headline pointer-events-none absolute -top-3 -right-1 text-[7rem] text-white/[0.04]">
-              0{i + 1}
-            </span>
             <span className="eyebrow">{t.tag}</span>
-            <span className="headline text-4xl">{t.title}</span>
+            <span className="section-title text-2xl">{t.title}</span>
             <span className="text-muted">{t.body}</span>
             <span className="mt-auto inline-flex items-center gap-2 pt-2 font-bold uppercase tracking-wide text-accent">
               {t.cta} <ArrowIcon className="size-5 transition group-hover:translate-x-1" />
@@ -68,10 +65,10 @@ export default function Home() {
       </section>
       <section className="flex flex-wrap items-center gap-2 text-sm">
         <span className="mr-1 text-muted">See it on a real match:</span>
-        <Link href="/jobs/demo-breakdown" className="rounded-full border border-line px-4 py-2 font-semibold hover:border-accent">
+        <Link href="/jobs/demo-breakdown" className={secondaryButtonClass}>
           Forehand breakdown
         </Link>
-        <Link href="/jobs/demo-autocut" className="rounded-full border border-line px-4 py-2 font-semibold hover:border-accent">
+        <Link href="/jobs/demo-autocut" className={secondaryButtonClass}>
           Highlight reel
         </Link>
       </section>

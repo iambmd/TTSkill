@@ -23,7 +23,7 @@ export function HeroVideo() {
 
   return (
     <figure className="mx-auto w-[min(100%,calc(62svh*9/16))] lg:w-[22rem]">
-      <div className="relative overflow-hidden rounded-[2rem] border border-line bg-black shadow-[0_30px_80px_-30px_rgb(255_107_44/0.5)]">
+      <div className="video-frame relative overflow-hidden border">
         <video
           ref={ref} src={`${demoAssets.breakdown.url}#t=0.001`} muted loop playsInline preload="auto"
           onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)}
@@ -31,12 +31,12 @@ export function HeroVideo() {
         />
         <button
           type="button" onClick={toggle} aria-label={playing ? "Pause demo" : "Play demo"}
-          className="absolute right-3 bottom-3 grid size-11 place-items-center rounded-full bg-black/60 text-neutral-50 backdrop-blur hover:bg-black/80"
+          className="absolute right-3 bottom-3 grid size-11 place-items-center rounded-full bg-[var(--training-media)] text-[var(--training-on-action)] hover:text-ball"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </button>
       </div>
-      <figcaption className="mt-3 flex items-center justify-between gap-3 text-sm">
+      <figcaption className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm">
         <span className="text-muted">Ma Long · forehand</span>
         <Link href="/jobs/demo-breakdown" className="inline-flex items-center gap-1 font-bold uppercase tracking-wide text-accent">
           Full breakdown <ArrowIcon className="size-4" />
