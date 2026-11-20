@@ -272,3 +272,4 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 - Home. Matched the Coach title, media frame, cards, section labels, and demo links while keeping the hero video and its playback control. All 172 frontend tests passed.
 - Breakdown. Adopted the shared upload, two-column form, before/after layout, and result frame. Forehand and backhand labels use their documented colors. All 172 frontend tests passed.
 - Pro Match. Reused the shared form, upload and comparison frames, and matched the height toggle and pro result cards to the palette. All 172 frontend tests passed.
+- Auto-Cut. Paired the shared upload box with the existing mode, rally controls, and detection settings. The layout keeps those settings readable on phones. All 172 frontend tests passed.

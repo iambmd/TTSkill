@@ -66,7 +66,7 @@ export default function AutoCutPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
+    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
       <PageIntro
         eyebrow="Match Auto-Cut"
         title="Cut the dead time."
@@ -76,50 +76,52 @@ export default function AutoCutPage() {
         kind="autocut" onProblem={setVideoProblem}
         title="Upload your match" hint="Phone footage works. Keep the sound on, that's how we find the rallies."
       />
-      <fieldset>
-        <legend className={labelClass}>What to make</legend>
-        <RadioTiles name="mode" options={MODES} value={mode} onChange={setMode} className="grid-cols-2" />
-      </fieldset>
-      {mode === "highlights" && (
-        <div className="rounded-2xl border border-line bg-panel p-4">
-          <div className="flex items-end justify-between">
-            <label className={labelTextClass} htmlFor="top_n">Rallies in the reel</label>
-            <span className="headline text-5xl text-accent">{topN}</span>
-          </div>
-          <input
-            id="top_n" name="top_n" type="range" min={A.top_n.min} max={A.top_n.max} value={topN}
-            onChange={(e) => setTopN(Number(e.target.value))} className="mt-3 h-8 w-full accent-accent"
-          />
-        </div>
-      )}
-      <details className="group rounded-2xl border border-line bg-panel">
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-          Detection settings
-          <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
-        </summary>
-        <div className="grid grid-cols-3 gap-3 px-4 [&>div]:flex [&>div]:flex-col [&>div]:justify-end">
-          {SETTINGS.map((s, i) => (
-            <div key={s.name}>
-              <label className={labelClass} htmlFor={s.name}>{s.label}</label>
-              <input
-                id={s.name} name={s.name} type="text" inputMode={s.whole ? "numeric" : "decimal"} autoComplete="off"
-                value={settings[s.name]} onChange={(e) => setSettings({ ...settings, [s.name]: e.target.value })}
-                aria-invalid={!!settingErrors[i]} aria-describedby="settings-error"
-                className={`${inputClass} ${settingErrors[i] ? "border-red-500/50" : ""}`}
-              />
+      <div className="min-w-0 space-y-6">
+        <fieldset>
+          <legend className={labelClass}>What to make</legend>
+          <RadioTiles name="mode" options={MODES} value={mode} onChange={setMode} className="grid-cols-2" />
+        </fieldset>
+        {mode === "highlights" && (
+          <div className="surface-card p-4">
+            <div className="flex items-end justify-between">
+              <label className={labelTextClass} htmlFor="top_n">Rallies in the reel</label>
+              <span className="text-4xl font-bold tabular-nums text-accent">{topN}</span>
             </div>
-          ))}
-        </div>
-        <div className="px-4 pb-4">
-          <FieldError id="settings-error">{settingsError}</FieldError>
-          {!settingsError && (
-            <p className="mt-3 text-xs text-muted">
-              Threshold {A.threshold.min}–{A.threshold.max}, gap {A.gap.min}–{A.gap.max} s, min hits {A.min_hits.min}–{A.min_hits.max}.
-              Not finding rallies? Lower the threshold.
-            </p>
-          )}
-        </div>
-      </details>
+            <input
+              id="top_n" name="top_n" type="range" min={A.top_n.min} max={A.top_n.max} value={topN}
+              onChange={(e) => setTopN(Number(e.target.value))} className="mt-3 h-8 w-full accent-accent"
+            />
+          </div>
+        )}
+        <details className="group surface-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+            Detection settings
+            <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
+          </summary>
+          <div className="grid grid-cols-1 gap-3 px-4 min-[360px]:grid-cols-3 [&>div]:flex [&>div]:flex-col [&>div]:justify-end">
+            {SETTINGS.map((s, i) => (
+              <div key={s.name}>
+                <label className={labelClass} htmlFor={s.name}>{s.label}</label>
+                <input
+                  id={s.name} name={s.name} type="text" inputMode={s.whole ? "numeric" : "decimal"} autoComplete="off"
+                  value={settings[s.name]} onChange={(e) => setSettings({ ...settings, [s.name]: e.target.value })}
+                  aria-invalid={!!settingErrors[i]} aria-describedby="settings-error"
+                  className={`${inputClass} ${settingErrors[i] ? "border-red-500/50" : ""}`}
+                />
+              </div>
+            ))}
+          </div>
+          <div className="px-4 pb-4">
+            <FieldError id="settings-error">{settingsError}</FieldError>
+            {!settingsError && (
+              <p className="mt-3 text-xs text-muted">
+                Threshold {A.threshold.min}–{A.threshold.max}, gap {A.gap.min}–{A.gap.max} s, min hits {A.min_hits.min}–{A.min_hits.max}.
+                Not finding rallies? Lower the threshold.
+              </p>
+            )}
+          </div>
+        </details>
+      </div>
       <SubmitBar label="Cut my match" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
       <ExampleSection
