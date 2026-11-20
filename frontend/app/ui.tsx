@@ -134,3 +134,8 @@ export const ChevronIcon = ({ className = "size-5" }: IconProps) => (
 export const WarningIcon = ({ className = "size-5" }: IconProps) => (
   <svg {...stroke} className={className}><path d="M12 4 2.5 20h19L12 4zM12 10v4.5M12 17.5v.01" /></svg>
 );
+
+/** The stroke family used to style the existing result labels. */
+export function strokeFamily(stroke?: string | null) {
+  return stroke?.match(/^(forehand|backhand)(?:\b|_)/i)?.[1].toLowerCase();
+}

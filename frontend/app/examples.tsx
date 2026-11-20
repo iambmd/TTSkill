@@ -13,7 +13,7 @@ function ExampleVideo({ clip }: { clip: Clip }) {
   return (
     <figure className="space-y-2">
       <figcaption className="flex items-baseline justify-between gap-3">
-        <span className="headline text-2xl">{clip.label}</span>
+        <span className="example-title headline text-2xl">{clip.label}</span>
         <span className="text-right text-xs text-muted">{clip.caption}</span>
       </figcaption>
       {clip.message && (
@@ -37,25 +37,25 @@ export function ExampleSection({
   before, after, steps, stepsTitle = "What happens to your video.",
 }: { before: Clip; after: Clip | ReactNode; steps: string[]; stepsTitle?: string }) {
   return (
-    <section aria-labelledby="example-heading" className="mx-auto mt-8 max-w-xl space-y-10 border-t border-line pt-10">
-      <div className="space-y-6">
+    <section aria-labelledby="example-heading" className="example-section mx-auto mt-8 max-w-xl space-y-10 border-t border-line pt-10">
+      <div className="example-comparison space-y-6">
         <div className="space-y-2">
           <p className="eyebrow">Example</p>
-          <h2 id="example-heading" className="headline text-4xl">See it on a real clip.</h2>
+          <h2 id="example-heading" className="example-title headline text-4xl">See it on a real clip.</h2>
         </div>
         <ExampleVideo clip={before} />
-        <div aria-hidden className="text-center text-2xl text-accent">↓</div>
+        <div aria-hidden className="example-direction text-center text-2xl text-accent">↓</div>
         {isClip(after) ? <ExampleVideo clip={after} /> : after}
       </div>
       <div className="space-y-4">
         <div className="space-y-2">
           <p className="eyebrow">How it works</p>
-          <h2 className="headline text-4xl">{stepsTitle}</h2>
+          <h2 className="example-title headline text-4xl">{stepsTitle}</h2>
         </div>
         <ol className="space-y-3">
           {steps.map((s, i) => (
-            <li key={i} className="flex gap-3 rounded-2xl border border-line bg-panel p-4 text-sm">
-              <span className="headline text-2xl leading-none text-accent">{i + 1}</span>
+            <li key={i} className="surface-card flex gap-3 p-4 text-sm">
+              <span className="example-title headline text-2xl leading-none text-accent">{i + 1}</span>
               <span className="text-fg/90">{s}</span>
             </li>
           ))}

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Job } from "@/lib/submit";
-import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass } from "../../ui";
+import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFamily } from "../../ui";
 import { AnalysedPlayer } from "./analysed-player";
 import { CoachView } from "./coach-view";
 import { Matches } from "./matches";
@@ -24,7 +24,7 @@ function Stage({ job }: { job: Job }) {
   const [ratio, setRatio] = useState<number | null>(null);
   return (
     <div
-      className={`-mx-4 -mt-6 overflow-hidden bg-black sm:mx-auto sm:mt-0 sm:rounded-3xl sm:border sm:border-line ${vertical ? "sm:w-[min(100%,calc(78svh*9/16))] lg:w-full" : ""}`}
+      className={`video-frame mx-auto overflow-hidden border ${vertical ? "sm:w-[min(100%,calc(78svh*9/16))] lg:w-full" : ""}`}
     >
       {job.resultUrl ? (
         <video
@@ -34,18 +34,18 @@ function Stage({ job }: { job: Job }) {
             if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
           }}
           style={{ aspectRatio: ratio ?? (vertical ? 9 / 16 : 16 / 9) }}
-          className="mx-auto block max-h-[78svh] w-full bg-black object-contain"
+          className="mx-auto block max-h-[78svh] w-full object-contain"
         />
       ) : (
         <div
-          className={`relative flex flex-col items-center justify-center gap-2 px-6 text-center ${vertical ? "aspect-[9/16] max-h-[70svh] w-full sm:max-h-none" : "aspect-video"} ${failed ? "bg-red-500/10" : "stripes"}`}
+          className={`relative flex flex-col items-center justify-center gap-2 bg-panel px-6 text-center ${vertical ? "aspect-[9/16] max-h-[70svh] w-full sm:max-h-none" : "aspect-video"} ${failed ? "bg-red-500/10" : "stripes"}`}
         >
           {failed ? (
-            <span className="headline text-5xl text-red-300">Failed</span>
+            <span className="section-title text-4xl text-red-300">Failed</span>
           ) : job.status === "done" ? (
-            <span className="headline text-5xl">No video</span>
+            <span className="section-title text-4xl">No video</span>
           ) : (
-            <span className="headline text-8xl tabular-nums">
+            <span className="font-bold leading-none text-7xl tabular-nums">
               {pct}<span className="text-4xl text-accent">%</span>
             </span>
           )}
@@ -81,17 +81,23 @@ function titleFor(job: Job) {
   return "All done";
 }
 
+function strokeLabel(text: string, key = text) {
+  const family = strokeFamily(key);
+  return family ? <span className="stroke-label" data-stroke={family}>{text}</span> : text;
+}
+
 function eyebrowFor(job: Job) {
   if (job.kind === "breakdown") {
     const player = job.breakdown?.player ?? str(job.params.player);
     const st = job.strokeType;
     const stroke = st ? `${st.label}${st.detected ? " (auto-detected)" : ""}` : job.breakdown?.stroke ?? str(job.params.stroke);
-    return ["Technique breakdown", player, stroke].filter(Boolean).join(" · ");
+    return <>{["Technique breakdown", player].filter(Boolean).join(" · ")}{stroke && <> · {strokeLabel(stroke, st?.key ?? job.breakdown?.stroke_type ?? stroke)}</>}</>;
   }
   if (job.kind === "match") {
     const h = job.you?.height;
     const height = h ? `${h.height_cm} cm${h.method === "entered" ? "" : " (from the table)"}` : undefined;
-    return ["Find my pro match", str(job.params.stroke), height].filter(Boolean).join(" · ");
+    const stroke = str(job.params.stroke);
+    return <>Find my pro match{stroke && <> · {strokeLabel(stroke)}</>}{height && <> · {height}</>}</>;
   }
   return `Match Auto-Cut · ${job.params.mode === "full" ? "Full match" : "Highlights"}`;
 }
@@ -104,8 +110,8 @@ function Rallies({ rallies, full }: { rallies: Rally[]; full: boolean }) {
     <section className="space-y-3">
       <div className="grid grid-cols-3 gap-2">
         {stats.map(([k, v]) => (
-          <div key={k} className="rounded-2xl border border-line bg-panel px-3 py-3 text-center">
-            <p className="headline text-4xl tabular-nums">{v}</p>
+          <div key={k} className="surface-card px-3 py-3 text-center">
+            <p className="font-bold text-3xl tabular-nums">{v}</p>
             <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-widest text-muted">{k}</p>
           </div>
         ))}
@@ -113,16 +119,16 @@ function Rallies({ rallies, full }: { rallies: Rally[]; full: boolean }) {
       <h2 className="eyebrow pt-3">{full ? "Every rally, in order" : "Best rallies, most shots first"}</h2>
       <ol className="space-y-2">
         {rallies.map((r, i) => (
-          <li key={i} className="relative overflow-hidden rounded-xl border border-line bg-panel px-4 py-3">
+          <li key={i} className="relative overflow-hidden surface-card px-4 py-3">
             <div aria-hidden className="absolute inset-y-0 left-0 bg-accent/10" style={{ width: `${(r.shots / most) * 100}%` }} />
             <div className="relative flex items-center gap-4">
-              <span className="headline w-7 text-2xl text-muted">{i + 1}</span>
+              <span className="w-7 text-xl font-bold text-muted">{i + 1}</span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold tabular-nums">{fmt(r.start)} – {fmt(r.end)}</p>
                 <p className="text-xs text-muted">{Math.round(r.end - r.start)} s, match time</p>
               </div>
               <p className="shrink-0">
-                <span className="headline text-3xl text-accent tabular-nums">{r.shots}</span>
+                <span className="text-2xl font-bold text-accent tabular-nums">{r.shots}</span>
                 <span className="ml-1 text-xs font-bold uppercase text-muted">shots</span>
               </p>
             </div>
@@ -182,8 +188,8 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (error) {
     return (
-      <div className="mx-auto max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
-        <p className="headline text-4xl">Job not found</p>
+      <div className="mx-auto training-page max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
+        <p className="section-title text-4xl">Job not found</p>
         <p className="text-red-200">{error}</p>
         <Link href="/" className={secondaryButtonClass}>Back home</Link>
       </div>
@@ -192,7 +198,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (!job) {
     return (
-      <div className="mx-auto max-w-3xl" aria-busy="true">
+      <div className="training-page mx-auto max-w-3xl" aria-busy="true">
         <Trouble text={trouble} />
         <div className="stripes -mx-4 -mt-6 aspect-video bg-panel sm:mx-0 sm:mt-0 sm:rounded-3xl" />
         <p className="mt-4 text-muted">Loading...</p>
@@ -208,18 +214,18 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   return (
     <>
     <Trouble text={trouble} />
-    <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
+    <div className={`training-page mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
       <div className={`min-w-0 ${vertical ? "lg:sticky lg:top-20" : ""}`}>
         <Stage job={job} />
       </div>
       <div className="mt-6 min-w-0 space-y-8 lg:mt-0">
         <div className="space-y-3">
           <p className="eyebrow">{eyebrowFor(job)}</p>
-          <h1 className="headline text-5xl">{titleFor(job)}</h1>
+          <h1 className="headline break-words text-5xl text-accent">{titleFor(job)}</h1>
           {job.message && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
           {job.warning && <Warning>{job.warning}</Warning>}
           {ended && (
-            <div className="grid grid-cols-2 gap-2 pt-2 sm:flex">
+            <div className="flex flex-wrap gap-2 pt-2">
               {job.resultUrl && (
                 <a href={job.resultUrl} download={`ttskill-${job.id}.mp4`} className={`${buttonBaseClass} h-12 text-xl`}>
                   <DownloadIcon /> Download
@@ -235,7 +241,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
-        <details className="group rounded-2xl border border-line bg-panel">
+        <details className="group surface-card">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
             Run details
             <span aria-hidden className="transition group-open:rotate-45">+</span>

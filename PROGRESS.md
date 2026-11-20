@@ -270,3 +270,4 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 
 - Shared foundation. Extracted the site header and published the Coach form, surface, upload, field, button, and media styles for reuse. Disabled primary buttons have an outlined red treatment with muted text in both themes. The Coach form keeps its layout and disabled hint. All 172 frontend tests passed.
 - Home. Matched the Coach title, media frame, cards, section labels, and demo links while keeping the hero video and its playback control. All 172 frontend tests passed.
+- Breakdown. Adopted the shared upload, two-column form, before/after layout, and result frame. Forehand and backhand labels use their documented colors. All 172 frontend tests passed.

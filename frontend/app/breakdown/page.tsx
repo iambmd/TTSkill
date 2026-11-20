@@ -56,7 +56,7 @@ export default function BreakdownPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="mx-auto max-w-xl space-y-7">
+    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
       <PageIntro
         eyebrow="Technique Breakdown"
         title="Swing like the pros."
@@ -66,50 +66,52 @@ export default function BreakdownPage() {
         kind="breakdown" onProblem={setVideoProblem}
         title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best."
       />
-      <details ref={textRef} className="group rounded-2xl border border-line bg-panel">
-        <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-          No video? Describe the training instead
-          <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
-        </summary>
-        <div className="px-4 pb-4">
-          <label className="sr-only" htmlFor="text">Training description</label>
-          <textarea
-            id="text" name="text" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
-            aria-invalid={!!notesError} aria-describedby="text-error"
-            className={`${inputClass} ${notesError ? "border-red-500/50" : ""}`}
-            placeholder="Paste notes, a transcript, or a description of how the player trains this stroke."
+      <div className="min-w-0 space-y-6">
+        <details ref={textRef} className="group surface-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+            No video? Describe the training instead
+            <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
+          </summary>
+          <div className="px-4 pb-4">
+            <label className="sr-only" htmlFor="text">Training description</label>
+            <textarea
+              id="text" name="text" rows={4} value={notes} onChange={(e) => setNotes(e.target.value)}
+              aria-invalid={!!notesError} aria-describedby="text-error"
+              className={`${inputClass} ${notesError ? "border-red-500/50" : ""}`}
+              placeholder="Paste notes, a transcript, or a description of how the player trains this stroke."
+            />
+            <FieldError id="text-error">{notesError}</FieldError>
+            {!notesError && notes.length > LIMITS.text_chars.training_text * 0.8 && (
+              <p className="mt-2 text-xs text-muted tabular-nums">{notes.trim().length}/{LIMITS.text_chars.training_text} characters</p>
+            )}
+          </div>
+        </details>
+        <div>
+          <label className={labelClass} htmlFor="player">Player</label>
+          <input
+            id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass}
+            maxLength={LIMITS.text_chars.player}
           />
-          <FieldError id="text-error">{notesError}</FieldError>
-          {!notesError && notes.length > LIMITS.text_chars.training_text * 0.8 && (
-            <p className="mt-2 text-xs text-muted tabular-nums">{notes.trim().length}/{LIMITS.text_chars.training_text} characters</p>
-          )}
         </div>
-      </details>
-      <div>
-        <label className={labelClass} htmlFor="player">Player</label>
-        <input
-          id="player" name="player" placeholder="e.g. Fan Zhendong" autoComplete="off" className={inputClass}
-          maxLength={LIMITS.text_chars.player}
-        />
-      </div>
-      <div>
-        <label className={labelClass} htmlFor="stroke_type">
-          Stroke <span className="font-medium tracking-normal normal-case text-white/40">optional</span>
-        </label>
-        <div className="relative">
-          <select id="stroke_type" name="stroke_type" defaultValue="" className={`${inputClass} appearance-none pr-12`}>
-            <option value="">Auto-detect from the swing</option>
-            {STROKE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-          </select>
-          <ChevronIcon className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-muted" />
+        <div>
+          <label className={labelClass} htmlFor="stroke_type">
+            Stroke <span className="font-medium tracking-normal normal-case text-muted">optional</span>
+          </label>
+          <div className="relative">
+            <select id="stroke_type" name="stroke_type" defaultValue="" className={`${inputClass} appearance-none pr-12`}>
+              <option value="">Auto-detect from the swing</option>
+              {STROKE_TYPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+            <ChevronIcon className="pointer-events-none absolute top-1/2 right-4 size-5 -translate-y-1/2 text-muted" />
+          </div>
+          <p className="mt-2 text-xs text-muted">Pick one to get that stroke&apos;s coaching steps, or leave it and we read it from the video.</p>
         </div>
-        <p className="mt-2 text-xs text-muted">Pick one to get that stroke&apos;s coaching steps, or leave it and we read it from the video.</p>
+        <fieldset>
+          <legend className={labelClass}>Bat hand</legend>
+          <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
+          <p className="mt-2 text-xs text-muted">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
+        </fieldset>
       </div>
-      <fieldset>
-        <legend className={labelClass}>Bat hand</legend>
-        <RadioTiles name="hand" options={HANDS} defaultValue="auto" className="grid-cols-3" />
-        <p className="mt-2 text-xs text-muted">Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.</p>
-      </fieldset>
       <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
       <ExampleSection

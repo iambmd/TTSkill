@@ -13,8 +13,8 @@ export function Steps({ b, drill = true }: { b: Breakdown; drill?: boolean }) {
         <h2 className="eyebrow">Step by step</h2>
         <ol className="space-y-2">
           {b.steps.map((s, i) => (
-            <li key={i} className="flex gap-4 rounded-2xl border border-line bg-panel p-4">
-              <span className="headline text-4xl leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
+            <li key={i} className="flex gap-4 surface-card p-4">
+              <span className="text-3xl font-bold leading-none text-accent">{String(i + 1).padStart(2, "0")}</span>
               <div className="min-w-0 space-y-1">
                 <p className="text-lg font-bold">{s.title}</p>
                 {s.lines.map((l) => <p key={l} className="text-muted">{l}</p>)}
@@ -29,7 +29,7 @@ export function Steps({ b, drill = true }: { b: Breakdown; drill?: boolean }) {
             </li>
           ))}
         </ol>
-        {b.recap && <p className="headline text-2xl text-muted">{b.recap}</p>}
+        {b.recap && <p className="section-title text-xl text-muted">{b.recap}</p>}
       </section>
       {drill && b.drill && (
         <section className="rounded-2xl border border-accent/40 bg-accent/10 p-4">
@@ -39,7 +39,7 @@ export function Steps({ b, drill = true }: { b: Breakdown; drill?: boolean }) {
       )}
       <section className="space-y-3">
         <h2 className="eyebrow">The details</h2>
-        <dl className="divide-y divide-line rounded-2xl border border-line bg-panel">
+        <dl className="divide-y divide-line surface-card">
           {facts.map(([k, v]) => (
             <div key={k} className="grid gap-1 px-4 py-3 sm:grid-cols-[9rem_minmax(0,1fr)] sm:gap-4">
               <dt className="text-xs font-bold uppercase tracking-widest text-muted sm:pt-0.5">{k}</dt>

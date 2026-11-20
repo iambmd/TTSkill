@@ -105,6 +105,25 @@ a.primary-button:hover {
   scale: none;
 }
 
+.stroke-label {
+  display: inline-block;
+  border: 1px solid transparent;
+  border-radius: var(--training-control-radius);
+  padding: 0.125rem 0.5rem;
+  color: var(--training-on-action);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.stroke-label[data-stroke="forehand"] {
+  background: var(--training-forehand);
+}
+
+.stroke-label[data-stroke="backhand"] {
+  background: var(--training-backhand);
+  border-color: var(--training-backhand-line);
+}
+
 .video-picker :has(> input[type="file"]:focus-visible) {
   --tw-ring-color: var(--training-accent);
 }
@@ -222,5 +241,40 @@ a.primary-button:hover {
 @media (prefers-reduced-motion: reduce) {
   :is(.primary-button, .video-picker .upload-target) {
     transition: none;
+  }
+}
+
+.feature-form + .example-section {
+  max-width: none;
+  margin-top: 2rem;
+}
+
+.feature-form + .example-section .example-title {
+  font-family: var(--font-sans);
+  font-style: normal;
+  letter-spacing: normal;
+  line-height: 1.15;
+  text-transform: none;
+}
+
+@media (min-width: 48rem) {
+  .feature-form + .example-section .example-comparison {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 1.5rem;
+  }
+
+  .feature-form + .example-section .example-comparison > * {
+    margin-block: 0;
+  }
+
+  .feature-form + .example-section .example-comparison > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  .feature-form + .example-section .example-direction {
+    align-self: center;
+    transform: rotate(-90deg);
   }
 }
