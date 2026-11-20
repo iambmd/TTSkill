@@ -76,7 +76,7 @@ export default function MatchPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
+    <form onSubmit={onSubmit} noValidate className="feature-form">
       <PageIntro
         eyebrow="Find my pro match"
         title="Who do you play like?"

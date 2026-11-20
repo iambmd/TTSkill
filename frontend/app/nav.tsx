@@ -27,7 +27,7 @@ export function Nav() {
         return (
           <Link
             key={href} href={href} aria-current={active ? "page" : undefined}
-            className={`shrink-0 rounded-full px-2 py-2 text-[0.7rem] sm:px-3.5 sm:text-sm font-bold uppercase tracking-wide transition ${active ? "bg-accent text-black" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
+            className={`shrink-0 rounded-full px-2 py-2 text-[0.7rem] md:px-3.5 md:text-sm font-bold uppercase tracking-wide transition ${active ? "action-fill" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
           >
             {label}
           </Link>

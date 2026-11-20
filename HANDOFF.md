@@ -1,11 +1,15 @@
 # HANDOFF
 
-Read this first, then `PROGRESS.md` (history, every measurement) and `AGENTS.md` (layout,
-conventions). Last updated 2026-11-18 after the Coach result page fix, the licensing brief, the Coach speed brief
-(Phases 0-4) and the player-picker brief before it. Work is on `main`; each change is its own
-commit. All metrics are development data (no held-out set).
+Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for project conventions. Work is on `main`. Metrics below are development data.
 
-## Coach result page (bug brief of 2026-11-18, latest)
+## Site-wide Coach style (2026-11-20)
+
+- The table-and-rubber palette is shared across the site. [STYLE.md](docs/STYLE.md) documents the dark and light tokens and the forehand, backhand, and improvement colors. `frontend/app/globals.css` maps the palette to Tailwind, and `frontend/app/training.css` holds shared form, card, upload, media-frame, and primary-button styles.
+- `SiteHeader`, `PageIntro`, `VideoPicker`, `SubmitBar`, and `ExampleSection` supply the shared UI. The Coach page keeps its form composition and disabled hint. Every primary button uses the red outline and muted text when disabled, including during upload.
+- Home, Breakdown, Pro Match, Auto-Cut, and both Gear tabs have their own rollout commits. Job results reuse the video frame and use the stroke family already in the job to color its label.
+- Dark Playwright captures at 390 and 1440 px cover [Home](docs/screenshots/home), [Coach](docs/screenshots/coach), [Breakdown](docs/screenshots/breakdown), [Pro Match](docs/screenshots/match), [Auto-Cut](docs/screenshots/autocut), [Rubber Finder](docs/screenshots/gear), and [Pro Setups](docs/screenshots/pros). The Coach folder also has light captures. Pro Setups uses the existing drawings and initials in the screenshots because external images were blocked in the local browser check.
+
+## Coach result page (2026-11-18)
 
 Reported:
 - **A:** at 1920 px the plan wrapped one word per line, "100%" overlapped the cards, and the

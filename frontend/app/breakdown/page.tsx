@@ -56,7 +56,7 @@ export default function BreakdownPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
+    <form onSubmit={onSubmit} noValidate className="feature-form">
       <PageIntro
         eyebrow="Technique Breakdown"
         title="Swing like the pros."

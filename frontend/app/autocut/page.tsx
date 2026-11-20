@@ -66,7 +66,7 @@ export default function AutoCutPage() {
 
   return (
     <>
-    <form onSubmit={onSubmit} noValidate className="training-page feature-form">
+    <form onSubmit={onSubmit} noValidate className="feature-form">
       <PageIntro
         eyebrow="Match Auto-Cut"
         title="Cut the dead time."

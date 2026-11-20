@@ -427,7 +427,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   return (
     <fieldset className="space-y-3">
       {hidden}
-      <legend className="headline mb-1 text-2xl">{kind === "breakdown" ? "Which player should we analyse?" : "Which one is you?"}</legend>
+      <legend className={`${kind === "coach" ? "headline" : "section-title"} mb-1 text-2xl`}>{kind === "breakdown" ? "Which player should we analyse?" : "Which one is you?"}</legend>
       <p className="text-sm text-muted">
         {found.candidates.length > 1 ? `We see ${found.candidates.length} players. ` : ""}
         {kind === "breakdown" ? "Tap the one to break down." : "Tap yourself so we analyse the right one."}

@@ -72,7 +72,7 @@ export default function ProsPage() {
   const hits = query ? PROS.filter((p) => norm(p.name).includes(query)) : PROS;
 
   return (
-    <div className="training-page space-y-7">
+    <div className="space-y-7">
       <GearTabs active="pros" />
       <PageIntro
         eyebrow="Pro setups"

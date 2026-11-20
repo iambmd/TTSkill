@@ -45,6 +45,11 @@
   background: var(--training-field);
 }
 
+.coach-example .surface-card,
+.coach-result .surface-card:not(.coach-plan) {
+  border-radius: var(--radius-2xl);
+}
+
 .coach-example > section {
   max-width: none;
   margin-top: 2rem;

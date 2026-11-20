@@ -188,7 +188,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (error) {
     return (
-      <div className="mx-auto training-page max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
+      <div className="mx-auto max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
         <p className="section-title text-4xl">Job not found</p>
         <p className="text-red-200">{error}</p>
         <Link href="/" className={secondaryButtonClass}>Back home</Link>
@@ -198,7 +198,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (!job) {
     return (
-      <div className="training-page mx-auto max-w-3xl" aria-busy="true">
+      <div className="mx-auto max-w-3xl" aria-busy="true">
         <Trouble text={trouble} />
         <div className="stripes -mx-4 -mt-6 aspect-video bg-panel sm:mx-0 sm:mt-0 sm:rounded-3xl" />
         <p className="mt-4 text-muted">Loading...</p>
@@ -214,7 +214,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   return (
     <>
     <Trouble text={trouble} />
-    <div className={`training-page mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
+    <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
       <div className={`min-w-0 ${vertical ? "lg:sticky lg:top-20" : ""}`}>
         <Stage job={job} />
       </div>

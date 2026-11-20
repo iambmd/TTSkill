@@ -1,4 +1,4 @@
-# TTSkill Coach style
+# TTSkill style
 
 Table and rubber pairs condensed italic headlines with the colors of the sport. Dark mode uses a near-black canvas and deep table blue. Light mode uses a lavender canvas and softly tinted surfaces. Rubber red marks primary actions, titles, focus, and the active tab. Orange is reserved for the brand ball and small video accents.
 
@@ -33,7 +33,7 @@ Use white label text over the semantic fills. Pair each fill with a written labe
 
 - **Contrast.** Use a minimum of 4.5:1 for body text, labels, and placeholders, and 3:1 for large text and essential control boundaries. Keep the brighter red for small text on dark blue and use solid rubber red with white text for primary controls. [WCAG text contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html) · [WCAG non-text contrast](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)
 - **Actions.** Solid rubber red is the enabled primary button. Disabled buttons use the page surface, muted text, and an inset red outline.
-- **Type.** Use Barlow Condensed 800 italic for display and Barlow 400–700 for body and controls. Use 48–88 px for the form title, 28–40 px for section titles, 16 px for body, and 13 px for labels. Both fonts are bundled under SIL OFL 1.1.
+- **Type.** Use Barlow Condensed 800 italic for page titles and primary actions. Use Barlow 400–700 for body, section headings, labels, and secondary controls. Use 48–88 px for the form title, 28–40 px for section titles, 16 px for body, and 13 px for labels. Both fonts are bundled under SIL OFL 1.1.
 - **Spacing.** Work from 8, 16, 24, 32, and 48 px. Keep the form in one column on phones and use two shrinkable columns on wider displays. Give notes and videos separate rows. Below 600 px, the navigation tabs scroll in their own row.
 - **Edges.** Use 8 px for controls and 12 px for panels and media. Use a dashed outline to identify the upload target and a solid red rule to identify the coaching notes. Keep the header divider as the line above the page.
 - **Motion.** Use 160 ms for color and border feedback and up to 300 ms for progress fills. Respect reduced motion for transitions and status pulses. Switch the header text and background colors together.

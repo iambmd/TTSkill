@@ -1,37 +1,10 @@
-:root body:has(> main :is(.coach-form, .coach-result, .training-page)) {
-  --color-ink: var(--training-bg);
-  --color-fg: var(--training-ink);
-  --color-white: var(--training-ink);
-  --color-muted: var(--training-muted);
-  --color-panel: var(--training-surface);
-  --color-line: var(--training-line);
-  --color-accent: var(--training-accent);
-  --color-accent-hot: var(--training-ink);
-  --accent-glow: var(--training-action);
-  background: var(--training-bg);
-  color: var(--training-ink);
+/* Keep header text and its background in the same theme during the switch. */
+.site-nav :is(a, button) {
+  transition-property: none;
+}
 
-  > header {
-    background-color: var(--training-bg);
-  }
-
-  .site-nav :is(a, button) {
-    /* Keep the label and its backdrop in the same theme during the switch. */
-    transition-property: none;
-  }
-
-  .brand-ball {
-    background-color: var(--color-ball);
-  }
-
-  :is(.site-nav-links, .gear-tabs) a[aria-current="page"] {
-    background-color: var(--training-action);
-    color: var(--training-on-action);
-  }
-
-  :is([role="alert"], .text-red-100, .text-red-200, .text-red-300, .text-red-400) {
-    color: var(--training-error);
-  }
+:is([role="alert"], .text-red-100, .text-red-200, .text-red-300, .text-red-400) {
+  color: var(--training-error);
 }
 
 .eyebrow {
@@ -76,7 +49,7 @@
   color: var(--training-muted);
 }
 
-.surface-card {
+@utility surface-card {
   border: 1px solid var(--training-line);
   border-radius: var(--training-panel-radius);
   background-color: var(--training-surface);
@@ -199,6 +172,11 @@ a.primary-button:hover {
 }
 
 @media (width < 600px) {
+  html:has(.feature-form) {
+    /* Keep scrolled-to fields clear of the sticky header and submit bar. */
+    scroll-padding-block: 7.25rem 7rem;
+  }
+
   .site-nav {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);

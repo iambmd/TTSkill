@@ -49,7 +49,7 @@ export default function RubbersPage() {
   }, [style, type, level, budget]);
 
   return (
-    <div className="training-page space-y-7">
+    <div className="space-y-7">
       <GearTabs active="rubbers" />
       <PageIntro
         eyebrow="Rubber finder"

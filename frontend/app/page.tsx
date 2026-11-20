@@ -35,7 +35,7 @@ const tools = [
 
 export default function Home() {
   return (
-    <div className="training-page space-y-12">
+    <div className="space-y-12">
       <section className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] lg:gap-12">
         <div className="page-intro space-y-3">
           <p className="eyebrow">AI coaching for table tennis</p>

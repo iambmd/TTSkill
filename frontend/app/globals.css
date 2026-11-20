@@ -6,15 +6,15 @@
 @custom-variant light (&:where([data-theme="light"], [data-theme="light"] *));
 
 @theme {
-  /* Ball orange on near-black. */
   --color-ball: #ff6b2c;
-  --color-accent: var(--color-ball);
-  --color-accent-hot: #ff8547;
-  --color-ink: #07090d;
-  --color-panel: #0e1218;
-  --color-line: rgb(255 255 255 / 0.09);
-  --color-muted: #8f97aa;
-  --color-fg: #eef0f5;
+  --color-accent: var(--training-accent);
+  --color-accent-hot: var(--training-ink);
+  --color-ink: var(--training-bg);
+  --color-panel: var(--training-surface);
+  --color-line: var(--training-line);
+  --color-muted: var(--training-muted);
+  --color-fg: var(--training-ink);
+  --color-white: var(--training-ink);
 }
 
 @theme inline {
@@ -56,37 +56,19 @@
   }
 }
 
-/* Light mode: same tokens on a light red page. White is remapped to dark ink so the
-   white-alpha hovers, borders and faint text used across pages flip with the theme. */
-:root[data-theme="light"] {
-  color-scheme: light;
-  --color-accent: #d9400b;
-  --color-accent-hot: #c03608;
-  --color-ink: #ffd6d0;
-  --color-panel: #fff4f2;
-  --color-line: rgb(60 8 8 / 0.16);
-  --color-muted: #6b3a36;
-  --color-fg: #1f0a09;
-  --color-white: #1f0a09;
-}
-
 html {
   color-scheme: dark;
-  --accent-glow: var(--color-ball);
+  --accent-glow: var(--training-action);
   -webkit-tap-highlight-color: transparent;
 }
 
-body {
-  background:
-    radial-gradient(70rem 28rem at 50% -10rem, color-mix(in srgb, var(--color-ball) 16%, transparent), transparent 70%) no-repeat,
-    var(--color-ink);
-  color: var(--color-fg);
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
-:root[data-theme="light"] body {
-  background:
-    radial-gradient(70rem 28rem at 50% -10rem, rgb(220 38 38 / 0.22), transparent 70%) no-repeat,
-    var(--color-ink);
+body {
+  background: var(--training-bg);
+  color: var(--training-ink);
 }
 
 :focus-visible {
@@ -94,7 +76,7 @@ body {
   outline-offset: 2px;
 }
 
-/* Table and rubber palette used by Coach. */
+/* Table and rubber palette. */
 :root {
   --training-bg: #0a0d12;
   --training-surface: #0e2a47;

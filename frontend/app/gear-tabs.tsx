@@ -11,7 +11,7 @@ export function GearTabs({ active }: { active: "rubbers" | "pros" }) {
     </Link>
   );
   return (
-    <nav className="gear-tabs surface-card flex gap-1 p-1">
+    <nav className="surface-card flex gap-1 p-1">
       {tab("/rubbers", "Rubber finder", active === "rubbers")}
       {tab("/pros", "Pro setups", active === "pros")}
     </nav>
