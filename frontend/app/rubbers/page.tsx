@@ -49,73 +49,76 @@ export default function RubbersPage() {
   }, [style, type, level, budget]);
 
   return (
-    <div className="mx-auto max-w-xl space-y-7">
+    <div className="training-page space-y-7">
       <GearTabs active="rubbers" />
       <PageIntro
         eyebrow="Rubber finder"
         title="Pick your rubber"
         body="Tell us how you play and what you can spend. Pricier rubbers are usually better, so we start near your budget and rank by what players who use them think."
       />
-      <fieldset>
-        <legend className={labelClass}>Style</legend>
-        <RadioTiles name="style" options={STYLE_OPTIONS} value={style} onChange={setStyle} className="grid-cols-2" />
-      </fieldset>
-      <fieldset>
-        <legend className={labelClass}>Rubber type</legend>
-        <RadioTiles name="type" options={TYPE_OPTIONS} value={type} onChange={setType} className="grid-cols-2" />
-      </fieldset>
-      <fieldset>
-        <legend className={labelClass}>Level</legend>
-        <RadioTiles name="level" options={LEVEL_OPTIONS} value={level} onChange={setLevel} className="grid-cols-3" />
-      </fieldset>
+      <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-8">
+        <div className="min-w-0 space-y-6">
+          <fieldset>
+            <legend className={labelClass}>Style</legend>
+            <RadioTiles name="style" options={STYLE_OPTIONS} value={style} onChange={setStyle} className="grid-cols-2" />
+          </fieldset>
+          <fieldset>
+            <legend className={labelClass}>Rubber type</legend>
+            <RadioTiles name="type" options={TYPE_OPTIONS} value={type} onChange={setType} className="grid-cols-2" />
+          </fieldset>
+          <fieldset>
+            <legend className={labelClass}>Level</legend>
+            <RadioTiles name="level" options={LEVEL_OPTIONS} value={level} onChange={setLevel} className="grid-cols-3" />
+          </fieldset>
 
-      <div>
-        <label className={labelClass} htmlFor="budget">Budget per sheet</label>
-        <div className="relative">
-          <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm font-semibold text-muted">$</span>
-          <input
-            id="budget" type="number" inputMode="numeric" min={1} max={500} step={1} value={budget}
-            onChange={(e) => setBudget(e.target.value)} className={`${inputClass} h-12 pl-8`}
-          />
-        </div>
-        <p className="mt-2 text-xs text-muted">Nothing over budget. We rank in $10 steps down from it, best rated first in each step.</p>
-      </div>
-
-      <section aria-live="polite" className="space-y-3">
-        {error && <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm">{error}</p>}
-        {rec && !error && (
-          <>
-            <div className="flex items-baseline justify-between rounded-2xl border border-accent/40 bg-accent/10 p-4 shadow-[0_0_24px_rgb(255_107_44/0.15)]">
-              <span className="text-sm font-semibold text-muted">Sponge thickness</span>
-              <span className="headline text-2xl text-accent">{rec.thickness}</span>
+          <div>
+            <label className={labelClass} htmlFor="budget">Budget per sheet</label>
+            <div className="relative">
+              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm font-semibold text-muted">$</span>
+              <input
+                id="budget" type="number" inputMode="numeric" min={1} max={500} step={1} value={budget}
+                onChange={(e) => setBudget(e.target.value)} className={`${inputClass} h-12 pl-8`}
+              />
             </div>
-            {rec.note && <p className="rounded-2xl border border-line bg-panel p-4 text-sm text-muted">{rec.note}</p>}
-            {!rec.note && rec.results.length === 0 && (
-              <p className="rounded-2xl border border-line bg-panel p-4 text-sm text-muted">Nothing matches yet. Try another level.</p>
-            )}
-            <ol className="space-y-2">
-              {rec.results.map((r, i) => (
-                <li key={r.name} className="flex items-center gap-4 rounded-2xl border border-line bg-panel p-4">
-                  <span className="headline w-6 text-2xl text-accent">{i + 1}</span>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-bold">{r.name}</p>
-                    <p className="text-xs text-muted">
-                      Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="headline text-xl">${r.price?.toFixed(0)}</p>
-                    <p className="text-xs text-muted">score {fmt(r.overall)}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <p className="text-xs text-muted">
-              Ratings and prices: revspin.net user reviews, via PingSense. Scores are out of 10.
-            </p>
-          </>
-        )}
-      </section>
+            <p className="mt-2 text-xs text-muted">Nothing over budget. We rank in $10 steps down from it, best rated first in each step.</p>
+          </div>
+        </div>
+        <section aria-live="polite" className="min-w-0 space-y-3">
+          {error && <p role="alert" className="rounded-2xl border border-red-500/40 bg-red-500/10 p-4 text-sm">{error}</p>}
+          {rec && !error && (
+            <>
+              <div className="surface-card flex flex-wrap items-baseline justify-between gap-2 border-s-[4px] border-s-accent p-4">
+                <span className="text-sm font-semibold text-muted">Sponge thickness</span>
+                <span className="text-xl font-bold text-accent">{rec.thickness}</span>
+              </div>
+              {rec.note && <p className="surface-card p-4 text-sm text-muted">{rec.note}</p>}
+              {!rec.note && rec.results.length === 0 && (
+                <p className="surface-card p-4 text-sm text-muted">Nothing matches yet. Try another level.</p>
+              )}
+              <ol className="space-y-2">
+                {rec.results.map((r, i) => (
+                  <li key={r.name} className="flex items-center gap-4 surface-card p-4">
+                    <span className="w-6 shrink-0 text-xl font-bold tabular-nums text-accent">{i + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <p className="break-words font-bold">{r.name}</p>
+                      <p className="text-xs text-muted">
+                        Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xl font-bold tabular-nums">${r.price?.toFixed(0)}</p>
+                      <p className="text-xs text-muted">score {fmt(r.overall)}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+              <p className="text-xs text-muted">
+                Ratings and prices: revspin.net user reviews, via PingSense. Scores are out of 10.
+              </p>
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

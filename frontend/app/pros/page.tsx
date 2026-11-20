@@ -4,7 +4,7 @@ import { useState } from "react";
 import data from "@/lib/pros.json";
 import productData from "@/lib/product-images.json";
 import { GearTabs } from "../gear-tabs";
-import { PageIntro, inputClass, labelClass } from "../ui";
+import { PageIntro, inputClass, labelClass, strokeFamily } from "../ui";
 import { ProPhoto, SetupStrip, type ProductImage } from "./pro-photo";
 
 type Pro = {
@@ -26,11 +26,11 @@ const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCa
 
 function ProCard({ p }: { p: Pro }) {
   return (
-    <article className="space-y-4 rounded-3xl border border-line bg-panel p-5">
+    <article className="surface-card min-w-0 space-y-4 p-5">
       <header className="flex items-start gap-4">
         <ProPhoto name={p.name} wiki={p.wiki} />
         <div className="min-w-0 flex-1">
-          <h2 className="headline text-3xl">{p.name}</h2>
+          <h2 className="section-title text-2xl">{p.name}</h2>
           <p className="text-sm text-muted">{p.country} · {p.grip}</p>
           {p.uncertain && (
             <span className="mt-2 inline-block rounded-full border border-accent/50 px-2.5 py-1 text-[0.65rem] font-bold uppercase tracking-wide text-accent">
@@ -43,8 +43,10 @@ function ProCard({ p }: { p: Pro }) {
       <dl className="grid gap-2 text-sm">
         {([["Blade", p.blade], ["Forehand", p.fh], ["Backhand", p.bh]] as const).map(([k, v]) => (
           <div key={k} className="flex gap-3 rounded-xl bg-white/[0.03] px-3 py-2.5">
-            <dt className="w-20 shrink-0 text-xs font-bold uppercase tracking-wide text-muted">{k}</dt>
-            <dd className="font-semibold">{v}</dd>
+            <dt className="w-20 shrink-0 text-xs font-bold uppercase tracking-wide text-muted">
+              <span className={k === "Blade" ? undefined : "stroke-label"} data-stroke={strokeFamily(k)}>{k}</span>
+            </dt>
+            <dd className="min-w-0 break-words font-semibold">{v}</dd>
           </div>
         ))}
       </dl>
@@ -70,14 +72,14 @@ export default function ProsPage() {
   const hits = query ? PROS.filter((p) => norm(p.name).includes(query)) : PROS;
 
   return (
-    <div className="mx-auto max-w-xl space-y-7">
+    <div className="training-page space-y-7">
       <GearTabs active="pros" />
       <PageIntro
         eyebrow="Pro setups"
         title="What the pros use"
         body="Blade and rubbers for 20 of the best. Search for your favourite player."
       />
-      <div>
+      <div className="max-w-lg">
         <label htmlFor="pro-search" className={labelClass}>Player</label>
         <input
           id="pro-search" type="search" value={q} onChange={(e) => setQ(e.target.value)}
@@ -87,11 +89,11 @@ export default function ProsPage() {
       <section aria-live="polite" className="space-y-4">
         {hits.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-line p-8 text-center">
-            <p className="headline text-3xl">Not here yet</p>
+            <p className="section-title text-2xl">Not here yet</p>
             <p className="mt-2 text-sm text-muted">We have 20 players so far. More are coming.</p>
           </div>
         ) : (
-          hits.map((p) => <ProCard key={p.name} p={p} />)
+          <div className="grid gap-4 md:grid-cols-2">{hits.map((p) => <ProCard key={p.name} p={p} />)}</div>
         )}
       </section>
     </div>
