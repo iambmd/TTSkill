@@ -105,6 +105,7 @@ body {
   --training-line: #343b46;
   --training-accent: #ff6b2c;
   --training-action: #ff6b2c;
+  --training-action-disabled: #db9270;
   --training-on-action: #17100c;
   --training-error: #fecaca;
   --training-media: #090b0e;

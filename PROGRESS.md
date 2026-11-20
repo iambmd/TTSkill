@@ -249,3 +249,11 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 - Playwright Chromium ran against the local demo-mode dev server at 390 and 1440 px. Both widths passed the upload-to-demo-result flow, plan disclosure, video playback and seek, and geometry checks for horizontal overflow and notes/video overlap. The theme toggle and light surfaces were checked at 1440 px. [Mobile](docs/screenshots/coach/dark-390.png) · [Desktop](docs/screenshots/coach/dark-1440.png)
 - Frontend tests passed (172). ESLint with a temporary Next.js configuration reported zero errors and five existing image warnings. The repository's lint script prompts for first-time configuration.
 - The Next.js production build passed.
+
+## Coach polish (2026-11-20)
+
+- Below 600 px, Coach puts its navigation in a full-width scrollable row beneath the brand and theme toggle. All six tabs fit at 390 px. The shared header divider is the single line above Coach.
+- The disabled submit button uses faded orange and shows “Add a video or link to start” while the form is blocked. The existing submit conditions still control when the button is enabled.
+- Playwright checked both widths for clipping, the disabled hint, demo submission, and notes/video separation. Updated the [390 px](docs/screenshots/coach/dark-390.png) and [1440 px](docs/screenshots/coach/dark-1440.png) dark screenshots.
+- Committed the Next.js ESLint configuration and locked its development dependencies. `npm run lint` completed without prompting with zero errors and five existing image warnings. All 172 frontend tests passed.
+- The Next.js production build passed.

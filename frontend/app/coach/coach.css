@@ -11,8 +11,6 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 1.25rem;
-  padding-top: 1.5rem;
-  border-top: 3px solid var(--training-action);
 }
 
 .coach-form > :first-child h1 {
@@ -125,8 +123,7 @@
 }
 
 .coach-form button[type="submit"].cursor-not-allowed {
-  background: color-mix(in srgb, var(--training-action) 14%, var(--training-field));
-  color: var(--training-muted);
+  background: var(--training-action-disabled);
   opacity: 1;
 }
 
@@ -137,11 +134,6 @@
 .coach-example > section {
   max-width: none;
   margin-top: 2rem;
-}
-
-.coach-result {
-  padding-top: 1.5rem;
-  border-top: 3px solid var(--training-action);
 }
 
 .coach-plan {
@@ -183,6 +175,35 @@
   border-radius: var(--training-panel-radius);
   background-color: var(--training-media);
   color-scheme: dark;
+}
+
+@media (width < 600px) {
+  body:has(> main :is(.coach-form, .coach-result)) .site-nav {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    height: auto;
+    row-gap: 0.25rem;
+    padding-block: 0.5rem 0.25rem;
+
+    .site-nav-links {
+      grid-column: 1 / -1;
+      justify-content: space-between;
+      margin-inline: -0.5rem;
+      padding: 0.25rem;
+      scrollbar-width: thin;
+    }
+
+    .site-nav-links a {
+      display: flex;
+      align-items: center;
+      min-height: 2.75rem;
+      padding-inline: 0.25rem;
+      font-family: var(--font-display);
+      font-size: 0.875rem;
+      letter-spacing: 0.025em;
+      white-space: nowrap;
+    }
+  }
 }
 
 @media (min-width: 48rem) {

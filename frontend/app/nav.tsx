@@ -21,7 +21,7 @@ export function Nav() {
   }, [path]);
   return (
     // Scrolls sideways on narrow phones instead of wrapping.
-    <div ref={bar} className="relative -mr-4 flex min-w-0 gap-0.5 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:gap-1 sm:pr-0">
+    <div ref={bar} className="site-nav-links relative -mr-4 flex min-w-0 gap-0.5 overflow-x-auto pr-4 [scrollbar-width:none] sm:mr-0 sm:gap-1 sm:pr-0">
       {LINKS.map(([href, label]) => {
         const active = href === "/" ? path === "/" : href === "/rubbers" ? GEAR.some((g) => path.startsWith(g)) : path.startsWith(href);
         return (

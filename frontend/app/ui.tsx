@@ -51,7 +51,7 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
 }
 
 /** Submit button that sticks to the bottom of the screen on long forms and fills up as the upload goes. */
-export function SubmitBar({ label, progress, error, startingLabel = "Starting...", blocked = false }: {
+export function SubmitBar({ label, progress, error, startingLabel = "Starting...", blocked = false, blockedHint }: {
   label: string;
   progress: number | null;
   error: string | null;
@@ -59,8 +59,10 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
   startingLabel?: string;
   /** A field has an error (shown next to it), so there is nothing to send yet. */
   blocked?: boolean;
+  blockedHint?: string;
 }) {
   const busy = progress !== null;
+  const waitingForInput = blocked && !busy;
   const pct = Math.round((progress ?? 0) * 100);
   const text = !busy ? label : pct === 0 ? "Uploading..." : pct < 100 ? `Uploading ${pct}%` : startingLabel;
   return (
@@ -70,11 +72,12 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
       )}
       <button
         type="submit" disabled={busy || blocked}
-        className={`${buttonClass} w-full ${blocked && !busy ? "cursor-not-allowed opacity-40 hover:bg-accent active:scale-100" : ""}`}
+        className={`${buttonClass} w-full ${waitingForInput ? "cursor-not-allowed opacity-40 hover:bg-accent active:scale-100" : ""}`}
       >
         {busy && <span aria-hidden className="absolute inset-y-0 left-0 bg-black/15 transition-[width] duration-300" style={{ width: `${pct}%` }} />}
         <span className="relative" aria-live="polite">{text}</span>
       </button>
+      {waitingForInput && blockedHint && <p className="mt-2 text-center text-sm text-muted">{blockedHint}</p>}
     </div>
   );
 }

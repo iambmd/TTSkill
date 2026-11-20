@@ -94,7 +94,10 @@ export default function CoachPage() {
         <div className="coach-upload">
           <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
         </div>
-        <SubmitBar label="Ask the coach" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
+        <SubmitBar
+          label="Ask the coach" progress={progress} error={error} startingLabel={starting}
+          blocked={blocked} blockedHint="Add a video or link to start"
+        />
       </form>
       <div className="coach-surface coach-example"><CoachExample /></div>
     </>

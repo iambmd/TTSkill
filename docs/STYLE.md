@@ -11,6 +11,7 @@ A table-tennis training desk with ball orange, condensed italic headlines, and q
 | `--training-line` | `#343b46` | `#d9b6ae` |
 | `--training-accent` | `#ff6b2c` | `#a9300c` |
 | `--training-action` | `#ff6b2c` | `#ff6b2c` |
+| `--training-action-disabled` | `#db9270` | `#db9270` |
 | `--training-on-action` | `#17100c` | `#17100c` |
 | `--training-error` | `#fecaca` | `#9f2020` |
 | `--training-media` | `#090b0e` | `#090b0e` |
