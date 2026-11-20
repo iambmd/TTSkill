@@ -77,9 +77,9 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   }
 
   return (
-    <div className="space-y-4">
+    <div className="video-picker space-y-4">
       <div
-        className="rounded-3xl has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-white has-[input:focus-visible]:ring-offset-4 has-[input:focus-visible]:ring-offset-ink"
+        className="rounded-[var(--training-panel-radius)] has-[input:focus-visible]:ring-2 has-[input:focus-visible]:ring-white has-[input:focus-visible]:ring-offset-4 has-[input:focus-visible]:ring-offset-ink"
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
         onDrop={onDrop}
@@ -90,7 +90,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
           onChange={(e) => pick(e.target.files?.[0] ?? null)}
         />
         {file ? (
-          <div className={`overflow-hidden rounded-3xl border bg-black ${dragging ? "border-accent" : fileError ? "border-red-500/50" : "border-line"}`}>
+          <div className={`overflow-hidden rounded-[var(--training-panel-radius)] border bg-[var(--training-media)] ${dragging ? "border-accent" : fileError ? "border-red-500/50" : "border-line"}`}>
             {url && canPreview ? (
               <video
                 key={url} src={`${url}#t=0.001`} controls playsInline preload="metadata"
@@ -101,7 +101,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                   setMeta({ duration: v.duration, width: v.videoWidth, height: v.videoHeight });
                 }}
                 onError={() => setCanPreview(false)}
-                className="block max-h-[60svh] w-full bg-black object-contain"
+                className="block max-h-[60svh] w-full bg-[var(--training-media)] object-contain"
               />
             ) : (
               <div className="stripes flex aspect-video items-center justify-center px-6 text-center text-sm text-muted">
@@ -112,7 +112,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
               {fileError ? (
                 <span className="grid size-8 shrink-0 place-items-center rounded-full bg-red-500/80 text-neutral-50"><CloseIcon className="size-4" /></span>
               ) : (
-                <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-4" /></span>
+                <span className="grid size-8 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-4" /></span>
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{file.name}</p>
@@ -134,7 +134,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             )}
           </div>
         ) : ytId ? (
-          <div className={`overflow-hidden rounded-3xl border bg-black ${dragging ? "border-accent" : "border-line"}`}>
+          <div className={`overflow-hidden rounded-[var(--training-panel-radius)] border bg-[var(--training-media)] ${dragging ? "border-accent" : "border-line"}`}>
             <div className="relative aspect-video">
               {/* YouTube's own thumbnail; nothing is downloaded until the form is sent. */}
               <img src={`https://i.ytimg.com/vi/${ytId}/hqdefault.jpg`} alt="" className="size-full object-cover opacity-80" />
@@ -145,7 +145,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
               </span>
             </div>
             <div className="flex items-center gap-3 border-t border-line bg-panel px-4 py-3">
-              <span className="grid size-8 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-4" /></span>
+              <span className="grid size-8 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-4" /></span>
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">YouTube video</p>
                 <p className="text-xs text-muted">We fetch it at up to 720p when you submit.</p>
@@ -158,13 +158,13 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
         ) : (
           <label
             htmlFor={id}
-            className={`hatch relative flex min-h-64 w-full cursor-pointer flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl bg-accent px-6 py-10 text-center text-black shadow-[0_24px_60px_-24px_color-mix(in_srgb,var(--accent-glow)_70%,transparent)] transition hover:bg-accent-hot active:scale-[.99] ${dragging ? "scale-[1.01] ring-4 ring-white" : ""}`}
+            className={`upload-target relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden text-center transition active:scale-[.99] ${dragging ? "scale-[1.01] ring-4 ring-white" : ""}`}
           >
-            <span className="grid size-20 place-items-center rounded-full bg-black text-accent">
+            <span className="grid place-items-center">
               <UploadIcon className="size-9" />
             </span>
-            <span className="headline text-4xl sm:text-5xl">{title}</span>
-            <span className="max-w-xs text-sm font-medium text-black/70">
+            <span className="upload-title section-title text-2xl">{title}</span>
+            <span className="max-w-xs text-sm font-medium">
               {hint}<span className="hidden sm:inline"> Or drop a file here.</span>
             </span>
           </label>

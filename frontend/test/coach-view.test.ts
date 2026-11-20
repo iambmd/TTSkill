@@ -116,7 +116,7 @@ describe("the plan", () => {
 
   it("collapses to one line when done, and opens to the steps", () => {
     const html = render(job());
-    const plan = /<details class="group coach-plan border">([\s\S]*?)<\/details>/.exec(html)?.[1] ?? "";
+    const plan = /<details class="group coach-plan surface-card">([\s\S]*?)<\/details>/.exec(html)?.[1] ?? "";
     expect(plan).toContain("All steps done");
     expect(plan).toContain("6 steps");
     for (const label of LABELS) expect(plan).toContain(label);

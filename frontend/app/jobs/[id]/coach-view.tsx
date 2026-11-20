@@ -23,7 +23,7 @@ const DEV = process.env.NODE_ENV === "development";
 
 function StepIcon({ status, stopped }: { status: Todo["status"]; stopped: boolean }) {
   if (status === "completed") {
-    return <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-3" /></span>;
+    return <span className="grid size-5 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-3" /></span>;
   }
   if (status === "in_progress") {
     return stopped ? (
@@ -59,7 +59,7 @@ export function Plan({ job }: { job: Job }) {
   const failed = job.status === "failed";
   if (!todos.length) {
     return (
-      <div className={`${running ? "stripes" : ""} coach-plan border p-4 text-sm text-muted`}>
+      <div className={`${running ? "stripes" : ""} coach-plan surface-card p-4 text-sm text-muted`}>
         {running ? "The coach is planning..." : "No plan was recorded."}
       </div>
     );
@@ -67,9 +67,9 @@ export function Plan({ job }: { job: Job }) {
   const finished = todos.filter((t) => t.status === "completed").length;
   if (job.status === "done") {
     return (
-      <details className="group coach-plan border">
+      <details className="group coach-plan surface-card">
         <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-          <span className="grid size-5 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-3" /></span>
+          <span className="grid size-5 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-3" /></span>
           <span className="min-w-0 flex-1">{finished === todos.length ? "All steps done" : `${finished} of ${todos.length} steps done`}</span>
           <span className="shrink-0 text-xs font-normal text-muted">{todos.length} steps</span>
           <span aria-hidden className="shrink-0 text-muted transition group-open:rotate-45">+</span>
@@ -80,7 +80,7 @@ export function Plan({ job }: { job: Job }) {
   }
   const pct = Math.round(job.progress * 100);
   return (
-    <section aria-label="The plan" className="coach-plan border p-4">
+    <section aria-label="The plan" className="coach-plan surface-card p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="eyebrow">The plan</h2>
         <span className={`shrink-0 text-sm font-bold tabular-nums ${failed ? "text-red-300" : ""}`}>
@@ -182,11 +182,11 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
             </div>
             <video
               src={`${o.url}#t=0.001`} controls playsInline preload="metadata"
-              className={`coach-video mx-auto block w-full border object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
+              className={`coach-video video-frame mx-auto block w-full border object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
             />
           </section>
         ))}
-        {running && !(job.outputs ?? []).length && <div className="stripes coach-plan aspect-video border" />}
+        {running && !(job.outputs ?? []).length && <div className="stripes coach-plan surface-card aspect-video" />}
         <AnalysedPlayer job={job} />
         {/* The notes already hold the drill, so the breakdown doesn't repeat it. */}
         {job.breakdown && <Steps b={job.breakdown} drill={!notes} />}

@@ -59,7 +59,7 @@ export default function CoachPage() {
 
   return (
     <>
-      <form onSubmit={onSubmit} noValidate className="coach-surface coach-form">
+      <form onSubmit={onSubmit} noValidate className="coach-surface coach-form feature-form">
         <PageIntro
           eyebrow="TT Coach"
           title="Ask your coach."

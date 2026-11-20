@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./training.css";
 @import "./coach/coach.css";
 
 /* `light:` for the rare spot that needs its own light-mode style. */
@@ -37,11 +38,6 @@
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-accent);
-}
-
-/* Static hatch on the upload button. */
-@utility hatch {
-  background-image: repeating-linear-gradient(-45deg, rgb(0 0 0 / 0.06) 0 10px, transparent 10px 20px);
 }
 
 /* Moving stripes on the video stage while a job runs. A 34px tile holds whole 24px stripe periods at 45deg, so it loops seamlessly. */
@@ -111,9 +107,7 @@ body {
   --training-secondary: var(--training-accent);
   --training-action: #d7262e;
   --training-action-hover: #b91e2b;
-  --training-action-disabled: #bf7883;
   --training-on-action: #fff;
-  --training-on-disabled: #25141a;
   --training-error: #ffbdc5;
   --training-media: #090b0e;
   --training-forehand: var(--training-action);
@@ -137,7 +131,6 @@ body {
   --training-secondary: #6958a3;
   --training-action: #b81f26;
   --training-action-hover: #941722;
-  --training-action-disabled: #e4a5ae;
   --training-error: #8d1526;
   --training-backhand: #2b2a30;
   --training-backhand-line: #776e85;

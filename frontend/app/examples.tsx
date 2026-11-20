@@ -24,7 +24,7 @@ function ExampleVideo({ clip }: { clip: Clip }) {
       {clip.src ? (
         <video
           src={`${clip.src}#t=0.1`} controls muted playsInline preload="metadata"
-          className={`${frame} object-contain bg-black`}
+          className={`${frame} video-frame object-contain`}
         />
       ) : (
         <div className={`${frame} stripes grid place-items-center text-sm text-muted`}>Example video coming soon</div>

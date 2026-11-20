@@ -265,3 +265,7 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 - Rendered text, placeholder, input-boundary, and keyboard-focus contrast checks passed the applicable WCAG AA thresholds. The lowest sampled small-text contrast was 4.89:1 in dark and 4.96:1 in light.
 - All 172 frontend tests passed. The committed ESLint config ran without prompting and reported five existing image warnings.
 - The Next.js production build passed.
+
+## Site-wide Coach style rollout (2026-11-20)
+
+- Shared foundation. Extracted the site header and published the Coach form, surface, upload, field, button, and media styles for reuse. Disabled primary buttons have an outlined red treatment with muted text in both themes. The Coach form keeps its layout and disabled hint. All 172 frontend tests passed.

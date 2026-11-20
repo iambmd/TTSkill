@@ -27,7 +27,7 @@ function After() {
             <ol className="space-y-1.5 rounded-2xl border border-line bg-panel p-3">
               {after.todos.map((t, i) => (
                 <li key={i} className="flex items-center gap-3 rounded-xl px-2 py-2 text-sm">
-                  <span className="grid size-6 shrink-0 place-items-center rounded-full bg-accent text-black"><CheckIcon className="size-3.5" /></span>
+                  <span className="grid size-6 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-3.5" /></span>
                   <span className="text-muted">{t.content}</span>
                 </li>
               ))}
@@ -47,7 +47,7 @@ function After() {
               </figcaption>
               <video
                 src={`${o.url}#t=0.1`} controls muted playsInline preload="metadata"
-                className={`mx-auto block w-full overflow-hidden rounded-3xl border border-line bg-black object-contain ${
+                className={`video-frame mx-auto block w-full overflow-hidden border object-contain ${
                   o.kind === "highlights" ? "aspect-video" : "aspect-[9/16] max-w-xs"
                 }`}
               />

@@ -1,79 +1,11 @@
-:root body:has(> main :is(.coach-form, .coach-result)) {
-  --color-ink: var(--training-bg);
-  --color-fg: var(--training-ink);
-  --color-white: var(--training-ink);
-  --color-muted: var(--training-muted);
-  --color-panel: var(--training-surface);
-  --color-line: var(--training-line);
-  --color-accent: var(--training-accent);
-  --color-accent-hot: var(--training-ink);
-  --accent-glow: var(--training-action);
-  background: var(--training-bg);
-  color: var(--training-ink);
-
-  > header {
-    background-color: var(--training-bg);
-  }
-
-  .site-nav :is(a, button) {
-    /* Keep the label and its backdrop in the same theme during the switch. */
-    transition-property: none;
-  }
-
-  .brand-ball {
-    background-color: var(--color-ball);
-  }
-
-  .site-nav-links a[aria-current="page"] {
-    background-color: var(--training-action);
-    color: var(--training-on-action);
-  }
-
-  :is([role="alert"], .text-red-100, .text-red-200, .text-red-300, .text-red-400) {
-    color: var(--training-error);
-  }
-}
-
-.coach-surface .eyebrow {
-  color: var(--training-secondary);
-}
-
-.coach-form {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 1.25rem;
-}
-
-.coach-form > :first-child h1 {
-  color: var(--training-action);
-  font-size: clamp(3rem, 7.5vw, 5.5rem);
-}
-
-.coach-form > :first-child > p:last-child {
-  max-inline-size: 62ch;
-  line-height: 1.55;
-}
-
-.coach-form > :last-child {
-  padding-top: 1rem;
-}
-
-.coach-form :is(textarea, input[type="url"]) {
-  background: var(--training-field);
-  border-color: var(--training-control-line);
-  border-radius: var(--training-control-radius);
-}
-
-.coach-form :is(textarea, input[type="url"]):focus {
-  border-color: var(--training-accent);
-}
-
-.coach-form :is(textarea, input[type="url"])[aria-invalid="true"] {
-  border-color: var(--training-error);
-}
-
-.coach-form :is(textarea, input[type="url"])::placeholder {
-  color: var(--training-muted);
+.coach-form .upload-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-style: italic;
+  font-weight: 800;
+  letter-spacing: -0.005em;
+  line-height: 0.92;
+  text-transform: uppercase;
 }
 
 .coach-request textarea {
@@ -113,106 +45,13 @@
   background: var(--training-field);
 }
 
-.coach-upload :has(> input[type="file"]:focus-visible) {
-  --tw-ring-color: var(--training-accent);
-}
-
-.coach-upload input[type="checkbox"] {
-  accent-color: var(--training-action);
-}
-
-.coach-upload .stripes {
-  background-color: var(--training-surface);
-}
-
-.coach-upload .hatch {
-  min-height: 10.5rem;
-  gap: 0.625rem;
-  padding: 1.25rem;
-  border: 1px dashed var(--training-accent);
-  border-radius: var(--training-panel-radius);
-  background-color: var(--training-surface);
-  background-image:
-    linear-gradient(147deg, transparent 20%, var(--training-line) 20.25%, transparent 20.75%),
-    linear-gradient(18deg, transparent 80%, var(--training-line) 80.5%, transparent 81%);
-  color: var(--training-ink);
-  box-shadow: none;
-}
-
-.coach-upload .hatch:hover {
-  background-color: var(--training-field);
-}
-
-.coach-upload .hatch > span:first-child {
-  width: 3rem;
-  height: 3rem;
-  border-radius: var(--training-control-radius);
-  background: var(--training-action);
-  color: var(--training-on-action);
-}
-
-.coach-upload .hatch svg {
-  width: 1.5rem;
-  height: 1.5rem;
-}
-
-.coach-upload .hatch .headline {
-  font-size: 2rem;
-}
-
-.coach-upload .hatch > span:last-child {
-  color: var(--training-muted);
-}
-
-.coach-form button[type="submit"] {
-  border-radius: var(--training-control-radius);
-  background: var(--training-action);
-  color: var(--training-on-action);
-}
-
-.coach-form button[type="submit"]:enabled:hover {
-  background: var(--training-action-hover);
-}
-
-.coach-form button[type="submit"].cursor-not-allowed {
-  background: var(--training-action-disabled);
-  color: var(--training-on-disabled);
-  opacity: 1;
-}
-
-.coach-surface [role="note"] {
-  border-color: var(--training-line);
-  background: var(--training-surface);
-  color: var(--training-ink);
-}
-
-.coach-surface [role="note"] svg {
-  color: var(--training-error);
-}
-
 .coach-example > section {
   max-width: none;
   margin-top: 2rem;
 }
 
-.coach-plan {
-  background-color: var(--training-surface);
-  border-color: var(--training-line);
-  border-radius: var(--training-panel-radius);
-}
-
 .coach-progress {
   background-color: var(--training-line);
-}
-
-.coach-surface :where(.bg-accent.text-black) {
-  background-color: var(--training-action);
-  color: var(--training-on-action);
-}
-
-.coach-upload .video-link-play {
-  background-color: var(--training-media);
-  color: var(--color-ball);
 }
 
 .coach-notes {
@@ -237,58 +76,8 @@
   border-top: 1px solid var(--training-line);
 }
 
-.coach-video,
-.coach-upload video,
-.coach-example video {
-  display: block;
-  border-color: var(--training-line);
-  border-radius: var(--training-panel-radius);
-  background-color: var(--training-media);
-  color-scheme: dark;
-}
-
-@media (width < 600px) {
-  body:has(> main :is(.coach-form, .coach-result)) .site-nav {
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
-    height: auto;
-    row-gap: 0.25rem;
-    padding-block: 0.5rem 0.25rem;
-
-    .site-nav-links {
-      grid-column: 1 / -1;
-      justify-content: space-between;
-      margin-inline: -0.5rem;
-      padding: 0.25rem;
-      scrollbar-width: thin;
-    }
-
-    .site-nav-links a {
-      display: flex;
-      align-items: center;
-      min-height: 2.75rem;
-      padding-inline: 0.25rem;
-      font-family: var(--font-display);
-      font-size: 0.875rem;
-      letter-spacing: 0.025em;
-      white-space: nowrap;
-    }
-  }
-}
-
-@media (min-width: 48rem) {
-  .coach-form {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 2rem;
-  }
-
-  .coach-form > :is(:first-child, :last-child) {
-    grid-column: 1 / -1;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .coach-surface :is(button, .hatch, .coach-progress > div) {
+  .coach-surface .coach-progress > div {
     transition: none;
   }
 

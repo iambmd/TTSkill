@@ -1,17 +1,17 @@
 export const inputClass =
-  "w-full rounded-xl border border-line bg-panel px-4 py-3 text-base outline-none placeholder:text-white/30 focus:border-accent focus:ring-2 focus:ring-accent/30";
+  "field-input w-full border px-4 py-3 text-base focus:ring-2 focus:ring-accent/30";
 export const labelTextClass = "text-xs font-bold uppercase tracking-[0.14em] text-muted";
 export const labelClass = `mb-2 block ${labelTextClass}`;
 /** Primary button without a size, for callers that need a smaller one. */
 export const buttonBaseClass =
-  "headline relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-accent px-6 text-black transition hover:bg-accent-hot active:scale-[.98] disabled:cursor-wait";
+  "primary-button headline relative inline-flex items-center justify-center gap-2 overflow-hidden px-6 transition active:scale-[.98] disabled:cursor-wait";
 export const buttonClass = `${buttonBaseClass} h-14 text-2xl`;
 export const secondaryButtonClass =
   "inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 text-sm font-bold uppercase tracking-wide transition hover:border-white/30 active:scale-[.98]";
 
 export function PageIntro({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (
-    <div className="space-y-3">
+    <div className="page-intro space-y-3">
       <p className="eyebrow">{eyebrow}</p>
       <h1 className="headline text-5xl sm:text-6xl">{title}</h1>
       <p className="text-muted">{body}</p>
@@ -72,9 +72,9 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
       )}
       <button
         type="submit" disabled={busy || blocked}
-        className={`${buttonClass} w-full ${waitingForInput ? "cursor-not-allowed opacity-40 hover:bg-accent active:scale-100" : ""}`}
+        className={`${buttonClass} w-full ${waitingForInput ? "cursor-not-allowed" : ""}`}
       >
-        {busy && <span aria-hidden className="absolute inset-y-0 left-0 bg-black/15 transition-[width] duration-300" style={{ width: `${pct}%` }} />}
+        {busy && <span aria-hidden className="absolute inset-y-0 left-0 bg-accent/15 transition-[width] duration-300" style={{ width: `${pct}%` }} />}
         <span className="relative" aria-live="polite">{text}</span>
       </button>
       {waitingForInput && blockedHint && <p className="mt-2 text-center text-sm text-muted">{blockedHint}</p>}
@@ -91,8 +91,8 @@ export function FieldError({ id, children }: { id: string; children: React.React
 /** A heads-up that doesn't stop anything, e.g. a pro whose backhand you shouldn't copy. */
 export function Warning({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <p role="note" className={`flex gap-2.5 rounded-xl border border-amber-300/30 bg-amber-300/10 px-3 py-2.5 text-sm text-amber-100 ${className}`}>
-      <WarningIcon className="mt-0.5 size-4 shrink-0 text-amber-300" />
+    <p role="note" className={`flex gap-2.5 notice rounded-xl border px-3 py-2.5 text-sm ${className}`}>
+      <WarningIcon className="mt-0.5 size-4 shrink-0" />
       <span>{children}</span>
     </p>
   );
