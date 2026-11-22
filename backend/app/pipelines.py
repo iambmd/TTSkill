@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import time
 import traceback
 from pathlib import Path
 from typing import Callable
@@ -28,7 +29,8 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args, **kwargs)
             jobs.update(job_id, progress=round(0.05 * f, 3), message=f"Downloading the video... {pct}%")
 
     try:
-        jobs.update(job_id, status="running", progress=0.0, message="Downloading the video...")
+        stage = {"autocutStage": {"key": "preparing"}} if run is run_autocut else {}
+        jobs.update(job_id, status="running", progress=0.0, message="Downloading the video...", **stage)
         path = download(url, jobs.job_dir(job_id), progress=report)
     except Exception as exc:  # LinkError messages are written for the user
         traceback.print_exc()
@@ -40,11 +42,11 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args, **kwargs)
         path.unlink(missing_ok=True)
 
 
-def pick_segments(found: list, video: Path, mode: str, top_n: int) -> tuple[list, list[tuple[float, float]]]:
+def pick_segments(found: list, video: Path, mode: str, top_n: int, total: float | None = None) -> tuple[list, list[tuple[float, float]]]:
     """Rallies to keep and their padded segments. Highlights: best rallies first, padding
     never merges them so each stays its own clip. Full: every rally, overlaps merged."""
     rallies = sorted(found, key=lambda r: -r.hits)[:top_n] if mode == "highlights" else found
-    total = duration(video)
+    total = duration(video) if total is None else total
     return rallies, padded_segments([(r.start, r.end) for r in rallies], total,
                                     merge=mode != "highlights",
                                     bounds=[r.clip_bounds or (0.0, total) for r in rallies])
@@ -60,31 +62,58 @@ def few_rallies_warning(count: int) -> str | None:
 
 
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
+    started = time.monotonic()
+    estimate = 0.0
+
+    def report(key: str, progress: float, done: int | None = None, total: int | None = None, **fields) -> None:
+        elapsed = time.monotonic() - started
+        # Start with a duration-based guess and blend in the measured pace as work advances.
+        measured = elapsed / max(progress, 0.1)
+        expected = estimate * (1 - progress) + measured * progress
+        eta = max(1, round(expected - elapsed))
+        stage = {"key": key, "etaUntil": round(time.time()) + eta}
+        if total:
+            stage.update(done=done, total=total)
+        jobs.update(job_id, status="running", progress=round(progress, 3), autocutStage=stage, **fields)
+
     try:
-        jobs.update(job_id, status="running", progress=0.1, message="Finding rallies…")
+        video_seconds = duration(video)
+        estimate = 12 + 0.35 * video_seconds
         workdir = jobs.job_dir(job_id)
-        found = detect_rallies(video, workdir, threshold, gap, min_hits)
+        report("extracting_audio", 0.06)
+        found = detect_rallies(video, workdir, threshold, gap, min_hits, lambda: report("finding_rallies", 0.12))
         if found:
-            jobs.update(job_id, progress=0.2, message="Reviewing rallies…")
             from .floor_bounce import drop_non_play  # heavy imports (MediaPipe, OpenCV)
-            found, bounces = drop_non_play(video, found, min_hits=min_hits)
+
+            def reviewed(done: int, total: int) -> None:
+                report("finding_rallies", 0.18 + 0.44 * done / total, done, total)
+
+            reviewed(0, len(found))
+            found, bounces = drop_non_play(video, found, min_hits=min_hits, progress=reviewed)
             if bounces:
                 print(f"dropped {len(bounces)} non-play spans: {[r.to_dict() for r in bounces]}")
         warning = few_rallies_warning(len(found))  # counted after non-play spans are dropped
-        if not found:  # nothing to cut, but the advice is the result: done, not failed
+        if not found:
             jobs.update(job_id, status="done", progress=1.0, rallies=[], warning=warning,
-                        message="No rallies found.")
+                        autocutStage={"key": "done"}, message="No rallies found.")
             return
-        rallies, segments = pick_segments(found, video, mode, top_n)
-        jobs.update(job_id, progress=0.3, message="Making your reel…",
-                    rallies=[r.to_dict() for r in rallies])
-        cut_and_concat(video, segments, workdir, workdir / "result.mp4",
-                       progress=lambda f: jobs.update(job_id, progress=round(0.3 + 0.65 * f, 3)))
+        report("ranking", 0.68)
+        rallies, segments = pick_segments(found, video, mode, top_n, total=video_seconds)
+        report("rendering", 0.72, 0, len(segments), rallies=[r.to_dict() for r in rallies])
+
+        def rendered(done: int, total: int, path: Path) -> None:
+            fields = {}
+            if done == 1:
+                shutil.copyfile(path, workdir / "preview.mp4")
+                fields["previewUrl"] = f"/jobs/{job_id}/files/preview.mp4"
+            report("rendering", 0.72 + 0.25 * done / total, done, total, **fields)
+
+        cut_and_concat(video, segments, workdir, workdir / "result.mp4", clip_ready=rendered)
         length = sum(e - s for s, e in segments)
         label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
         jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", warning=warning,
-                    message=f"{label}, {length:.0f} seconds.")
-    except Exception as exc:  # surface errors on the job page
+                    autocutStage={"key": "done"}, message=f"{label}, {length:.0f} seconds.")
+    except Exception as exc:
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))
 

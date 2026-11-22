@@ -4,6 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import type { Job } from "@/lib/submit";
 import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFamily } from "../../ui";
+import { AutoCutWaiting } from "./autocut-waiting";
 import { AnalysedPlayer } from "./analysed-player";
 import { CoachView } from "./coach-view";
 import { Matches } from "./matches";
@@ -154,13 +155,14 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const [trouble, setTrouble] = useState<string | null>(null);
 
   useEffect(() => {
+    const controller = new AbortController();
     let timer: ReturnType<typeof setTimeout>;
     let alive = true;
     let failures = 0;
     async function poll() {
       try {
-        const res = await fetch(`/api/jobs/${id}`, { cache: "no-store" });
-        if (res.status === 404) {
+        const res = await fetch(`/api/jobs/${id}`, { cache: "no-store", signal: controller.signal });
+        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
           const data = await res.json().catch(() => ({}));
           if (alive) setError(data.error ?? "Job not found");
           return;
@@ -181,7 +183,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
       }
     }
     poll();
-    return () => { alive = false; clearTimeout(timer); };
+    return () => { alive = false; clearTimeout(timer); controller.abort(); };
   }, [id]);
 
   if (error) {
@@ -214,13 +216,13 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
     <Trouble text={trouble} />
     <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
       <div className={`min-w-0 ${vertical ? "lg:sticky lg:top-20" : ""}`}>
-        <Stage job={job} />
+        {job.kind === "autocut" && !ended ? <AutoCutWaiting job={job} /> : <Stage job={job} />}
       </div>
       <div className="mt-6 min-w-0 space-y-8 lg:mt-0">
         <div className="space-y-3">
           <p className="eyebrow">{eyebrowFor(job)}</p>
           <h1 className="headline break-words text-5xl text-accent">{titleFor(job)}</h1>
-          {job.message && (job.kind !== "autocut" || !ended) && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
+          {job.message && (job.kind !== "autocut" || job.status === "queued") && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
           {job.warning && <Warning>{job.warning}</Warning>}
           {ended && (
             <div className="flex flex-wrap gap-2 pt-2">
@@ -238,7 +240,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <AnalysedPlayer job={job} />
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
-        {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
+        {job.status === "done" && job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
         {job.kind === "autocut" && job.status === "done" && job.canReuseVideo && <GoDeeper id={job.id} />}
         {job.kind !== "autocut" && <details className="group surface-card">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">

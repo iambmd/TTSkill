@@ -37,7 +37,8 @@ def padded_segments(spans: list[tuple[float, float]], total: float, pad: float =
 
 
 def cut_and_concat(video: Path, segments: list[tuple[float, float]], workdir: Path, dest: Path,
-                   progress: Callable[[float], None] | None = None) -> Path:
+                   progress: Callable[[float], None] | None = None, *,
+                   clip_ready: Callable[[int, int, Path], None] | None = None) -> Path:
     """Re-encodes each segment with identical settings (frame-accurate cuts, normalised streams
     so iPhone HEVC/variable-rate input concatenates cleanly) and joins them without re-encoding."""
     parts_dir = workdir / "parts"
@@ -54,6 +55,8 @@ def cut_and_concat(video: Path, segments: list[tuple[float, float]], workdir: Pa
             check=True,
         )
         parts.append(part)
+        if clip_ready:
+            clip_ready(i + 1, len(segments), part)
         if progress:
             progress((i + 1) / len(segments))
     listing = parts_dir / "list.txt"

@@ -10,6 +10,7 @@ import json
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 from scipy.io import wavfile
@@ -167,7 +168,10 @@ def group_rallies_anchored(times: np.ndarray, ratios: np.ndarray,
     return rallies
 
 
-def detect_rallies(video: Path, workdir: Path, threshold: float = 3.0, gap: float = 1.6, min_hits: int = 4) -> list[Rally]:
+def detect_rallies(video: Path, workdir: Path, threshold: float = 3.0, gap: float = 1.6, min_hits: int = 4,
+                   audio_ready: Callable[[], None] | None = None) -> list[Rally]:
     wav = extract_audio(video, workdir / "audio.wav")
+    if audio_ready:
+        audio_ready()
     times, ratios = detect_hits(wav, min(threshold, 2.0), with_ratios=True)
     return group_rallies_anchored(times, ratios, threshold, gap, min_hits)

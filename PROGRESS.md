@@ -280,3 +280,4 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 ## Upload-first match flow (2026-11-22)
 
 1. Home now starts a highlight job when you select or drop an MP4/MOV. Auto-Cut results link to Coach and Breakdown with the stored upload. The Auto-Cut form and results use player-facing copy and keep algorithm settings out of the UI. Build, lint, all 172 frontend tests, and both backend upload-reuse cases passed.
+2. Auto-Cut reports extraction, rally review counts, ranking, and render progress. Waiting shows a duration-based ETA and the first playable clip while the reel renders. The job URL resumes polling after refresh, and navigation cancels the active request. Build, lint, all 172 frontend tests, and 23 Auto-Cut backend cases passed.

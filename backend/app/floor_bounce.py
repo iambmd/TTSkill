@@ -10,6 +10,7 @@ from __future__ import annotations
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
 import numpy as np
 
@@ -135,13 +136,15 @@ class Refined:
     joins: list[float]     # crossfade times found in an edited video
 
 
-def drop_non_play(video: Path, rallies: list[Rally], min_hits: int = 4) -> tuple[list[Rally], list[Rally]]:
+def drop_non_play(video: Path, rallies: list[Rally], min_hits: int = 4,
+                  progress: Callable[[int, int], None] | None = None) -> tuple[list[Rally], list[Rally]]:
     """Returns (kept, dropped). If pose can't run (e.g. missing libGLES), keeps everything."""
-    r = refine(video, rallies, min_hits)
+    r = refine(video, rallies, min_hits, progress)
     return r.kept, r.dropped
 
 
-def refine(video: Path, rallies: list[Rally], min_hits: int = 4) -> Refined:
+def refine(video: Path, rallies: list[Rally], min_hits: int = 4,
+           progress: Callable[[int, int], None] | None = None) -> Refined:
     """Audio proposes, video decides: regroup candidates around clip joins, then keep the
     ones that show this table's players in play."""
     if not rallies:
@@ -156,13 +159,14 @@ def refine(video: Path, rallies: list[Rally], min_hits: int = 4) -> Refined:
         return Refined(rallies, [], [])
 
     try:
-        return _refine(video, rallies, min_hits, mp, BaseOptions, vision, model_path)
+        return _refine(video, rallies, min_hits, mp, BaseOptions, vision, model_path, progress)
     except Exception as exc:
         print(f"non-play pose check skipped: {exc}")
         return Refined(rallies, [], [])
 
 
-def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, vision, model_path) -> Refined:
+def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, vision, model_path,
+            progress: Callable[[int, int], None] | None) -> Refined:
     opts = vision.PoseLandmarkerOptions(
         base_options=BaseOptions(model_asset_path=str(model_path())),
         running_mode=vision.RunningMode.IMAGE,
@@ -173,7 +177,7 @@ def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, v
     seen: list[tuple[float, list[np.ndarray]]] = []   # (time, people) for every posed frame
     joins: list[float] = []
     with vision.PoseLandmarker.create_from_options(opts) as landmarker:
-        for r in rallies:
+        for i, r in enumerate(rallies):
             # A margin each side, so a crossfade at the edge of a candidate is still seen.
             t0 = max(0.0, r.start - JOIN_MARGIN)
             rgb = _frames(video, t0, r.end + JOIN_MARGIN)
@@ -183,6 +187,8 @@ def _refine(video: Path, rallies: list[Rally], min_hits: int, mp, BaseOptions, v
                 if r.start <= t <= r.end:
                     people = landmarker.detect(mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)).pose_landmarks
                     seen.append((t, [np.array([[p.x, p.y] for p in person]) for person in people]))
+            if progress:
+                progress(i + 1, len(rallies))
     times = np.array([t for t, _ in seen])
     if joins:
         # An edited video: look for joins in every gap between candidates, not only short

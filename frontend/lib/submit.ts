@@ -7,6 +7,14 @@ export type Job = {
   params: Record<string, unknown>;
   resultUrl?: string | null;
   canReuseVideo?: boolean;
+  autocutStage?: {
+    key: "preparing" | "extracting_audio" | "finding_rallies" | "ranking" | "rendering" | "done";
+    done?: number;
+    total?: number;
+    /** Estimated finish time in Unix seconds, based on video duration and work completed. */
+    etaUntil?: number;
+  };
+  previewUrl?: string;
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
   /** Advice beside a job that still counts as done: Auto-Cut heard too few rallies; Coach skipped a step. */
