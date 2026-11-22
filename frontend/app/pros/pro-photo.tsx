@@ -89,13 +89,13 @@ function Item({ part, label, name, img }: { part: "blade" | "fh" | "bh"; label: 
           : <div className="grid size-full place-items-center rounded-lg bg-ink"><Drawn part={part} name={name} /></div>}
       </div>
       <figcaption className="text-[0.65rem] font-bold uppercase tracking-wide text-muted">
-        {photo ? <a href={img.page} target="_blank" rel="noreferrer" className="underline decoration-white/30 hover:text-fg">{label}</a> : label}
+        {photo && part === "blade" ? <a href={img.page} target="_blank" rel="noreferrer" className="underline decoration-white/30 hover:text-fg">{label}</a> : label}
       </figcaption>
     </figure>
   );
 }
 
-/** Blade, forehand, backhand in that order: the product photo, linked to its page, or a drawing. */
+/** Blade, forehand, backhand in that order, with drawings as fallbacks. */
 export function SetupStrip({ blade, fh, bh, images }: {
   blade: string; fh: string; bh: string; images: { blade?: ProductImage; fh?: ProductImage; bh?: ProductImage };
 }) {

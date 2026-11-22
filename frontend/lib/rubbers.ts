@@ -4,6 +4,7 @@
  * backend/equipment/SOURCE.md. Keep the rules here and in recommend.py in step.
  */
 import data from "./rubbers.json";
+import { withRubberBuyLinks, type BuyLinkData } from "./buy-links";
 
 export const STYLES = ["spin", "speed"] as const;
 export const TYPES = ["inverted", "short_pips", "long_pips", "anti_spin"] as const;
@@ -12,7 +13,7 @@ export type Style = (typeof STYLES)[number];
 export type RubberType = (typeof TYPES)[number];
 export type Level = (typeof LEVELS)[number];
 
-export type Rubber = {
+export type Rubber = BuyLinkData & {
   name: string; brand: string; price: number | null; speed: number | null; spin: number | null;
   control: number | null; hardness: number | null; overall: number | null; type: string;
 };
@@ -59,5 +60,5 @@ export function recommend(style: Style, type: RubberType, level: Level, budget =
   const note = type === "short_pips" || type === "long_pips"
     ? "PingSense has no pips rubbers yet, so there is nothing to rank. They're on the list."
     : null;
-  return { style, type, level, budget, thickness: THICKNESS[type][level], results: picks.slice(0, limit), note };
+  return { style, type, level, budget, thickness: THICKNESS[type][level], results: picks.slice(0, limit).map(withRubberBuyLinks), note };
 }

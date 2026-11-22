@@ -2,6 +2,21 @@
 
 Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for project conventions. Work is on `main`. Metrics below are development data.
 
+## US rubber purchase links (2026-11-22)
+
+`shared/rubber-buy-links.json` holds the clean US product URLs for Rubber Finder and Pro Setups. Rubber Finder gets names and brands from `backend/equipment/rubbers.csv` and its frontend export, `frontend/lib/rubbers.json`. The pro equipment labels live in `frontend/lib/pros.json`. Both recommenders join links by exact rubber name. A legacy `buyUrl` or `buyLink` still works until that entry has a list. Missing matches use an empty list. See the [coverage and unverified candidates in PROGRESS.md](PROGRESS.md#us-rubber-purchase-links-2026-11-22).
+
+| Frontend environment variable | Effect |
+| --- | --- |
+| `NEXT_PUBLIC_AMAZON_TAG` | Appends `tag` to Amazon links after an official storefront and first-party seller have been verified. Also enables the Amazon Associate disclosure. |
+| `NEXT_PUBLIC_MEGASPIN_TAG` | Appends Megaspin's `aid` to its product URLs. |
+| `NEXT_PUBLIC_PADDLE_PALACE_TAG` | Supplies a Paddle Palace partner tag. |
+| `NEXT_PUBLIC_PADDLE_PALACE_TAG_PARAM` | Supplies the query parameter assigned by the Paddle Palace partner program. Set it together with the tag to activate the rule. |
+
+Set public tags in `frontend/.env.local` or in Vercel's project settings. Next.js inlines these values, so rebuild after changing them. The menu computes the order from the configured tags, then uses brand store, Amazon, Megaspin and Paddle Palace as the priority within each group. The official-store badge follows the brand link if it moves.
+
+Run `python3 scripts/check_buy_links.py` to check the catalog. It reports broken links, title mismatches, and requests it could not verify. To retry a site that blocks plain HTTP clients, install Python Playwright and Chromium with `python -m pip install playwright` and `python -m playwright install chromium`, then use `python scripts/check_buy_links.py --browser`. Before adding an Amazon listing, open its US product page and verify both the official brand storefront and the current **Sold by** field.
+
 ## Upload-first match flow (2026-11-22)
 
 1. **Start on Home.** Drop an MP4 or MOV or choose a file to start a highlight reel. From a finished upload, **Go deeper** opens Coach or Breakdown with the saved recording. The feature pages remain in the navigation.

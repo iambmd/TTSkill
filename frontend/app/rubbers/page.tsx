@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { Level, Recommendation, RubberType, Style } from "@/lib/rubbers";
 import { GearTabs } from "../gear-tabs";
+import { RubberBuyMenu } from "../rubber-buy-menu";
 import { PageIntro, RadioTiles, inputClass, labelClass } from "../ui";
 
 const STYLE_OPTIONS = [
@@ -97,18 +98,21 @@ export default function RubbersPage() {
               )}
               <ol className="space-y-2">
                 {rec.results.map((r, i) => (
-                  <li key={r.name} className="flex items-center gap-4 surface-card p-4">
-                    <span className="w-6 shrink-0 text-xl font-bold tabular-nums text-accent">{i + 1}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="break-words font-bold">{r.name}</p>
-                      <p className="text-xs text-muted">
-                        Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
-                      </p>
+                  <li key={r.name} className="surface-card space-y-3 p-4">
+                    <div className="flex items-center gap-4">
+                      <span className="w-6 shrink-0 text-xl font-bold tabular-nums text-accent">{i + 1}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="break-words font-bold">{r.name}</p>
+                        <p className="text-xs text-muted">
+                          Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold tabular-nums">${r.price?.toFixed(0)}</p>
+                        <p className="text-xs text-muted">score {fmt(r.overall)}</p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xl font-bold tabular-nums">${r.price?.toFixed(0)}</p>
-                      <p className="text-xs text-muted">score {fmt(r.overall)}</p>
-                    </div>
+                    <RubberBuyMenu product={r.name} buyLinks={r.buyLinks} buyLink={r.buyLink} buyUrl={r.buyUrl} />
                   </li>
                 ))}
               </ol>

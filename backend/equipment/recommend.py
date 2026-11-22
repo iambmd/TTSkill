@@ -9,6 +9,7 @@ from functools import lru_cache
 from pathlib import Path
 
 DATA = Path(__file__).with_name("rubbers.csv")
+BUY_LINKS = DATA.resolve().parents[2] / "shared" / "rubber-buy-links.json"
 
 STYLES = ("spin", "speed")
 TYPES = ("inverted", "short_pips", "long_pips", "anti_spin")
@@ -66,6 +67,11 @@ def band(price: float, budget: float) -> int:
     return math.floor((budget - price) / BAND + 1e-9)
 
 
+@lru_cache(maxsize=1)
+def buy_links() -> dict[str, list[dict[str, str]]]:
+    return json.loads(BUY_LINKS.read_text(encoding="utf-8"))
+
+
 def recommend(style: str, rtype: str, level: str, budget: float = DEFAULT_BUDGET, limit: int = 8) -> dict:
     """Drop rubbers over budget, then rank by budget band (closest first) and the highest user score (Overall)."""
     if style not in STYLES or rtype not in TYPES or level not in LEVELS:
@@ -87,8 +93,9 @@ def recommend(style: str, rtype: str, level: str, budget: float = DEFAULT_BUDGET
     note = None
     if rtype in ("short_pips", "long_pips"):
         note = "PingSense has no pips rubbers yet, so there is nothing to rank. They're on the list."
+    links = buy_links()
     return {"style": style, "type": rtype, "level": level, "budget": budget, "thickness": THICKNESS[rtype][level],
-            "results": picks[:limit], "note": note}
+            "results": [{**r, "buyLinks": links.get(r["name"], [])} for r in picks[:limit]], "note": note}
 
 
 if __name__ == "__main__" and sys.argv[1:2] == ["--export"]:

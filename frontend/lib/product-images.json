@@ -1,5 +1,5 @@
 {
-  "_note": "Product photos hotlinked from the manufacturer or retailer page in `page` (non-commercial hackathon demo). Each image links back to that page. Cards fall back to a drawing when a key is missing or the image fails to load.",
+  "_note": "Existing product photos from the manufacturer or retailer page in `page` (non-commercial hackathon demo). Blade captions link back to that page. Rubber menus use the verified US catalog. Cards fall back to a drawing when a key is missing or the image fails to load.",
   "products": {
     "szocs_sig": {
       "src": "https://tibhar.info/wp-content/uploads/2022/11/Szocs_Signature1_RD24.jpg",

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { rubberBuyLinks } from "@/lib/buy-links";
 import data from "@/lib/pros.json";
 import productData from "@/lib/product-images.json";
 import { GearTabs } from "../gear-tabs";
+import { RubberBuyMenu } from "../rubber-buy-menu";
 import { PageIntro, inputClass, labelClass, strokeFamily } from "../ui";
 import { ProPhoto, SetupStrip, type ProductImage } from "./pro-photo";
 
@@ -46,7 +48,10 @@ function ProCard({ p }: { p: Pro }) {
             <dt className="w-20 shrink-0 text-xs font-bold uppercase tracking-wide text-muted">
               <span className={k === "Blade" ? undefined : "stroke-label"} data-stroke={strokeFamily(k)}>{k}</span>
             </dt>
-            <dd className="min-w-0 break-words font-semibold">{v}</dd>
+            <dd className="min-w-0 space-y-2 break-words">
+              <p className="font-semibold">{v}</p>
+              {k !== "Blade" && <RubberBuyMenu product={v} buyLinks={rubberBuyLinks(v)} />}
+            </dd>
           </div>
         ))}
       </dl>

@@ -1,5 +1,6 @@
 import { BACKEND_URL } from "@/lib/jobs";
-import { DEFAULT_BUDGET, LEVELS, STYLES, TYPES, recommend, type Level, type RubberType, type Style } from "@/lib/rubbers";
+import { withRubberBuyLinks } from "@/lib/buy-links";
+import { DEFAULT_BUDGET, LEVELS, STYLES, TYPES, recommend, type Level, type Recommendation, type RubberType, type Style } from "@/lib/rubbers";
 
 /** GET /api/rubbers?style=&rubber_type=&level=&budget= : the backend's recommender, or the local port without one. */
 export async function GET(req: Request): Promise<Response> {
@@ -15,7 +16,10 @@ export async function GET(req: Request): Promise<Response> {
   if (BACKEND_URL) {
     try {
       const res = await fetch(`${BACKEND_URL}/equipment/rubbers?${new URLSearchParams({ style, rubber_type: type, level, budget: String(budget) })}`);
-      if (res.ok) return Response.json(await res.json());
+      if (res.ok) {
+        const body = await res.json() as Recommendation;
+        return Response.json({ ...body, results: body.results.map(withRubberBuyLinks) });
+      }
     } catch {
       // fall through to the local copy, the data is the same
     }

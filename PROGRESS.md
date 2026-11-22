@@ -286,3 +286,24 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 5. Added a skip link, kept keyboard focus on rally controls after reordering and removal, and announced progress and completion in live regions. The existing demos have visible descriptions associated with their players. Reduced motion suppresses decorative effects, and videos start on request. Build, lint, and all 175 frontend tests passed. Playwright passed at 375 px in both themes, including keyboard upload, rally editing, and the four cached demo results. Sampled normal text reached at least 4.89:1 in dark mode and 4.64:1 in light mode. The sampled large text, input boundaries, and focus indicators also met their [WCAG 2.2 AA contrast thresholds](https://www.w3.org/TR/WCAG22/#contrast-minimum).
 
 The production frontend and a local FastAPI instance processed the existing match example from Home at 375 px. Playwright observed a ranged first-clip preview before completion, checked the rally thumbnail and clip, downloaded a reordered export, and confirmed that Coach showed the selected time range and Breakdown reused the full match. The full FastAPI endpoint test file finished with 130 passes and one opt-in YouTube test skipped.
+
+## US rubber purchase links (2026-11-22)
+
+The purchase catalog contains 202 verified links across 174 distinct names, covering 165 of the 984 ratings entries and 17 of the 21 distinct Pro Setups labels. Counts include separate display names that refer to the same model. Product discovery used the stores' own catalogs, and each published link returned HTTP 200 with a matching product name in Chromium or a direct HTTP check.
+
+| Rubber | Links added | Anything not found or unverified |
+| --- | --- | --- |
+| Butterfly Tenergy 05, Tenergy 05 FX, Dignics 05, Dignics 09C, Zyre 03 | Butterfly US and Paddle Palace | Megaspin candidate links unverified |
+| Butterfly Tenergy 64 | Paddle Palace | [Butterfly US candidate](https://shop.butterflyonline.com/tenergy-64) unverified because its response did not contain a product title |
+| Butterfly Glayzer and Glayzer 09C | Separate Butterfly US and Paddle Palace pages for each model | Rejected the 09C page as a match for standard Glayzer |
+| DHS Hurricane 3 and Hurricane 3 Neo | Separate DHS Sports USA and Paddle Palace pages for each model | Megaspin candidate links unverified |
+| DHS Hurricane 3 National blue and orange, and Neo National blue | Paddle Palace product page for each sponge and edition | The two pro Hurricane 3 blue-sponge labels specifying 40° or 40.5° and 2.1 mm still have no exact verified match |
+| DHS Hurricane 8-80 | DHS Sports USA | Pro Hurricane 8 orange, 37°, 2.1 mm has no exact verified match |
+| JOOLA Trinity Charged | JOOLA USA | Megaspin candidate unverified |
+| JOOLA Dynaryz ZGR | JOOLA USA | An alternate JOOLA URL now opens Trinity Hybrid and was rejected |
+| Andro NuZN 55 and Rasanter R53, Nittaku Fastarc G-1 and Moristo SP, Tibhar Hybrid K3 and Quantum X Pro, Yasaka Mark V | Paddle Palace | No exact US product page verified for the pro label Tibhar K3 Pro Special |
+| Other ratings entries | Full per-model links in `shared/rubber-buy-links.json` | 819 ratings entries have no verified link from the requested sources |
+
+Megaspin blocked direct verification. The [Tenergy 05 candidate](https://www.megaspin.net/store/default.asp?pid=b-tenergy-05) remained unverified after a Chromium check. Amazon access did not allow confirmation of an official storefront and first-party seller, so there are no Amazon links in this audit. Paddle Palace's listings are retail links, including the models for which it is the US distributor. [Paddle Palace distributor information](https://www.paddlepalace.com/pages/about-us)
+
+Frontend lint and build passed, along with 178 frontend tests and eight equipment tests. Chromium at 375 px verified both Gear pages, their link attributes, and the empty state. Tests also cover affiliate ordering, plain URLs when tags are unset, and legacy single-link records.

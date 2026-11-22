@@ -32,6 +32,14 @@ def test_level_sets_style_range_and_control():
             assert r["control"] is None or r["control"] >= rule["min_control"]
 
 
+def test_recommendations_have_exact_buy_links_or_an_empty_list():
+    picks = rec.recommend("spin", "inverted", "advanced", budget=120, limit=984)["results"]
+    by_name = {r["name"]: r["buyLinks"] for r in picks}
+    assert by_name["Butterfly Tenergy 05"][0]["type"] == "official"
+    assert by_name["Butterfly Tenergy 05"][0]["url"].endswith("/tenergy-05")
+    assert [] in by_name.values()
+
+
 def test_thickness_goes_down_with_level():
     mm = lambda level: rec.recommend("spin", "inverted", level)["thickness"]
     assert (mm("advanced"), mm("intermediate"), mm("beginner")) == ("2.1 mm or max", "1.8-2.0 mm", "1.5-1.8 mm")

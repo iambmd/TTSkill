@@ -13,3 +13,6 @@ per level, not a filter.
 
 `frontend/lib/rubbers.json` is the same data in JSON for the web app's offline mode
 (regenerate with `python -m equipment.recommend --export ../frontend/lib/rubbers.json`).
+
+US purchase links live separately in `shared/rubber-buy-links.json`. The recommenders join
+them by exact name, so regenerating the ratings export preserves the purchase catalog.
