@@ -3,18 +3,18 @@ Business Source License 1.1
 Parameters
 
 Licensor:             Duke (iambmd)
-Licensed Work:        TTSkill (all code in this repository)
-                      The Licensed Work is (c) 2026 Duke (iambmd)
-Additional Use Grant: You may use the Licensed Work for personal and
-                      non-commercial purposes. Any commercial use, including
-                      offering it as a hosted or paid service, requires a
-                      commercial license from the Licensor.
+Licensed Work:        TTSkill. The Licensed Work is (c) 2026 Duke (iambmd).
+Additional Use Grant: You may make production use of the Licensed Work for
+                      personal and non-commercial purposes. Any commercial
+                      production use, including offering the Licensed Work
+                      or a derivative of it to third parties as a hosted,
+                      managed or paid service, requires a commercial
+                      license from the Licensor.
 Change Date:          2030-11-18
-Change License:       Apache License, Version 2.0 (Apache-2.0)
+Change License:       Apache License, Version 2.0
 
 For information about alternative licensing arrangements for the Licensed
-Work, please contact the Licensor: https://github.com/iambmd
-
+Work, please contact: <your business email, or github.com/iambmd>
 Notice
 
 The Business Source License (this document, or the “License”) is not an Open
