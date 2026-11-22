@@ -120,10 +120,10 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                   {meta && Number.isFinite(meta.duration) ? `${fmtDuration(meta.duration)} · ` : ""}{fmtSize(file.size)}
                 </p>
               </div>
-              <label htmlFor={id} className="cursor-pointer rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
+              <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
                 Swap
               </label>
-              <button type="button" onClick={clear} aria-label="Remove video" className="rounded-lg p-2 text-muted hover:bg-white/5 hover:text-white">
+              <button type="button" onClick={clear} aria-label="Remove video" className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white">
                 <CloseIcon />
               </button>
             </div>
@@ -150,7 +150,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                 <p className="truncate font-semibold">YouTube video</p>
                 <p className="text-xs text-muted">We fetch it at up to 720p when you submit.</p>
               </div>
-              <label htmlFor={id} className="cursor-pointer rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
+              <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
                 Upload instead
               </label>
             </div>
@@ -203,7 +203,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             {link && (
               <button
                 type="button" onClick={() => setLink("")} aria-label="Clear link"
-                className="absolute top-1/2 right-2 -translate-y-1/2 rounded-lg p-2 text-muted hover:bg-white/5 hover:text-white"
+                className="absolute top-1/2 right-1 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white"
               >
                 <CloseIcon />
               </button>

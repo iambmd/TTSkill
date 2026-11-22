@@ -27,6 +27,7 @@ const ROUTES = {
   exports: "@/app/api/jobs/[id]/exports/route",
   files: "@/app/api/jobs/[id]/files/[name]/route",
   rubbers: "@/app/api/rubbers/route",
+  health: "@/app/api/health/route",
   players: "@/app/api/players/detect/route",
   rerun: "@/app/api/jobs/[id]/rerun/route",
 } as const;
@@ -56,6 +57,7 @@ async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
     exports: () => import("@/app/api/jobs/[id]/exports/route"),
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
     rubbers: () => import("@/app/api/rubbers/route"),
+    health: () => import("@/app/api/health/route"),
     players: () => import("@/app/api/players/detect/route"),
     rerun: () => import("@/app/api/jobs/[id]/rerun/route"),
   };
@@ -277,7 +279,7 @@ describe("proxy to the FastAPI backend", () => {
   it("answers 502 with a readable error when the backend is down", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => { throw new TypeError("fetch failed"); }));
     const create = await route("breakdown", backend);
-    await expectError(await create.POST!(post({ text: "loops" })), 502, "Can't reach the TTSkill backend");
+    await expectError(await create.POST!(post({ text: "loops" })), 502, "Our analysis server is offline right now");
     const read = await route("job", backend);
     await expectError(await read.GET!(get(), ctx({ id: "abc" })), 502, "Can't reach the TTSkill backend");
   });
@@ -518,6 +520,26 @@ it("proxies an ordered rally export and rejects duplicate IDs", async () => {
   expect(await result.json()).toEqual({ url });
   expect(upstream.mock.calls[0][0]).toBe(`http://backend/jobs/${id}/exports`);
   expect(upstream.mock.calls[0][1].body).toBe(JSON.stringify({ rallies: [3, 1] }));
+});
+
+it("reports backend health using the existing /health endpoint", async () => {
+  const upstream = vi.fn(async () => Response.json({ ok: true }));
+  vi.stubGlobal("fetch", upstream);
+  const { GET } = await route("health", { BACKEND_URL: "http://backend" });
+  const res = await GET!(get(), ctx({}));
+  expect(await res.json()).toEqual({ ok: true });
+  expect(res.headers.get("cache-control")).toBe("no-store");
+  expect(upstream).toHaveBeenCalledWith("http://backend/health", expect.objectContaining({ cache: "no-store" }));
+});
+
+it("reports an offline tunnel and keeps local demo mode available", async () => {
+  vi.stubGlobal("fetch", vi.fn(async () => new Response("tunnel error", { status: 530 })));
+  const proxy = await route("health", { NEXT_PUBLIC_API_URL: "https://offline.trycloudflare.com" });
+  const offline = await proxy.GET!(get(), ctx({}));
+  expect(offline.status).toBe(503);
+  expect(await offline.json()).toEqual({ ok: false });
+  const demo = await route("health", { DEMO_MODE: "1" });
+  expect((await demo.GET!(get(), ctx({}))).status).toBe(200);
 });
 
 // A new route.ts under app/api must be added to ROUTES (and tested) or this fails.

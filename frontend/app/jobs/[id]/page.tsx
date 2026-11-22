@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+import { OfflineNotice } from "../../offline-notice";
 import type { Job } from "@/lib/submit";
 import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFamily } from "../../ui";
 import { AutoCutWaiting } from "./autocut-waiting";
@@ -76,7 +77,7 @@ function titleFor(job: Job) {
   if (job.status !== "done") {
     return job.kind === "breakdown" ? "Building your breakdown" : job.kind === "match" ? "Finding your pro match" : "Cutting your match";
   }
-  if (job.kind === "autocut" && !job.rallies?.length && job.warning) return "No rallies found";
+  if (job.kind === "autocut" && !job.resultUrl) return "No rallies found";
   if (job.kind === "autocut" && job.rallies?.length) {
     return job.params.mode === "full" ? `All ${job.rallies.length} rallies` : `Top ${job.rallies.length} rallies`;
   }
@@ -139,13 +140,24 @@ function GoDeeper({ id }: { id: string }) {
   );
 }
 
-/** Shown when polls keep failing, so a lost server never looks like a job that is just slow. */
-function Trouble({ text }: { text: string | null }) {
-  if (!text) return null;
+function JobFailure({ job }: { job: Job }) {
   return (
-    <p role="alert" className="mx-auto mb-4 max-w-5xl rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
-      {text}
-    </p>
+    <div className="surface-card space-y-3 p-4">
+      <p role="alert" className="text-red-200">
+        {job.failureHint ?? "We couldn't finish this analysis. Try again or upload a shorter clip."}
+      </p>
+      <Link href={job.kind === "autocut" ? "/" : `/${job.kind}`} className={secondaryButtonClass}>
+        Try another recording
+      </Link>
+    </div>
+  );
+}
+
+function NoRallies() {
+  return (
+    <div role="status" className="surface-card p-4 text-muted">
+      Try filming closer to the table in a quieter spot, with both players in frame.
+    </div>
   );
 }
 
@@ -153,45 +165,57 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   const { id } = use(params);
   const [job, setJob] = useState<Job | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [trouble, setTrouble] = useState<string | null>(null);
+  const [offline, setOffline] = useState(false);
+  const [retrying, setRetrying] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    const controller = new AbortController();
+    let cancelled = false;
+    let request: AbortController | undefined;
     let timer: ReturnType<typeof setTimeout>;
-    let alive = true;
-    let failures = 0;
     async function poll() {
+      request = new AbortController();
+      const controller = request;
+      const deadline = setTimeout(() => controller.abort(), 10_000);
       try {
         const res = await fetch(`/api/jobs/${id}`, { cache: "no-store", signal: controller.signal });
-        if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429) {
-          const data = await res.json().catch(() => ({}));
-          if (alive) setError(data.error ?? "Job not found");
+        if (cancelled) return;
+        if (res.status === 404) {
+          setError("Open the match result again or upload a new video.");
           return;
         }
-        // A 5xx or an HTML error page is a server problem, not the job's answer: retry.
-        if (!res.ok) throw new Error(`server error ${res.status}`);
-        const data = (await res.json()) as Job;
-        if (!alive) return;
-        failures = 0;
-        setTrouble(null);
-        setJob(data);
-        if (data.status === "queued" || data.status === "running") timer = setTimeout(poll, 1500);
+        if (!res.ok) throw new Error("The job isn't reachable.");
+        const next = (await res.json()) as Job;
+        if (cancelled) return;
+        if (next.id !== id || !["queued", "running", "done", "failed"].includes(next.status)) {
+          throw new Error("The server didn't send a job.");
+        }
+        setOffline(false);
+        setRetrying(false);
+        setJob(next);
+        if (next.status === "queued" || next.status === "running") timer = setTimeout(poll, 1500);
       } catch {
-        if (!alive) return;
-        failures += 1;
-        if (failures >= 3) setTrouble("Can't reach the server right now. Still trying... If this stays, check that the backend is running.");
-        timer = setTimeout(poll, Math.min(10_000, 1500 * 2 ** Math.min(failures, 3)));
+        if (cancelled) return;
+        setOffline(true);
+        setRetrying(false);
+      } finally {
+        clearTimeout(deadline);
       }
     }
-    poll();
-    return () => { alive = false; clearTimeout(timer); controller.abort(); };
-  }, [id]);
+    void poll();
+    return () => { cancelled = true; clearTimeout(timer); request?.abort(); };
+  }, [id, attempt]);
+
+  const offlineNotice = offline && <OfflineNotice checking={retrying} onRetry={() => {
+    setRetrying(true);
+    setAttempt((n) => n + 1);
+  }} />;
 
   if (error) {
     return (
       <div className="mx-auto max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
         <p className="section-title text-4xl">Job not found</p>
-        <p className="text-red-200">{error}</p>
+        <p role="alert" className="text-red-200">{error}</p>
         <Link href="/" className={secondaryButtonClass}>Back home</Link>
       </div>
     );
@@ -199,33 +223,42 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   if (!job) {
     return (
-      <div className="mx-auto max-w-3xl" aria-busy="true">
-        <Trouble text={trouble} />
-        <div className="stripes -mx-4 -mt-6 aspect-video bg-panel sm:mx-0 sm:mt-0 sm:rounded-3xl" />
-        <p className="mt-4 text-muted">Loading...</p>
+      <div className="mx-auto max-w-3xl space-y-4">
+        {offlineNotice || <p role="status" className="surface-card p-4 text-muted">Loading your result…</p>}
       </div>
     );
   }
 
-  if (job.kind === "coach") return <><Trouble text={trouble} /><CoachView job={job} /></>;
+  const failed = job.status === "failed";
+  if (job.kind === "coach") return (
+    <div className="space-y-4">
+      {offlineNotice}
+      {failed && <JobFailure job={job} />}
+      <CoachView job={job} />
+    </div>
+  );
 
-  const vertical = job.kind !== "autocut";
+  const vertical = job.kind !== "autocut" && !failed;
   const ended = job.status === "done" || job.status === "failed";
 
   return (
     <>
-    <Trouble text={trouble} />
+    {offlineNotice && <div className="mx-auto mb-4 max-w-3xl">{offlineNotice}</div>}
     <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
-      <div className={`min-w-0 ${vertical ? "lg:sticky lg:top-20" : ""}`}>
-        {job.kind === "autocut" && !ended ? <AutoCutWaiting job={job} /> : <Stage job={job} />}
-      </div>
+      {(!ended || job.resultUrl) && (
+        <div className={`min-w-0 ${vertical ? "lg:sticky lg:top-20" : ""}`}>
+          {job.kind === "autocut" && !ended ? <AutoCutWaiting job={job} /> : <Stage job={job} />}
+        </div>
+      )}
       <div className="mt-6 min-w-0 space-y-8 lg:mt-0">
         <div className="space-y-3">
           <p className="eyebrow">{eyebrowFor(job)}</p>
           <h1 className="headline break-words text-5xl text-accent">{titleFor(job)}</h1>
-          {job.message && (job.kind !== "autocut" || job.status === "queued") && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
-          {job.warning && <Warning>{job.warning}</Warning>}
-          {ended && (
+          {!failed && job.message && (job.kind !== "autocut" || job.status === "queued") && <p className="text-muted">{job.message}</p>}
+          {failed && <JobFailure job={job} />}
+          {job.kind === "autocut" && job.status === "done" && !job.resultUrl && <NoRallies />}
+          {job.warning && (job.kind !== "autocut" || job.resultUrl) && <Warning>{job.warning}</Warning>}
+          {job.status === "done" && (
             <div className="flex flex-wrap gap-2 pt-2">
               {job.resultUrl && !job.rallyClips?.length && (
                 <a href={job.resultUrl} download={`ttskill-${job.id}.mp4`} className={`${buttonBaseClass} h-12 text-xl`}>
@@ -233,7 +266,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                 </a>
               )}
               <Link href={job.kind === "autocut" ? "/" : `/${job.kind}`} className={secondaryButtonClass}>
-                {job.kind === "breakdown" ? "New breakdown" : job.kind === "match" ? "Match again" : "Cut another"}
+                {job.kind === "breakdown" ? "New breakdown" : job.kind === "match" ? "Match again" : job.resultUrl ? "Cut another" : "Try another recording"}
               </Link>
             </div>
           )}

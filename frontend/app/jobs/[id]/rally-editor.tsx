@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { ANALYSIS_OFFLINE, AnalysisOfflineError, unavailableStatus } from "@/lib/analysis-status";
 import { PUBLIC_API_URL, type RallyClip } from "@/lib/submit";
 import { fmtDuration } from "@/lib/validate";
 import { buttonBaseClass, DownloadIcon, FieldError, secondaryButtonClass } from "../../ui";
@@ -41,9 +42,10 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rallies: selection.map((clip) => clip.id) }),
       });
+      if (unavailableStatus(response.status)) throw new AnalysisOfflineError();
       const data = await response.json().catch(() => ({}));
       if (!response.ok || typeof data.url !== "string") {
-        throw new Error(data.detail ?? data.error ?? "Couldn't make this download. Try again.");
+        throw new Error("Couldn't make this download. Check the selection and try again.");
       }
       const url = `${root}${data.url}`;
       setDownload(url);
@@ -53,7 +55,7 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
       link.download = "ttskill-highlights.mp4";
       link.click();
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof TypeError ? ANALYSIS_OFFLINE : (err as Error).message);
     } finally {
       setBusy(false);
     }
@@ -96,7 +98,7 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" disabled={busy || !selection.length} onClick={() => void exportSelection()}
           className={`${buttonBaseClass} min-h-12 text-xl`}>
-          <DownloadIcon /> {busy ? "Preparing your download…" : "Download highlights"}
+          <DownloadIcon /> {busy ? "Preparing your download…" : error ? "Retry download" : "Download highlights"}
         </button>
         <button type="button" disabled={busy} className={`${secondaryButtonClass} disabled:opacity-45`} onClick={() => {
           setSelection(clips);

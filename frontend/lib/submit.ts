@@ -1,3 +1,5 @@
+import { AnalysisOfflineError, unavailableStatus } from "./analysis-status";
+
 export type RallyClip = {
   id: number;
   start: number;
@@ -12,6 +14,7 @@ export type Job = {
   status: "queued" | "running" | "done" | "failed";
   progress: number;
   message?: string;
+  failureHint?: string;
   params: Record<string, unknown>;
   resultUrl?: string | null;
   canReuseVideo?: boolean;
@@ -114,15 +117,18 @@ export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fract
     if (onProgress) xhr.upload.onprogress = (e) => { if (e.lengthComputable) onProgress(e.loaded / e.total); };
     xhr.onload = () => {
       const data = xhr.response ?? {};
-      if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Job);
+      if (xhr.status >= 200 && xhr.status < 300 && typeof data.id === "string") return resolve(data as Job);
+      if (unavailableStatus(xhr.status)) return reject(new AnalysisOfflineError());
       if (xhr.status === 413) return reject(new Error("That video is too big to upload here. Try a shorter clip."));
       // Our routes answer {error}; FastAPI, reached directly, answers {detail}.
       const detail = typeof data.detail === "string" ? data.detail : undefined;
-      reject(new Error(data.error ?? detail ?? `Request failed (${xhr.status})`));
+      const problem = typeof data.error === "string" ? data.error : detail;
+      reject(new Error(xhr.status >= 400 && xhr.status < 500 && problem
+        ? problem : "The upload didn't finish. Choose the video again or retry the upload."));
     };
-    xhr.onerror = () => reject(new Error(PUBLIC_API_URL
-      ? "Can't reach the TTSkill backend. Check your connection, then try again."
-      : "Upload failed. Check your connection and try again."));
+    xhr.onerror = () => reject(PUBLIC_API_URL
+      ? new AnalysisOfflineError()
+      : new Error("The upload didn't finish. Check your connection and try again."));
     xhr.send(form);
   });
 }

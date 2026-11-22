@@ -310,12 +310,12 @@ def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: s
                 return
             except Exception as e:
                 traceback.print_exc()
-                why = f"the pipeline stopped: {type(e).__name__}: {e}"
+                why = f"the pipeline stopped: {type(e).__name__}"
         s.update(engine="fallback", engineNote=why)
         try:
             run_fallback(s, request, why)
         except Exception as e:
             traceback.print_exc()
-            s.update(status="failed", message=str(e))
+            jobs.fail(job_id, e)
     finally:
         s.update(timings=timer.summary())

@@ -34,7 +34,7 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args, **kwargs)
         path = download(url, jobs.job_dir(job_id), progress=report)
     except Exception as exc:  # LinkError messages are written for the user
         traceback.print_exc()
-        jobs.update(job_id, status="failed", progress=1.0, message=str(exc))
+        jobs.fail(job_id, exc, "We couldn't open this video. Try another link or upload a file.")
         return
     try:
         run(job_id, path, *args, **kwargs)
@@ -143,7 +143,7 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
                     autocutStage={"key": "done"}, rallyClips=clips, message=f"{label}, {length:.0f} seconds.")
     except Exception as exc:
         traceback.print_exc()
-        jobs.update(job_id, status="failed", message=str(exc))
+        jobs.fail(job_id, exc, "We couldn't make a reel. Try a shorter MP4 or MOV recording with sound.")
 
 
 # Rough progress for each pipeline log line, so the job page bar moves.
@@ -207,7 +207,7 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
                                 "features": res.get("stroke_type_detected")})
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
-        jobs.update(job_id, status="failed", message=str(exc))
+        jobs.fail(job_id, exc)
 
 
 def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
@@ -289,4 +289,4 @@ def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = N
                     player={"thumb": res.get("player_thumb"), "picked": bool(selection)})
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
-        jobs.update(job_id, status="failed", message=str(exc))
+        jobs.fail(job_id, exc)

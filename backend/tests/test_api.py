@@ -349,7 +349,7 @@ def test_a_crashing_pipeline_fails_the_job(api):
 
     jobs.run(crash, job["id"])
     got = api.get(f"/jobs/{job['id']}").json()
-    assert got["status"] == "failed" and got["message"] == "boom" and job["id"] not in jobs.ACTIVE
+    assert got["status"] == "failed" and got["failureHint"] == jobs.FAILED and "boom" not in got["message"] and job["id"] not in jobs.ACTIVE
 
 
 def test_a_pipeline_that_returns_without_finishing_fails_the_job(api):
@@ -815,3 +815,18 @@ def test_autocut_exports_selected_rallies_and_reuses_one_for_coach(api, ran, mon
     source_clip = jobs.job_dir(job_id) / "rally-2.mp4"
     assert ran["run_coach"][-1][0].read_bytes() == source_clip.read_bytes()
     assert api.post("/jobs/breakdown", data={"source_job": job_id, "source_rally": "999"}).status_code == 422
+
+
+def test_autocut_hides_unexpected_pipeline_details(api, monkeypatch, media):
+    from app import pipelines
+
+    def broken(*args):
+        raise RuntimeError("private pipeline detail")
+
+    monkeypatch.setattr(pipelines, "detect_rallies", broken)
+    job = jobs.create("autocut", {})
+    jobs.run(pipelines.run_autocut, job["id"], media["ok"], "highlights", 5, 3.0, 1.6, 4)
+    result = api.get(f"/jobs/{job['id']}").json()
+    assert result["status"] == "failed"
+    assert "shorter MP4 or MOV" in result["failureHint"]
+    assert "private pipeline detail" not in result["message"]

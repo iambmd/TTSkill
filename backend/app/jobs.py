@@ -19,6 +19,7 @@ DATA_DIR = Path(os.environ.get("TTSKILL_DATA_DIR") or Path(__file__).resolve().p
 ACTIVE: set[str] = set()
 RESTARTED = "The server restarted before this job finished. Please try again."
 UNFINISHED = "The job stopped without finishing. Please try again."
+FAILED = "We couldn't finish this analysis. Try again or upload a shorter clip."
 _LOCK = threading.RLock()  # serialise read-modify-write of job.json within the process
 
 
@@ -86,12 +87,22 @@ def get(job_id: str) -> dict[str, Any] | None:
                 job = update(job_id, message=jobqueue.WAITING)
         elif state == "running":
             if not jobqueue.worker_alive():
-                job = update(job_id, status="failed", message=RESTARTED)
+                job = update(job_id, status="failed", message=RESTARTED, failureHint=RESTARTED)
         elif state in ("done", "failed", "timeout"):
-            job = update(job_id, status="failed", message=UNFINISHED)
+            job = update(job_id, status="failed", message=UNFINISHED, failureHint=UNFINISHED)
         else:
-            job = update(job_id, status="failed", message=RESTARTED)
+            job = update(job_id, status="failed", message=RESTARTED, failureHint=RESTARTED)
         return job
+
+
+def fail(job_id: str, exc: Exception, fallback: str = FAILED) -> None:
+    """Use friendly, deliberately authored errors and keep unexpected details in server logs."""
+    from technique.errors import NoPlayer
+    from .download import LinkError
+    from .validate import Invalid
+
+    hint = str(exc) if isinstance(exc, (NoPlayer, LinkError, Invalid)) else fallback
+    update(job_id, status="failed", message=hint, failureHint=hint)
 
 
 def run(fn: Callable[..., None], job_id: str, *args: Any, **kwargs: Any) -> None:
@@ -102,9 +113,9 @@ def run(fn: Callable[..., None], job_id: str, *args: Any, **kwargs: Any) -> None
         fn(job_id, *args, **kwargs)
     except Exception as exc:
         traceback.print_exc()
-        update(job_id, status="failed", message=str(exc) or type(exc).__name__)
+        fail(job_id, exc)
     finally:
         ACTIVE.discard(job_id)
         job = load(job_id)
         if job and job.get("status") in ("queued", "running"):
-            update(job_id, status="failed", message=UNFINISHED)
+            update(job_id, status="failed", message=UNFINISHED, failureHint=UNFINISHED)

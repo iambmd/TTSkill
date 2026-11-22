@@ -12,6 +12,7 @@ from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 
 from limits import LIMITS
+from .errors import NoPlayer
 
 MODEL_URL = (
     "https://storage.googleapis.com/mediapipe-models/pose_landmarker/"
@@ -62,10 +63,6 @@ class PoseTrack:
     def px(self, i: int) -> np.ndarray:
         """(33,2) pixel coords for frame i."""
         return self.lm[i, :, :2] * np.array([self.width, self.height])
-
-
-class NoPlayer(ValueError):
-    """Too few frames show a player to measure the stroke. The message is written for the user."""
 
 
 # Below this share of frames with a player, the cues and overlay would track noise.

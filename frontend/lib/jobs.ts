@@ -1,5 +1,6 @@
 import "server-only";
 import { randomUUID } from "crypto";
+import { ANALYSIS_OFFLINE, unavailableStatus } from "./analysis-status";
 import { PUBLIC_API_URL, type Job } from "./submit";
 import demoJobs from "./demo-jobs.json";
 
@@ -24,6 +25,17 @@ async function backend(path: string, init?: RequestInit): Promise<Response> {
   }
 }
 
+/** Reachability check for Home. Cached demo mode can work without a backend. */
+export async function backendHealth(): Promise<Response> {
+  let ok = DEMO_MODE && !PUBLIC_API_URL;
+  if (!ok && BACKEND_URL) {
+    const res = await backend("/health", { cache: "no-store", signal: AbortSignal.timeout(4000) });
+    const body = await res.json().catch(() => null);
+    ok = res.ok && body?.ok === true;
+  }
+  return Response.json({ ok }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
+}
+
 /** Summarizes a form for the job record, replacing files with their name and size. */
 function describeForm(form: FormData): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -40,6 +52,7 @@ export async function createJob(kind: Job["kind"], form: FormData): Promise<Resp
     const data = await res.json().catch(() => ({}));
     // FastAPI reports errors as {detail}; the client reads {error}.
     if (!res.ok) {
+      if (unavailableStatus(res.status)) return Response.json({ error: ANALYSIS_OFFLINE }, { status: res.status });
       const detail = typeof data.detail === "string" ? data.detail : data.error ?? "Backend rejected the request";
       return Response.json({ error: detail }, { status: res.status });
     }
@@ -108,7 +121,7 @@ export async function getJob(id: string): Promise<Response> {
   if (DEMO_JOBS[id]) return Response.json(DEMO_JOBS[id]);
   if (BACKEND_URL) {
     const res = await backend(`/jobs/${id}`, { cache: "no-store" });
-    if (!res.ok) return new Response(res.body, { status: res.status });
+    if (!res.ok) return new Response(res.body, { status: res.status, headers: res.headers });
     const job = (await res.json()) as Job;
     // Videos load straight from a public backend, since a Vercel Function can't pass a long video through;
     // otherwise our /api routes proxy them. Coach outputs are served at /jobs/{id}/files/{name}.

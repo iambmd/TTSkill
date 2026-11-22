@@ -156,8 +156,8 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
         <div className="space-y-3">
           <p className="eyebrow">TT Coach{job.engine === "deepagents" ? " · deep agent" : ""}</p>
           <h1 className="headline text-3xl [overflow-wrap:anywhere] sm:text-4xl">&ldquo;{str(job.params.request) ?? "Your request"}&rdquo;</h1>
-          {job.message && (
-            <p className={`[overflow-wrap:anywhere] ${job.status === "failed" ? "text-red-200" : "text-muted"}`}>
+          {job.message && job.status !== "failed" && (
+            <p className="text-muted [overflow-wrap:anywhere]">
               {running && <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent" />}
               {job.message}
             </p>
@@ -165,7 +165,7 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
         </div>
         <Plan job={job} />
         {job.engine === "fallback" && (
-          <p className="text-xs text-muted [overflow-wrap:anywhere]">Ran the same tools on a fixed plan ({job.engineNote}).</p>
+          <p className="text-xs text-muted [overflow-wrap:anywhere]">Finished the analysis with the backup plan.</p>
         )}
       </div>
       <div className="coach-result-content grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
@@ -178,7 +178,7 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
                 <h2 className="headline text-3xl [overflow-wrap:anywhere]">{o.title}</h2>
                 <p className="text-sm text-muted [overflow-wrap:anywhere]">{o.summary}</p>
               </div>
-              <a href={o.url} download className={`${secondaryButtonClass} h-10 shrink-0`}><DownloadIcon /> Save</a>
+              <a href={o.url} download className={`${secondaryButtonClass} h-11 shrink-0`}><DownloadIcon /> Save</a>
             </div>
             <video
               src={`${o.url}#t=0.001`} controls playsInline preload="metadata"

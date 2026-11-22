@@ -25,7 +25,7 @@ export function ThemeToggle() {
     <button
       type="button" onClick={flip} aria-pressed={light}
       aria-label={light ? "Switch to dark mode" : "Switch to light mode"}
-      className="grid size-10 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-accent hover:text-fg"
+      className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-accent hover:text-fg"
     >
       {light ? <MoonIcon /> : <SunIcon />}
     </button>
