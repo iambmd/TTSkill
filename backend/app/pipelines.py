@@ -56,17 +56,16 @@ def few_rallies_warning(count: int) -> str | None:
         return None
     heard = ("We didn't hear any rallies" if count == 0 else
              f"We only heard {count} rall{'y' if count == 1 else 'ies'}")
-    return (f"{heard}. Film closer to the table, or somewhere with less background noise, so each "
-            "ball contact is clear. You can also lower the hit threshold under Detection settings.")
+    return f"{heard}. Try filming closer to the table or somewhere with less background noise."
 
 
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
     try:
-        jobs.update(job_id, status="running", progress=0.1, message="Listening for ball contacts...")
+        jobs.update(job_id, status="running", progress=0.1, message="Finding rallies…")
         workdir = jobs.job_dir(job_id)
         found = detect_rallies(video, workdir, threshold, gap, min_hits)
         if found:
-            jobs.update(job_id, progress=0.2, message="Checking each rally shows real play...")
+            jobs.update(job_id, progress=0.2, message="Reviewing rallies…")
             from .floor_bounce import drop_non_play  # heavy imports (MediaPipe, OpenCV)
             found, bounces = drop_non_play(video, found, min_hits=min_hits)
             if bounces:
@@ -77,14 +76,14 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
                         message="No rallies found.")
             return
         rallies, segments = pick_segments(found, video, mode, top_n)
-        jobs.update(job_id, progress=0.3, message=f"Found {len(found)} rallies. Cutting {len(segments)} clips...",
+        jobs.update(job_id, progress=0.3, message="Making your reel…",
                     rallies=[r.to_dict() for r in rallies])
         cut_and_concat(video, segments, workdir, workdir / "result.mp4",
                        progress=lambda f: jobs.update(job_id, progress=round(0.3 + 0.65 * f, 3)))
         length = sum(e - s for s, e in segments)
         label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
         jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", warning=warning,
-                    message=f"{label}, {length:.0f} s cut from {len(found)} detected.")
+                    message=f"{label}, {length:.0f} seconds.")
     except Exception as exc:  # surface errors on the job page
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

@@ -6,6 +6,7 @@ export type Job = {
   message?: string;
   params: Record<string, unknown>;
   resultUrl?: string | null;
+  canReuseVideo?: boolean;
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
   /** Advice beside a job that still counts as done: Auto-Cut heard too few rallies; Coach skipped a step. */

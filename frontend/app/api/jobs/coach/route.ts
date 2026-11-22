@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     playerSelectionProblem(form) ??
     onlyMeProblem(form) ??
     textProblem(request, "coach_request", "Your request") ??
-    videoInputProblem(form, "Add a video: upload a clip or paste a YouTube link.");
+    videoInputProblem(form, "Add a video: upload a clip or paste a YouTube link.", true);
   if (problem) return invalid(problem);
   form.set("request", request);
   return createJob("coach", form);

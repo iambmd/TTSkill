@@ -753,3 +753,19 @@ def test_kept_uploads_are_deleted_after_two_hours(tmp_path, monkeypatch):
 def test_detect_checks_an_uploaded_video_like_a_job_upload(api, upload):
     r = api.post("/players/detect", files={"video": ("notes.txt", b"hello", "text/plain")}, data={"kind": "coach"})
     assert r.status_code == 422
+
+
+@pytest.mark.parametrize("kind,fields", [("coach", {"request": "Fix my forehand"}), ("breakdown", {})])
+def test_autocut_upload_can_start_an_analysis_without_another_upload(api, ran, upload, kind, fields):
+    original = api.post("/jobs/autocut", files=upload()).json()
+    assert api.get(f"/jobs/{original['id']}").json()["canReuseVideo"] is True
+    response = api.post(f"/jobs/{kind}", data={**fields, "source_job": original["id"]})
+    assert response.status_code == 201, response.text
+    child = response.json()
+    assert child["params"]["source_job"] == original["id"]
+    path = ran[f"run_{kind}"][-1][0]
+    assert path.parent.name == child["id"]
+    assert path.read_bytes() == ran["run_autocut"][-1][0].read_bytes()
+
+    bad = api.post(f"/jobs/{kind}", data={**fields, "source_job": child["id"]})
+    assert bad.status_code == 422

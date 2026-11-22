@@ -127,6 +127,24 @@ def take_video(video: UploadFile | None, staged: str) -> tuple[Path | None, str 
     return None, None
 
 
+def uploaded_match(source_job: str) -> tuple[Path, str]:
+    """Only a finished Auto-Cut upload can be reused by an analysis form."""
+    path = job_input(source_job)
+    source = jobs.load(source_job)
+    if not path or not source or source["kind"] != "autocut" or source["status"] != "done":
+        raise validate.Invalid("This uploaded match is no longer available. Choose the video again.")
+    return path, source["params"].get("video") or path.name
+
+
+def analysis_input(path: Path, job_id: str, source_job: str) -> Path:
+    if not source_job:
+        return adopt(path, job_id)
+    dest = jobs.job_dir(job_id) / f"input{path.suffix}"
+    # The analysis reads its own copy. The same original can start more than one job.
+    shutil.copyfile(path, dest)
+    return dest
+
+
 def adopt(staged: Path, job_id: str) -> Path:
     """Moves a checked upload into its job folder as input.<ext>."""
     return staged.replace(jobs.job_dir(job_id) / f"input{staged.suffix}")
@@ -202,6 +220,7 @@ def create_breakdown(
     player_box: str = Form(""),
     only_me: str = Form(""),
     staged: str = Form(""),
+    source_job: str = Form(""),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
@@ -212,7 +231,7 @@ def create_breakdown(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     player = validate.text(player, "player", "The player's name")
     text = validate.text(text, "training_text", "The training description")
-    staged, filename = take_video(video, staged)
+    staged, filename = uploaded_match(source_job) if source_job else take_video(video, staged)
     link = check_link(url, "breakdown") if staged is None else None
     if staged is None and link is None and not text:
         raise validate.Invalid("Upload a clip, paste a YouTube link, or describe the training.")
@@ -224,6 +243,8 @@ def create_breakdown(
     solo = solo and bool(staged or link)
     if solo:
         params["only_me"] = True
+    if source_job:
+        params["source_job"] = source_job
     job = jobs.create("breakdown", params)
     # The tapped player goes last, and only when there is one, so other calls are unchanged.
     args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
@@ -231,7 +252,7 @@ def create_breakdown(
     if link:
         jobqueue.submit(background, fetch_then, job["id"], link["url"], run_breakdown, *args, **kwargs)
     else:
-        path = adopt(staged, job["id"]) if staged else None
+        path = analysis_input(staged, job["id"], source_job) if staged else None
         jobqueue.submit(background, run_breakdown, job["id"], path, *args, **kwargs)
     return job
 
@@ -281,6 +302,7 @@ def create_coach(
     player_box: str = Form(""),
     only_me: str = Form(""),
     staged: str = Form(""),
+    source_job: str = Form(""),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
@@ -291,7 +313,7 @@ def create_coach(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
         raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
-    staged, filename = take_video(video, staged)
+    staged, filename = uploaded_match(source_job) if source_job else take_video(video, staged)
     link = None if staged else check_link(url, "coach")
     if not staged and link is None:
         raise validate.Invalid("Add a video: upload a clip or paste a YouTube link.")
@@ -301,8 +323,10 @@ def create_coach(
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     if solo:
         params["only_me"] = True
+    if source_job:
+        params["source_job"] = source_job
     job = jobs.create("coach", params)
-    path = adopt(staged, job["id"]) if staged else None
+    path = analysis_input(staged, job["id"], source_job) if staged else None
     if path is not None and not jobqueue.inline():
         # Start the analysis the job will need now, beside any job ahead of it in the queue.
         from agent.fixed import prepare
@@ -546,6 +570,8 @@ def get_job(job_id: str) -> dict:
     job = jobs.get(job_id)
     if not job:
         raise HTTPException(404, "job not found")
+    if job["kind"] == "autocut" and job["status"] == "done" and re.fullmatch(r"[0-9a-f]{32}", job_id):
+        job["canReuseVideo"] = job_input(job_id) is not None
     return job
 
 

@@ -256,3 +256,7 @@ a.primary-button:hover {
     transform: rotate(-90deg);
   }
 }
+
+.video-picker .match-dropzone {
+  min-height: 16rem;
+}

@@ -276,3 +276,7 @@ Backend: **336 passed, 2 network skips, 1 known xfail**.
 - Gear. Restyled both Rubber Finder and Pro Setups. Recommendations and searchable setups use the shared panels, and grip-side labels use rubber red and charcoal. All 172 frontend tests passed.
 - Site-wide verification. Playwright exercised demo submission and results, Home playback, Gear budget and search, and the Coach light theme. All six tabs fit at 390 px. Added mobile scroll clearance for the sticky header and submit bar and verified a focused field was reachable at 390 × 844. The screenshot folder has both dark widths for all seven routes and both light widths for Coach. Playwright blocked external images so the Pro Setups screenshots show the built-in fallbacks.
 - Final checks. All 172 frontend tests passed again, lint completed with five existing image warnings, and the production build passed. No new dependencies were added.
+
+## Upload-first match flow (2026-11-22)
+
+1. Home now starts a highlight job when you select or drop an MP4/MOV. Auto-Cut results link to Coach and Breakdown with the stored upload. The Auto-Cut form and results use player-facing copy and keep algorithm settings out of the UI. Build, lint, all 172 frontend tests, and both backend upload-reuse cases passed.

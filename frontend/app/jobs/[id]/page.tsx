@@ -103,38 +103,36 @@ function eyebrowFor(job: Job) {
 }
 
 function Rallies({ rallies, full }: { rallies: Rally[]; full: boolean }) {
-  const most = Math.max(1, ...rallies.map((r) => r.shots));
-  const total = rallies.reduce((t, r) => t + r.end - r.start, 0);
-  const stats: [string, string | number][] = [["Rallies", rallies.length], ["Most shots", most], ["Rally time", fmt(total)]];
   return (
     <section className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        {stats.map(([k, v]) => (
-          <div key={k} className="surface-card px-3 py-3 text-center">
-            <p className="font-bold text-3xl tabular-nums">{v}</p>
-            <p className="mt-1 text-[0.65rem] font-bold uppercase tracking-widest text-muted">{k}</p>
-          </div>
-        ))}
-      </div>
-      <h2 className="eyebrow pt-3">{full ? "Every rally, in order" : "Best rallies, most shots first"}</h2>
+      <h2 className="eyebrow">{full ? "Every rally" : "Highlights"}</h2>
       <ol className="space-y-2">
         {rallies.map((r, i) => (
-          <li key={i} className="relative overflow-hidden surface-card px-4 py-3">
-            <div aria-hidden className="absolute inset-y-0 left-0 bg-accent/10" style={{ width: `${(r.shots / most) * 100}%` }} />
-            <div className="relative flex items-center gap-4">
-              <span className="w-7 text-xl font-bold text-muted">{i + 1}</span>
-              <div className="min-w-0 flex-1">
-                <p className="font-semibold tabular-nums">{fmt(r.start)} – {fmt(r.end)}</p>
-                <p className="text-xs text-muted">{Math.round(r.end - r.start)} s, match time</p>
-              </div>
-              <p className="shrink-0">
-                <span className="text-2xl font-bold text-accent tabular-nums">{r.shots}</span>
-                <span className="ml-1 text-xs font-bold uppercase text-muted">shots</span>
-              </p>
-            </div>
+          <li key={i} className="surface-card flex items-center gap-4 px-4 py-3">
+            <span className="font-bold">Rally {i + 1}</span>
+            <span className="text-sm text-muted">{fmt(r.start)} – {fmt(r.end)}</span>
           </li>
         ))}
       </ol>
+    </section>
+  );
+}
+
+function GoDeeper({ id }: { id: string }) {
+  return (
+    <section aria-labelledby="deeper-title" className="space-y-3">
+      <h2 id="deeper-title" className="section-title text-2xl">Go deeper</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {([
+          ["coach", "Coach this match", "Ask what to work on in the match you uploaded."],
+          ["breakdown", "Break down a stroke", "Get a step-by-step look at a stroke from this video."],
+        ] as const).map(([path, title, body]) => (
+          <Link key={path} href={`/${path}?source=${id}`} className="surface-card space-y-1 p-4 hover:border-accent">
+            <h3 className="font-bold text-accent">{title}</h3>
+            <p className="text-sm text-muted">{body}</p>
+          </Link>
+        ))}
+      </div>
     </section>
   );
 }
@@ -222,7 +220,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <div className="space-y-3">
           <p className="eyebrow">{eyebrowFor(job)}</p>
           <h1 className="headline break-words text-5xl text-accent">{titleFor(job)}</h1>
-          {job.message && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
+          {job.message && (job.kind !== "autocut" || !ended) && <p className={job.status === "failed" ? "text-red-200" : "text-muted"}>{job.message}</p>}
           {job.warning && <Warning>{job.warning}</Warning>}
           {ended && (
             <div className="flex flex-wrap gap-2 pt-2">
@@ -231,7 +229,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
                   <DownloadIcon /> Download
                 </a>
               )}
-              <Link href={`/${job.kind}`} className={secondaryButtonClass}>
+              <Link href={job.kind === "autocut" ? "/" : `/${job.kind}`} className={secondaryButtonClass}>
                 {job.kind === "breakdown" ? "New breakdown" : job.kind === "match" ? "Match again" : "Cut another"}
               </Link>
             </div>
@@ -241,13 +239,14 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
         {job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
-        <details className="group surface-card">
+        {job.kind === "autocut" && job.status === "done" && job.canReuseVideo && <GoDeeper id={job.id} />}
+        {job.kind !== "autocut" && <details className="group surface-card">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
             Run details
             <span aria-hidden className="transition group-open:rotate-45">+</span>
           </summary>
           <pre className="overflow-x-auto whitespace-pre-wrap break-all px-4 pb-4 text-xs text-muted">{JSON.stringify(job.params, null, 2)}</pre>
-        </details>
+        </details>}
       </div>
     </div>
     </>

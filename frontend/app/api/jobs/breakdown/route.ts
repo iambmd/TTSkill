@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   // A missing field takes the backend's default; a blank one is checked as sent.
   const field = (k: string, missing = "") => String(form.get(k) ?? missing);
   const video = form.get("video");
-  const hasInput = (video instanceof File && video.size > 0) || !!field("url").trim() || !!field("staged").trim();
+  const hasInput = (video instanceof File && video.size > 0) || !!field("url").trim() || !!field("staged").trim() || !!field("source_job");
   const text = field("text").trim();
   const stroke = field("stroke");
   const strokeType = field("stroke_type");
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
     playerSelectionProblem(form) ??
     onlyMeProblem(form) ??
     (!hasInput && !text ? "Upload a clip, paste a YouTube link, or describe the training." : null) ??
-    (hasInput ? videoInputProblem(form, "") : null) ??
+    (hasInput ? videoInputProblem(form, "", true) : null) ??
     (STROKES.has(stroke) ? null : `Unknown stroke: ${stroke}. Leave it blank to auto-detect.`) ??
     (!strokeType || STROKE_TYPE_VALUES.has(strokeType)
       ? null : `Unknown stroke type: ${strokeType}. Pick one from the list, or leave it blank to auto-detect.`) ??

@@ -107,7 +107,9 @@ export const STAGED = /^[0-9a-f]{32}\.(mp4|mov|webm|mkv)$/;
 
 /** The video part of a submitted form: an upload already on the server, then a non-empty
  * file, then a link. */
-export function videoInputProblem(form: FormData, missing: string): string | null {
+export function videoInputProblem(form: FormData, missing: string, reuseMatch = false): string | null {
+  const source = reuseMatch ? String(form.get("source_job") ?? "") : "";
+  if (source) return /^[0-9a-f]{32}$/.test(source) ? null : "Open your match result or upload the video again.";
   const staged = String(form.get("staged") ?? "").trim();
   if (staged) return STAGED.test(staged) ? null : "Choose the video again.";
   const video = form.get("video");
