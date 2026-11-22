@@ -42,6 +42,29 @@ def public_video(source: Path, dest: Path) -> tuple[str, float]:
     return f'{url}?v={digest}', round(float(info['format']['duration']), 1)
 
 
+def home_previews() -> None:
+    """Keep the Home posters and short silent previews in step with the cached examples."""
+    public = ROOT / 'frontend/public'
+    destination = public / 'home'
+    destination.mkdir(exist_ok=True)
+    starts = {
+        'autocut-after': 2.0, 'autocut-before': 0.5, 'coach-after-breakdown': 3.0,
+        'breakdown-after': 3.0, 'breakdown-before': 2.0, 'match-after': 3.0,
+    }
+    for clip, start in starts.items():
+        source = public / 'examples' / f'{clip}.mp4'
+        ffmpeg = ['ffmpeg', '-loglevel', 'error', '-threads', '1', '-filter_threads', '1',
+                  '-y', '-ss', str(start), '-i', str(source)]
+        subprocess.run([*ffmpeg, '-frames:v', '1', '-vf', 'scale=528:528:force_original_aspect_ratio=decrease',
+                        '-c:v', 'libwebp', '-quality', '72', str(destination / f'{clip}.webp')], check=True)
+        if clip.endswith('before'):
+            continue
+        subprocess.run([*ffmpeg, '-t', '4', '-vf',
+                        'scale=432:432:force_original_aspect_ratio=decrease:force_divisible_by=2,fps=20',
+                        '-an', '-c:v', 'libx264', '-threads', '1', '-crf', '28', '-pix_fmt', 'yuv420p',
+                        '-movflags', '+faststart', str(destination / f'{clip}.mp4')], check=True)
+
+
 def run(kind: str, manifest: Path) -> None:
     # Demo refreshes use local templates; never upload video frames or load credentials.
     os.environ['ANTHROPIC_API_KEY'] = ''
@@ -121,6 +144,7 @@ def export(manifest: Path) -> None:
     for kind, legacy in (('breakdown', 'breakdown'), ('autocut', 'highlights')):
         shutil.copyfile(ROOT / f'frontend/public/examples/{kind}-after.mp4',
                         ROOT / f'frontend/public/demo/{legacy}.mp4')
+    home_previews()
     dest = ROOT / 'frontend/lib'
     (dest/'demo-jobs.json').write_text(json.dumps({j['id']: j for j in records.values()}, indent=2)+'\n')
     coach = records['coach']
@@ -131,8 +155,10 @@ def export(manifest: Path) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('--kind', choices=KINDS)
-    ap.add_argument('--export', action='store_true')
+    actions = ap.add_mutually_exclusive_group(required=True)
+    actions.add_argument('--kind', choices=KINDS)
+    actions.add_argument('--export', action='store_true')
+    actions.add_argument('--home-previews', action='store_true')
     ap.add_argument('--manifest', type=Path, default=ROOT/'backend/data/demo-refresh/manifest.json')
     args = ap.parse_args()
     if args.kind:
@@ -140,7 +166,7 @@ def main() -> None:
     elif args.export:
         export(args.manifest)
     else:
-        ap.error('choose --kind or --export')
+        home_previews()
 
 
 if __name__ == '__main__':

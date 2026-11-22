@@ -400,6 +400,15 @@ describe("GET /api/rubbers", () => {
     expect(body.thickness).toBe("from backend");
     expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain("/equipment/rubbers?style=speed&rubber_type=anti_spin&level=advanced&budget=40");
   });
+  it("serves the Equipment demo locally even when an analysis server is configured", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await route("rubbers", { BACKEND_URL: "http://backend" });
+    const body = await (await GET!(url("demo=1&style=speed&level=beginner"), ctx({}))).json();
+    expect(body).toMatchObject({ style: "speed", level: "beginner" });
+    expect(body.results.length).toBeGreaterThan(0);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 // ------------------------------------------------------------------ players

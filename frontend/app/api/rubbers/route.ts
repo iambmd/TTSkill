@@ -13,9 +13,11 @@ export async function GET(req: Request): Promise<Response> {
   if (!LEVELS.includes(level as Level)) return Response.json({ error: "Pick your level." }, { status: 400 });
   const budget = Number(q.get("budget") ?? DEFAULT_BUDGET);
   if (!(budget > 0 && budget <= 500)) return Response.json({ error: "Enter a budget between $1 and $500." }, { status: 400 });
-  if (BACKEND_URL) {
+  if (BACKEND_URL && q.get("demo") !== "1") {
     try {
-      const res = await fetch(`${BACKEND_URL}/equipment/rubbers?${new URLSearchParams({ style, rubber_type: type, level, budget: String(budget) })}`);
+      const res = await fetch(`${BACKEND_URL}/equipment/rubbers?${new URLSearchParams({ style, rubber_type: type, level, budget: String(budget) })}`, {
+        signal: AbortSignal.timeout(2500),
+      });
       if (res.ok) {
         const body = await res.json() as Recommendation;
         return Response.json({ ...body, results: body.results.map(withRubberBuyLinks) });

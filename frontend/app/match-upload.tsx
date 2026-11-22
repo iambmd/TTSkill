@@ -19,6 +19,8 @@ export function MatchUpload() {
   const [checking, setChecking] = useState(true);
   const [healthAttempt, setHealthAttempt] = useState(0);
   const [retryFile, setRetryFile] = useState<File | null>(null);
+  const pickerRef = useRef<HTMLInputElement>(null);
+  const focusAfterRetry = useRef(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -29,6 +31,13 @@ export function MatchUpload() {
     });
     return () => controller.abort();
   }, [healthAttempt]);
+
+  useEffect(() => {
+    if (!offline && !checking && focusAfterRetry.current) {
+      focusAfterRetry.current = false;
+      pickerRef.current?.focus();
+    }
+  }, [offline, checking]);
 
   async function upload(file?: File) {
     if (!file || uploading.current || offline) return;
@@ -59,36 +68,42 @@ export function MatchUpload() {
 
   const busy = progress !== null;
   const percent = Math.round((progress ?? 0) * 100);
-  return (
-    <div className="space-y-3">
-      {offline && <OfflineNotice checking={checking} onRetry={() => {
+  if (offline) {
+    return <div className="home-upload-offline">
+      <OfflineNotice checking={checking} message="Live analysis is offline right now. Explore the demos below." onRetry={() => {
+        focusAfterRetry.current = true;
         setChecking(true);
         setHealthAttempt((n) => n + 1);
-      }} />}
+      }} />
+    </div>;
+  }
+
+  return (
+    <div className="space-y-3">
       <label
         className={`video-picker block rounded-[var(--training-panel-radius)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-accent ${dragging ? "ring-2 ring-accent" : ""}`}
-        onDragOver={(e) => { e.preventDefault(); if (!busy && !offline) setDragging(true); }}
+        onDragOver={(e) => { e.preventDefault(); if (!busy) setDragging(true); }}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragging(false); }}
         onDrop={(e) => { e.preventDefault(); setDragging(false); void upload(e.dataTransfer.files[0]); }}
       >
         <input
-          type="file" accept=".mp4,.mov,video/mp4,video/quicktime" disabled={busy || offline}
-          aria-label="Choose a video or drop it here"
+          ref={pickerRef} type="file" accept=".mp4,.mov,video/mp4,video/quicktime" disabled={busy}
+          aria-label="Upload your match"
           aria-describedby={error ? "match-upload-error" : "match-upload-hint"}
           className="sr-only"
           onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }}
         />
-        <span className={`upload-target match-dropzone flex flex-col items-center justify-center text-center ${busy ? "cursor-wait" : offline ? "cursor-not-allowed" : "cursor-pointer"}`}>
+        <span className={`upload-target match-dropzone flex flex-col items-center justify-center text-center ${busy ? "cursor-wait" : "cursor-pointer"}`}>
           <span className="grid place-items-center"><UploadIcon /></span>
           <span className="section-title text-2xl" aria-live="polite">
-            {busy ? percent === 100 ? "Starting your reel…" : `Uploading ${percent}%` : "Choose a video or drop it here"}
+            {busy ? percent === 100 ? "Starting your reel…" : `Uploading ${percent}%` : "Upload your match"}
           </span>
-          <span id="match-upload-hint" className="text-sm">MP4 or MOV · Up to {LIMITS.upload.max_mb} MB</span>
+          <span id="match-upload-hint" className="text-sm text-muted">MP4 or MOV · Up to {LIMITS.upload.max_mb} MB</span>
         </span>
       </label>
       {busy && <progress className="h-2 w-full accent-accent" value={percent} max={100} aria-label="Upload progress" />}
       <FieldError id="match-upload-error">{error}</FieldError>
-      {!busy && !offline && retryFile && (
+      {!busy && retryFile && (
         <button type="button" className={secondaryButtonClass} onClick={() => void upload(retryFile)}>
           Retry upload
         </button>

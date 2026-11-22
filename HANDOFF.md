@@ -2,6 +2,14 @@
 
 Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for project conventions. Work is on `main`. Metrics below are development data.
 
+## Home discovery page (2026-11-22)
+
+- Home serves its gear cards, mini quiz, and demo links independently of the analysis server. A failed `/api/health` replaces the upload target with the offline card. **Retry** rechecks health and focuses the upload target when the service is back.
+- The quiz uses the existing recommender and opens Rubber Finder with the chosen style and level. Equipment’s **Try it** link opens the bundled ratings directly. The other four **Try it** links open cached results at `/jobs/demo-*`.
+- The feature tiles show lazy WebP posters and load short, silent previews on hover, touch, or keyboard activation. Equipment uses an illustrated loop of two real recommendations. The before/after strip loads the full cached clip when you press Play. Reduced motion keeps the tile posters in place and suppresses the background ball and other decorative motion.
+- `frontend/public/home/` contains the paddle cursor, posters, and four preview clips. Demo exports regenerate the previews. To regenerate them from the existing videos without running analysis, run `backend/.venv/bin/python scripts/refresh_demos.py --home-previews`.
+- Lighthouse 13.6 mobile Performance had a local production median of 98, up from 91. Initial navigation fetched zero MP4s. The browser checks covered 375 px touch emulation and both themes. See [PROGRESS.md](PROGRESS.md#home-discovery-page-2026-11-22) for the full comparison.
+
 ## US rubber purchase links (2026-11-22)
 
 `shared/rubber-buy-links.json` holds the clean US product URLs for Rubber Finder and Pro Setups. Rubber Finder gets names and brands from `backend/equipment/rubbers.csv` and its frontend export, `frontend/lib/rubbers.json`. The pro equipment labels live in `frontend/lib/pros.json`. Both recommenders join links by exact rubber name. A legacy `buyUrl` or `buyLink` still works until that entry has a list. Missing matches use an empty list. See the [coverage and unverified candidates in PROGRESS.md](PROGRESS.md#us-rubber-purchase-links-2026-11-22).

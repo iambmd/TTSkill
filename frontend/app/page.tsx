@@ -1,18 +1,37 @@
 import Link from "next/link";
+import { gearQuizResults, HomeGear } from "./home-gear";
+import { DemoStrip, FeatureGrid } from "./home-media";
+import { HomeMotion } from "./home-motion";
 import { MatchUpload } from "./match-upload";
+import "./home.css";
+
+const footerLinks = [
+  ["/", "Home"], ["/coach", "Coach"], ["/breakdown", "Breakdown"], ["/match", "Pro Match"],
+  ["/autocut", "Auto-Cut"], ["/rubbers", "Rubber Finder"], ["/pros", "Pro Setups"],
+] as const;
 
 export default function Home() {
   return (
-    <section aria-labelledby="match-title" className="mx-auto max-w-3xl space-y-6">
-      <div className="page-intro space-y-3">
-        <p className="eyebrow">TTSkill</p>
-        <h1 id="match-title" className="headline">Upload your match</h1>
-        <p className="text-muted">Get a highlight reel, then take any match into Coach or Technique Breakdown.</p>
-      </div>
-      <MatchUpload />
-      <Link href="/jobs/demo-autocut" className="inline-flex min-h-11 items-center font-semibold text-accent underline">
-        See an example reel
-      </Link>
-    </section>
+    <div className="home-page" data-ball-space>
+      <HomeMotion />
+      <section aria-labelledby="match-title" className="home-hero" data-ball-space>
+        <div className="home-hero-copy">
+          <h1 id="match-title" className="headline">Highlights and coaching</h1>
+          <p className="text-muted">Turn your match video into highlights and actionable coaching.</p>
+        </div>
+        <MatchUpload />
+      </section>
+      <HomeGear />
+      <FeatureGrid equipment={{ spin: gearQuizResults.spin.intermediate, speed: gearQuizResults.speed.beginner }} />
+      <DemoStrip />
+      <footer className="home-footer" data-ball-space>
+        <Link href="/" prefetch={false} className="headline text-2xl">TT<span className="text-accent">Skill</span></Link>
+        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-1">
+          {footerLinks.map(([href, label]) => (
+            <Link key={href} href={href} prefetch={false} className="inline-flex min-h-11 items-center text-sm font-semibold hover:text-accent">{label}</Link>
+          ))}
+        </nav>
+      </footer>
+    </div>
   );
 }

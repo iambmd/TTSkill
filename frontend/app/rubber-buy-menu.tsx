@@ -11,14 +11,23 @@ function Store({ link }: { link: BuyLink }) {
   </>;
 }
 
-export function RubberBuyMenu({ product, ...data }: BuyLinkData & { product: string }) {
-  const { links: [first, ...others], disclosure, amazonDisclosure } = buyMenu(data);
+export function RubberAffiliateDisclosure() {
+  const { disclosure, amazonDisclosure } = buyMenu({});
+  if (!disclosure) return null;
+  return <p className="text-xs text-muted">
+    As an affiliate, TTSkill may earn a commission from qualifying purchases.
+    {amazonDisclosure && " As an Amazon Associate I earn from qualifying purchases."}
+  </p>;
+}
+
+export function RubberBuyMenu({ product, featured = false, ...data }: BuyLinkData & { product: string; featured?: boolean }) {
+  const { links: [first, ...others] } = buyMenu(data);
   if (!first) return <p className="text-xs text-muted">Not sold in the US yet</p>;
 
   return (
     <div className="space-y-1.5" aria-label={`US stores for ${product}`} role="group">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <a {...external} href={first.url} aria-label={`Buy in the US: ${product} at ${first.store}`} className={`${secondaryButtonClass} h-11 normal-case tracking-normal`}>
+        <a {...external} href={first.url} aria-label={`Buy in the US: ${product} at ${first.store}`} className={`${secondaryButtonClass} ${featured ? "home-buy-button" : "h-11 normal-case tracking-normal"}`}>
           Buy in the US
         </a>
         <span className="text-xs text-muted"><Store link={first} /></span>
@@ -31,10 +40,7 @@ export function RubberBuyMenu({ product, ...data }: BuyLinkData & { product: str
           ))}
         </div>
       )}
-      {disclosure && <p className="text-xs text-muted">
-        As an affiliate, TTSkill may earn a commission from qualifying purchases.
-        {amazonDisclosure && " As an Amazon Associate I earn from qualifying purchases."}
-      </p>}
+      {!featured && <RubberAffiliateDisclosure />}
     </div>
   );
 }

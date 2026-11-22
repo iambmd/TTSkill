@@ -42,6 +42,11 @@ export const band = (price: number, budget: number) => Math.floor((budget - pric
 
 const RUBBERS = data as Rubber[];
 
+export function rubberByName(name: string) {
+  const rubber = RUBBERS.find((entry) => entry.name === name);
+  return rubber && withRubberBuyLinks(rubber);
+}
+
 /** Drop rubbers over budget, then rank by budget band (closest first) and the highest user score (Overall). */
 export function recommend(style: Style, type: RubberType, level: Level, budget = DEFAULT_BUDGET, limit = 8): Recommendation {
   const rule = LEVEL_RULES[level];
