@@ -109,7 +109,11 @@ export const STAGED = /^[0-9a-f]{32}\.(mp4|mov|webm|mkv)$/;
  * file, then a link. */
 export function videoInputProblem(form: FormData, missing: string, reuseMatch = false): string | null {
   const source = reuseMatch ? String(form.get("source_job") ?? "") : "";
-  if (source) return /^[0-9a-f]{32}$/.test(source) ? null : "Open your match result or upload the video again.";
+  if (source) {
+    if (!/^[0-9a-f]{32}$/.test(source)) return "Open your match result or upload the video again.";
+    const rally = String(form.get("source_rally") ?? "");
+    return !rally || /^[1-9][0-9]*$/.test(rally) ? null : "Open your match result and choose a rally again.";
+  }
   const staged = String(form.get("staged") ?? "").trim();
   if (staged) return STAGED.test(staged) ? null : "Choose the video again.";
   const video = form.get("video");

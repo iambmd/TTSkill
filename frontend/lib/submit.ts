@@ -1,3 +1,11 @@
+export type RallyClip = {
+  id: number;
+  start: number;
+  end: number;
+  clipUrl: string;
+  thumbnailUrl: string;
+};
+
 export type Job = {
   id: string;
   kind: "breakdown" | "autocut" | "match" | "coach";
@@ -15,6 +23,7 @@ export type Job = {
     etaUntil?: number;
   };
   previewUrl?: string;
+  rallyClips?: RallyClip[];
   breakdown?: Breakdown;
   rallies?: { start: number; end: number; hits: number; shots: number }[];
   /** Advice beside a job that still counts as done: Auto-Cut heard too few rallies; Coach skipped a step. */

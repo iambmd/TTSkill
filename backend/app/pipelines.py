@@ -12,7 +12,7 @@ import timing
 from limits import LIMITS
 
 from . import jobs
-from .cut import cut_and_concat, duration, padded_segments
+from .cut import cut_and_concat, cut_segment, duration, padded_segments, thumbnail
 from .download import download
 from .rally import detect_rallies
 
@@ -99,20 +99,48 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
             return
         report("ranking", 0.68)
         rallies, segments = pick_segments(found, video, mode, top_n, total=video_seconds)
-        report("rendering", 0.72, 0, len(segments), rallies=[r.to_dict() for r in rallies])
+        # Full cuts merge overlapping padding. Keep individual clips as well for editing
+        # and coaching, reusing the rendered parts wherever they are already separate.
+        separate = len(segments) != len(rallies)
+        card_spans = padded_segments(
+            [(r.start, r.end) for r in rallies], video_seconds, merge=False,
+            bounds=[r.clip_bounds or (0.0, video_seconds) for r in rallies],
+        ) if separate else segments
+        extra = len(card_spans) if separate else 0
+        render_total = len(segments) + extra
+        clips: list[dict] = []
+        report("rendering", 0.72, 0, render_total, rallies=[r.to_dict() for r in rallies])
 
-        def rendered(done: int, total: int, path: Path) -> None:
-            fields = {}
-            if done == 1:
-                shutil.copyfile(path, workdir / "preview.mp4")
-                fields["previewUrl"] = f"/jobs/{job_id}/files/preview.mp4"
-            report("rendering", 0.72 + 0.25 * done / total, done, total, **fields)
+        def publish(i: int, path: Path) -> None:
+            start, end = card_spans[i - 1]
+            name = f"rally-{i}"
+            public = workdir / f"{name}.mp4"
+            if path != public:
+                public.hardlink_to(path)
+            thumb = f"{name}.jpg"
+            thumbnail(public, workdir / thumb)
+            base = f"/jobs/{job_id}/files"
+            clips.append({"id": i, "start": start, "end": end, "clipUrl": f"{base}/{public.name}",
+                          "thumbnailUrl": f"{base}/{thumb}"})
+            if i == 1:
+                jobs.update(job_id, previewUrl=clips[0]["clipUrl"])
+
+        if separate:
+            for i, span in enumerate(card_spans, 1):
+                publish(i, cut_segment(video, span, workdir / f"rally-{i}.mp4"))
+                report("rendering", 0.72 + 0.25 * i / render_total, i, render_total)
+
+        def rendered(done: int, _: int, path: Path) -> None:
+            if not separate:
+                publish(done, path)
+            completed = extra + done
+            report("rendering", 0.72 + 0.25 * completed / render_total, completed, render_total)
 
         cut_and_concat(video, segments, workdir, workdir / "result.mp4", clip_ready=rendered)
         length = sum(e - s for s, e in segments)
         label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
         jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", warning=warning,
-                    autocutStage={"key": "done"}, message=f"{label}, {length:.0f} seconds.")
+                    autocutStage={"key": "done"}, rallyClips=clips, message=f"{label}, {length:.0f} seconds.")
     except Exception as exc:
         traceback.print_exc()
         jobs.update(job_id, status="failed", message=str(exc))

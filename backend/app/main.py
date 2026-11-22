@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import os
 import re
 import shutil
+import subprocess
 import threading
 import time
 import uuid
@@ -12,17 +14,20 @@ from concurrent.futures import ThreadPoolExecutor
 from contextlib import asynccontextmanager
 from functools import partial
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-from fastapi import BackgroundTasks, FastAPI, File, Form, HTTPException, Request, UploadFile
+from fastapi import BackgroundTasks, Body, FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from starlette.concurrency import run_in_threadpool
+from pydantic import StrictInt
 
 from equipment import recommend as rubbers
 from technique.strokes import STROKE_TYPES
 
 from . import download, jobqueue, jobs, validate
+from .cut import concat_parts
 from .pipelines import fetch_then, run_autocut, run_breakdown, run_match
 
 log = logging.getLogger("uvicorn.error")   # configured by uvicorn, so INFO lines show in `make backend`
@@ -127,12 +132,19 @@ def take_video(video: UploadFile | None, staged: str) -> tuple[Path | None, str 
     return None, None
 
 
-def uploaded_match(source_job: str) -> tuple[Path, str]:
-    """Only a finished Auto-Cut upload can be reused by an analysis form."""
+def uploaded_match(source_job: str, source_rally: str = "") -> tuple[Path, str]:
+    """Reuse the original upload or a published rally from a finished Auto-Cut job."""
     path = job_input(source_job)
     source = jobs.load(source_job)
-    if not path or not source or source["kind"] != "autocut" or source["status"] != "done":
-        raise validate.Invalid("This uploaded match is no longer available. Choose the video again.")
+    if not source or source["kind"] != "autocut" or source["status"] != "done":
+        raise validate.Invalid("Open a finished match result to use that video.")
+    if source_rally:
+        ids = {str(rally["id"]) for rally in source.get("rallyClips", [])}
+        if source_rally not in ids:
+            raise validate.Invalid("That rally is no longer available. Open the match result and choose again.")
+        path = jobs.job_dir(source_job) / f"rally-{source_rally}.mp4"
+    if not path or not path.is_file():
+        raise validate.Invalid("This video is no longer available. Choose the video again.")
     return path, source["params"].get("video") or path.name
 
 
@@ -221,6 +233,7 @@ def create_breakdown(
     only_me: str = Form(""),
     staged: str = Form(""),
     source_job: str = Form(""),
+    source_rally: str = Form(""),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
@@ -231,7 +244,7 @@ def create_breakdown(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     player = validate.text(player, "player", "The player's name")
     text = validate.text(text, "training_text", "The training description")
-    staged, filename = uploaded_match(source_job) if source_job else take_video(video, staged)
+    staged, filename = uploaded_match(source_job, source_rally) if source_job else take_video(video, staged)
     link = check_link(url, "breakdown") if staged is None else None
     if staged is None and link is None and not text:
         raise validate.Invalid("Upload a clip, paste a YouTube link, or describe the training.")
@@ -245,6 +258,8 @@ def create_breakdown(
         params["only_me"] = True
     if source_job:
         params["source_job"] = source_job
+        if source_rally:
+            params["source_rally"] = int(source_rally)
     job = jobs.create("breakdown", params)
     # The tapped player goes last, and only when there is one, so other calls are unchanged.
     args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
@@ -303,6 +318,7 @@ def create_coach(
     only_me: str = Form(""),
     staged: str = Form(""),
     source_job: str = Form(""),
+    source_rally: str = Form(""),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
@@ -313,7 +329,7 @@ def create_coach(
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
         raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
-    staged, filename = uploaded_match(source_job) if source_job else take_video(video, staged)
+    staged, filename = uploaded_match(source_job, source_rally) if source_job else take_video(video, staged)
     link = None if staged else check_link(url, "coach")
     if not staged and link is None:
         raise validate.Invalid("Add a video: upload a clip or paste a YouTube link.")
@@ -325,6 +341,8 @@ def create_coach(
         params["only_me"] = True
     if source_job:
         params["source_job"] = source_job
+        if source_rally:
+            params["source_rally"] = int(source_rally)
     job = jobs.create("coach", params)
     path = analysis_input(staged, job["id"], source_job) if staged else None
     if path is not None and not jobqueue.inline():
@@ -554,15 +572,45 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
     return job
 
 
+@app.post("/jobs/{job_id}/exports")
+def export_highlights(job_id: str, rallies: list[StrictInt] = Body(embed=True)) -> dict:
+    """Export the supplied rally IDs in order, keeping the original reel available."""
+    job = jobs.load(job_id) if re.fullmatch(r"[0-9a-f]{32}", job_id) else None
+    if not job or job["kind"] != "autocut" or job["status"] != "done":
+        raise HTTPException(404, "Open a finished match result to export highlights.")
+    available = {rally["id"] for rally in job.get("rallyClips", [])}
+    if not rallies or len(set(rallies)) != len(rallies) or not set(rallies) <= available:
+        raise validate.Invalid("Choose at least one available rally, once each.")
+
+    folder = jobs.job_dir(job_id)
+    parts = [folder / f"rally-{rally}.mp4" for rally in rallies]
+    if not all(part.is_file() for part in parts):
+        raise validate.Invalid("Some rally clips are no longer available. Upload the match again.")
+    tag = hashlib.sha256(",".join(map(str, rallies)).encode()).hexdigest()[:20]
+    dest = folder / f"highlights-{tag}.mp4"
+    if not dest.exists():
+        try:
+            with TemporaryDirectory(dir=folder) as work:
+                temp = Path(work) / "highlights.mp4"
+                concat_parts(parts, temp)
+                temp.replace(dest)
+        except (OSError, subprocess.CalledProcessError):
+            log.exception("Highlight export failed for %s", job_id)
+            raise HTTPException(500, "Couldn't make this download. Try again.") from None
+    return {"url": f"/jobs/{job_id}/files/{dest.name}"}
+
+
 @app.get("/jobs/{job_id}/files/{name}")
 def get_file(job_id: str, name: str) -> FileResponse:
-    """Videos the coach agent made (highlights.mp4, breakdown.mp4, pro_matches.mp4)."""
-    if not re.fullmatch(r"[\w-]{1,64}\.mp4", name) or not re.fullmatch(r"[0-9a-f]{32}", job_id):
+    """A result video or a rally thumbnail."""
+    picture = bool(re.fullmatch(r"rally-[1-9][0-9]*\.jpg", name))
+    if not (picture or re.fullmatch(r"[\w-]{1,64}\.mp4", name)) or not re.fullmatch(r"[0-9a-f]{32}", job_id):
         raise HTTPException(404, "not found")
     path = jobs.job_dir(job_id) / name
     if not path.exists():
         raise HTTPException(404, "not found")
-    return FileResponse(path, media_type="video/mp4", filename=f"ttskill-{name}")
+    return FileResponse(path, media_type="image/jpeg" if picture else "video/mp4",
+                        filename=None if picture else f"ttskill-{name}")
 
 
 @app.get("/jobs/{job_id}")

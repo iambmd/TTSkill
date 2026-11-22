@@ -772,3 +772,46 @@ def test_autocut_upload_can_start_an_analysis_without_another_upload(api, ran, u
 
     bad = api.post(f"/jobs/{kind}", data={**fields, "source_job": child["id"]})
     assert bad.status_code == 422
+
+
+def test_autocut_exports_selected_rallies_and_reuses_one_for_coach(api, ran, monkeypatch, media):
+    from app import pipelines
+    from app.rally import Rally
+
+    monkeypatch.setattr(pipelines, "detect_rallies", lambda *args: [Rally(0.3, 1.1, 7), Rally(1.8, 2.7, 9)])
+    monkeypatch.setattr("app.floor_bounce.drop_non_play", lambda video, rs, **kwargs: (rs, []))
+    job = jobs.create("autocut", {"video": "match.mp4"})
+    job_id = job["id"]
+    jobs.run(pipelines.run_autocut, job_id, media["ok"], "full", 5, 3.0, 1.6, 4)
+    result = api.get(f"/jobs/{job_id}").json()
+    assert result["status"] == "done"
+    first, second = result["rallyClips"]
+    assert [first["id"], second["id"]] == [1, 2]
+    assert api.get(first["thumbnailUrl"]).headers["content-type"] == "image/jpeg"
+    assert api.get(second["clipUrl"], headers={"range": "bytes=0-9"}).status_code == 206
+
+    seen = []
+    concat = main.concat_parts
+
+    def record(parts, dest):
+        seen.extend(part.name for part in parts)
+        return concat(parts, dest)
+
+    monkeypatch.setattr(main, "concat_parts", record)
+    export_path = f"/jobs/{job_id}/exports"
+    response = api.post(export_path, json={"rallies": [2, 1]})
+    assert response.status_code == 200, response.text
+    assert seen == ["rally-2.mp4", "rally-1.mp4"]
+    url = response.json()["url"]
+    assert api.get(url).headers["content-type"] == "video/mp4"
+    assert api.post(export_path, json={"rallies": [2, 1]}).json()["url"] == url
+    assert len(seen) == 2
+    for selection in ([], [1, 1], [999], ["1"]):
+        assert api.post(export_path, json={"rallies": selection}).status_code == 422
+
+    response = api.post("/jobs/coach", data={"request": "Coach this stroke.", "source_job": job_id, "source_rally": "2"})
+    assert response.status_code == 201, response.text
+    assert response.json()["params"]["source_rally"] == 2
+    source_clip = jobs.job_dir(job_id) / "rally-2.mp4"
+    assert ran["run_coach"][-1][0].read_bytes() == source_clip.read_bytes()
+    assert api.post("/jobs/breakdown", data={"source_job": job_id, "source_rally": "999"}).status_code == 422

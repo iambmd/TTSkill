@@ -3,7 +3,7 @@
 import demoAssets from "@/lib/demo-assets.json";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { submitJob } from "@/lib/submit";
+import { submitJob, type RallyClip } from "@/lib/submit";
 import { STROKE_TYPES } from "@/lib/strokes";
 import { LIMITS, textProblem } from "@/lib/validate";
 import { ChevronIcon, FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
@@ -17,7 +17,7 @@ const HANDS = [
   { value: "left", label: "Left" },
 ];
 
-export default function BreakdownForm({ sourceJob }: { sourceJob?: string }) {
+export default function BreakdownForm({ sourceJob, rallyId, clip }: { sourceJob?: string; rallyId?: string; clip?: RallyClip }) {
   const router = useRouter();
   const textRef = useRef<HTMLDetailsElement>(null);
   const [error, setError] = useState<string | null>(null);
@@ -63,7 +63,7 @@ export default function BreakdownForm({ sourceJob }: { sourceJob?: string }) {
         title="Swing like the pros."
         body="Drop in a clip of a player you admire and get a step-by-step coaching video of their stroke."
       />
-      {sourceJob ? <MatchSource job={sourceJob} form="breakdown" /> : (
+      {sourceJob ? <MatchSource job={sourceJob} rallyId={rallyId} clip={clip} form="breakdown" /> : (
         <VideoPicker findPlayer onlyMeOption
           kind="breakdown" onProblem={setVideoProblem}
           title="Upload a clip" hint="A few seconds of the stroke. Side-on, full body in frame works best."

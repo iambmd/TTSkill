@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { submitJob } from "@/lib/submit";
+import { submitJob, type RallyClip } from "@/lib/submit";
 import { LIMITS, textProblem } from "@/lib/validate";
 import { FieldError, PageIntro, SubmitBar, inputClass, labelClass } from "../ui";
 import { VideoPicker } from "../video-picker";
@@ -15,13 +15,13 @@ const EXAMPLES = [
   "Cut the dead time and tell me what to work on",
 ];
 
-export default function CoachForm({ sourceJob }: { sourceJob?: string }) {
+export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: string; rallyId?: string; clip?: RallyClip }) {
   const router = useRouter();
   const askRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
   const [starting, setStarting] = useState("Starting...");
-  const [ask, setAsk] = useState("");
+  const [ask, setAsk] = useState(sourceJob && rallyId ? "Coach my stroke in this rally." : "");
   const [videoProblem, setVideoProblem] = useState<string | null>(null);
   const most = LIMITS.text_chars.coach_request;
   const length = ask.trim().length;
@@ -93,7 +93,7 @@ export default function CoachForm({ sourceJob }: { sourceJob?: string }) {
           </div>
         </div>
         <div className="coach-upload">
-          {sourceJob ? <MatchSource job={sourceJob} form="coach" /> : (
+          {sourceJob ? <MatchSource job={sourceJob} rallyId={rallyId} clip={clip} form="coach" /> : (
             <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
           )}
         </div>

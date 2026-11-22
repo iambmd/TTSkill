@@ -7,6 +7,7 @@ import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFam
 import { AutoCutWaiting } from "./autocut-waiting";
 import { AnalysedPlayer } from "./analysed-player";
 import { CoachView } from "./coach-view";
+import { RallyEditor } from "./rally-editor";
 import { Matches } from "./matches";
 import { Steps } from "./steps";
 
@@ -226,7 +227,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           {job.warning && <Warning>{job.warning}</Warning>}
           {ended && (
             <div className="flex flex-wrap gap-2 pt-2">
-              {job.resultUrl && (
+              {job.resultUrl && !job.rallyClips?.length && (
                 <a href={job.resultUrl} download={`ttskill-${job.id}.mp4`} className={`${buttonBaseClass} h-12 text-xl`}>
                   <DownloadIcon /> Download
                 </a>
@@ -240,7 +241,9 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <AnalysedPlayer job={job} />
         {job.breakdown && <Steps b={job.breakdown} />}
         {job.matches && job.matches.length > 0 && <Matches matches={job.matches} stroke={str(job.params.stroke)} />}
-        {job.status === "done" && job.rallies && job.rallies.length > 0 && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />}
+        {job.status === "done" && (job.rallyClips?.length
+          ? <RallyEditor key={job.id} id={job.id} clips={job.rallyClips} />
+          : !!job.rallies?.length && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />)}
         {job.kind === "autocut" && job.status === "done" && job.canReuseVideo && <GoDeeper id={job.id} />}
         {job.kind !== "autocut" && <details className="group surface-card">
           <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">

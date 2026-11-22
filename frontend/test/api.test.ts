@@ -24,6 +24,7 @@ const ROUTES = {
   coach: "@/app/api/jobs/coach/route",
   job: "@/app/api/jobs/[id]/route",
   result: "@/app/api/jobs/[id]/result/route",
+  exports: "@/app/api/jobs/[id]/exports/route",
   files: "@/app/api/jobs/[id]/files/[name]/route",
   rubbers: "@/app/api/rubbers/route",
   players: "@/app/api/players/detect/route",
@@ -52,6 +53,7 @@ async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
     coach: () => import("@/app/api/jobs/coach/route"),
     job: () => import("@/app/api/jobs/[id]/route"),
     result: () => import("@/app/api/jobs/[id]/result/route"),
+    exports: () => import("@/app/api/jobs/[id]/exports/route"),
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
     rubbers: () => import("@/app/api/rubbers/route"),
     players: () => import("@/app/api/players/detect/route"),
@@ -500,6 +502,22 @@ describe("POST /api/players/detect for a past job", () => {
     expect((await POST!(post({ job: "0123456789abcdef0123456789abcdef", kind: "coach" }))).status).toBe(200);
     await expectError(await POST!(post({ job: "../etc" })), 422, "Unknown job");
   });
+});
+
+it("proxies an ordered rally export and rejects duplicate IDs", async () => {
+  const id = "1".repeat(32);
+  const url = `/jobs/${id}/files/highlights-demo.mp4`;
+  const upstream = vi.fn(async (_url: string, _init: RequestInit) => Response.json({ url }));
+  vi.stubGlobal("fetch", upstream);
+  const { POST } = await route("exports", { BACKEND_URL: "http://backend" });
+  const request = (rallies: number[]) => new Request("http://test/api", {
+    method: "POST", body: JSON.stringify({ rallies }),
+  });
+  await expectError(await POST!(request([1, 1]), ctx({ id })), 422, "once each");
+  const result = await POST!(request([3, 1]), ctx({ id }));
+  expect(await result.json()).toEqual({ url });
+  expect(upstream.mock.calls[0][0]).toBe(`http://backend/jobs/${id}/exports`);
+  expect(upstream.mock.calls[0][1].body).toBe(JSON.stringify({ rallies: [3, 1] }));
 });
 
 // A new route.ts under app/api must be added to ROUTES (and tested) or this fails.

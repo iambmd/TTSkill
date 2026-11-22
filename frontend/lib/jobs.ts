@@ -113,6 +113,9 @@ export async function getJob(id: string): Promise<Response> {
     // Videos load straight from a public backend, since a Vercel Function can't pass a long video through;
     // otherwise our /api routes proxy them. Coach outputs are served at /jobs/{id}/files/{name}.
     const videos = PUBLIC_API_URL || "/api";
+    job.rallyClips = job.rallyClips?.map((clip) => ({
+      ...clip, clipUrl: `${videos}${clip.clipUrl}`, thumbnailUrl: `${videos}${clip.thumbnailUrl}`,
+    }));
     if (job.previewUrl) job.previewUrl = `${videos}${job.previewUrl}`;
     if (job.resultUrl) job.resultUrl = `${videos}/jobs/${id}/result`;
     job.outputs = job.outputs?.map((o) => ({ ...o, url: `${videos}${o.url}` }));
@@ -144,4 +147,19 @@ export async function getResult(id: string, range?: string | null, file?: string
     if (v) headers.set(h, v);
   }
   return new Response(res.body, { status: res.status, headers });
+}
+
+
+export async function exportHighlights(id: string, rallies: number[]): Promise<Response> {
+  if (!BACKEND_URL || DEMO_JOBS[id]) return Response.json({ error: "This match has no editable rally clips." }, { status: 404 });
+  const res = await backend(`/jobs/${id}/exports`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ rallies }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    return Response.json({ error: data.detail ?? data.error ?? "Couldn't make this download. Try again." }, { status: res.status });
+  }
+  return Response.json(data);
 }
