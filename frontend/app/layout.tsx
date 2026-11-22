@@ -30,8 +30,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-dvh font-sans antialiased">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-panel focus:px-4 focus:py-3 focus:font-semibold focus:text-fg">
+          Skip to main content
+        </a>
         <SiteHeader />
-        <main className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:pt-10">{children}</main>
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:pt-10">{children}</main>
       </body>
     </html>
   );

@@ -13,15 +13,23 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
   const [announcement, setAnnouncement] = useState("");
   const [download, setDownload] = useState<string | null>(null);
   const root = PUBLIC_API_URL || "/api";
+  const resetId = `reset-rallies-${id}`;
+  const controlId = (clip: RallyClip, action: string) => `rally-${id}-${clip.id}-${action}`;
+
+  function restoreFocus(target: string) {
+    // React may move or unmount the focused button when it updates the list.
+    requestAnimationFrame(() => document.getElementById(target)?.focus());
+  }
 
   function move(index: number, step: -1 | 1) {
     const next = [...selection];
     const to = index + step;
-    if (to < 0 || to >= next.length) return;
+    if (busy || to < 0 || to >= next.length) return;
     [next[index], next[to]] = [next[to], next[index]];
     setSelection(next);
     setDownload(null);
     setAnnouncement(`Rally ${next[to].id} moved to position ${to + 1}.`);
+    restoreFocus(controlId(next[to], step < 0 ? "up" : "down"));
   }
 
   function remove(index: number) {
@@ -30,9 +38,12 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
     setSelection(next);
     setDownload(null);
     setAnnouncement(`Rally ${clip.id} removed.`);
+    const neighbor = next[index] ?? next[index - 1];
+    restoreFocus(neighbor ? controlId(neighbor, "remove") : resetId);
   }
 
   async function exportSelection() {
+    if (busy || !selection.length) return;
     setBusy(true);
     setError(null);
     setDownload(null);
@@ -78,16 +89,16 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
                 <p className="text-xs text-muted">{fmtDuration(clip.start)} – {fmtDuration(clip.end)} in match</p>
               </div>
               <div className="col-span-2 flex flex-wrap gap-2">
-                <button type="button" disabled={busy || index === 0} onClick={() => move(index, -1)}
-                  aria-label={`Move rally ${clip.id} up`} className={`${secondaryButtonClass} disabled:opacity-45`}>Up</button>
-                <button type="button" disabled={busy || index === selection.length - 1} onClick={() => move(index, 1)}
-                  aria-label={`Move rally ${clip.id} down`} className={`${secondaryButtonClass} disabled:opacity-45`}>Down</button>
-                <button type="button" disabled={busy} onClick={() => remove(index)}
+                <button id={controlId(clip, "up")} type="button" aria-disabled={busy || index === 0} onClick={() => move(index, -1)}
+                  aria-label={`Move rally ${clip.id} up`} className={`${secondaryButtonClass} aria-disabled:opacity-45`}>Up</button>
+                <button id={controlId(clip, "down")} type="button" aria-disabled={busy || index === selection.length - 1} onClick={() => move(index, 1)}
+                  aria-label={`Move rally ${clip.id} down`} className={`${secondaryButtonClass} aria-disabled:opacity-45`}>Down</button>
+                <button id={controlId(clip, "remove")} type="button" disabled={busy} onClick={() => remove(index)}
                   aria-label={`Remove rally ${clip.id}`} className={`${secondaryButtonClass} disabled:opacity-45`}>Remove</button>
                 <a href={clip.clipUrl} download aria-label={`Download rally ${clip.id}`} className={secondaryButtonClass}>
                   <DownloadIcon /> Download
                 </a>
-                <Link href={`/coach?source=${id}&rally=${clip.id}`} className={secondaryButtonClass}>
+                <Link href={`/coach?source=${id}&rally=${clip.id}`} aria-label={`Coach this stroke from rally ${clip.id}`} className={secondaryButtonClass}>
                   Coach this stroke
                 </Link>
               </div>
@@ -96,11 +107,11 @@ export function RallyEditor({ id, clips }: { id: string; clips: RallyClip[] }) {
         </ol>
       ) : <p className="surface-card p-4">No rallies selected. Reset the selection to bring them back.</p>}
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" disabled={busy || !selection.length} onClick={() => void exportSelection()}
+        <button type="button" aria-disabled={busy || !selection.length} onClick={() => void exportSelection()}
           className={`${buttonBaseClass} min-h-12 text-xl`}>
           <DownloadIcon /> {busy ? "Preparing your download…" : error ? "Retry download" : "Download highlights"}
         </button>
-        <button type="button" disabled={busy} className={`${secondaryButtonClass} disabled:opacity-45`} onClick={() => {
+        <button id={resetId} type="button" disabled={busy} className={`${secondaryButtonClass} disabled:opacity-45`} onClick={() => {
           setSelection(clips);
           setDownload(null);
           setError(null);

@@ -1,6 +1,7 @@
 /** The Coach page's example: a real request and match, then the coach's saved plan, reply and videos. */
 
 import type { Job } from "@/lib/submit";
+import { coachDemoDescriptions } from "@/lib/demo-descriptions";
 import { Markdown } from "../markdown";
 import { CheckIcon } from "../ui";
 import { ExampleSection } from "../examples";
@@ -42,11 +43,12 @@ function After() {
           {after.outputs.map((o) => (
             <figure key={o.url} className="space-y-2">
               <figcaption>
-                <span className="headline text-xl">{o.title}</span>
-                <span className="block text-xs text-muted">{o.summary}</span>
+                <span id={`example-${o.kind}-title`} className="headline text-xl">{o.title}</span>
+                <span id={`example-${o.kind}-description`} className="block text-sm text-muted">{coachDemoDescriptions[o.kind] ?? o.summary}</span>
               </figcaption>
               <video
                 src={`${o.url}#t=0.1`} controls muted playsInline preload="metadata"
+                aria-labelledby={`example-${o.kind}-title`} aria-describedby={`example-${o.kind}-description`}
                 className={`video-frame mx-auto block w-full overflow-hidden border object-contain ${
                   o.kind === "highlights" ? "aspect-video" : "aspect-[9/16] max-w-xs"
                 }`}
@@ -65,7 +67,7 @@ export function CoachExample() {
       before={{
         src: "/examples/coach-before.mp4",
         label: "Before",
-        caption: "A 2-minute phone recording of a match",
+        caption: "A phone records a match, with the player in teal nearest the camera and their opponent across the table.",
         message: "Here's my match, show my best rallies and fix my forehand",
       }}
       after={<After />}

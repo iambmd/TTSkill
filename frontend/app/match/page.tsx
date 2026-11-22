@@ -7,6 +7,7 @@ import { submitJob } from "@/lib/submit";
 import { feetInches, heightProblem, LIMITS } from "@/lib/validate";
 import { FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
 import { ExampleSection } from "../examples";
+import { demoDescriptions } from "@/lib/demo-descriptions";
 import { VideoPicker } from "../video-picker";
 
 const STROKES = [
@@ -159,8 +160,8 @@ export default function MatchPage() {
       />
     </form>
       <ExampleSection
-        before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player filming their forehand" }}
-        after={{ src: demoAssets.match.url, label: "After", caption: "The pro matches video we made from it", vertical: true }}
+        before={{ src: "/examples/match-before.mp4", label: "Before", caption: "A player records their forehand, bending their knees and rotating through the shot." }}
+        after={{ src: demoAssets.match.url, label: "After", caption: demoDescriptions.match, vertical: true }}
         steps={[
           "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
           "If you don't give your height, we estimate it from the table in the frame, which is always 76 cm high and 274 cm long.",

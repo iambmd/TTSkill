@@ -66,12 +66,12 @@
   color: var(--training-on-action);
 }
 
-.primary-button:enabled:hover,
+.primary-button:enabled:not([aria-disabled="true"]):hover,
 a.primary-button:hover {
   background: var(--training-action-hover);
 }
 
-.primary-button:disabled {
+.primary-button:is(:disabled, [aria-disabled="true"]) {
   background: var(--training-bg);
   color: var(--training-muted);
   box-shadow: inset 0 0 0 1px var(--training-accent);
@@ -173,8 +173,7 @@ a.primary-button:hover {
 
 @media (width < 600px) {
   html:has(.feature-form) {
-    /* Keep scrolled-to fields clear of the sticky header and submit bar. */
-    scroll-padding-block: 7.25rem 7rem;
+    scroll-padding-block-end: 7rem;
   }
 
   .site-nav {

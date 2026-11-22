@@ -8,6 +8,7 @@ import { STROKE_TYPES } from "@/lib/strokes";
 import { LIMITS, textProblem } from "@/lib/validate";
 import { ChevronIcon, FieldError, PageIntro, RadioTiles, SubmitBar, inputClass, labelClass } from "../ui";
 import { ExampleSection } from "../examples";
+import { demoDescriptions } from "@/lib/demo-descriptions";
 import { VideoPicker } from "../video-picker";
 import { MatchSource } from "../match-source";
 
@@ -118,8 +119,8 @@ export default function BreakdownForm({ sourceJob, rallyId, clip }: { sourceJob?
       <SubmitBar label="Break it down" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
       <ExampleSection
-        before={{ src: "/examples/breakdown-before.mp4", label: "Before", caption: "Ma Long forehand practice, 15 s", vertical: true }}
-        after={{ src: demoAssets.breakdown.url, label: "After", caption: "The coaching video we made from it", vertical: true }}
+        before={{ src: "/examples/breakdown-before.mp4", label: "Before", caption: "Ma Long repeats a forehand loop in practice, stepping into each swing and returning to his ready stance.", vertical: true }}
+        after={{ src: demoAssets.breakdown.url, label: "After", caption: demoDescriptions.breakdown, vertical: true }}
         steps={[
           "We find the few seconds where the swing happens and track the player's body with pose detection, frame by frame.",
           "We work out which hand holds the bat and which stroke it is, unless you picked one.",

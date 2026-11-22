@@ -43,7 +43,7 @@ export function AnalysedPlayer({ job }: { job: Job }) {
         {job.player?.thumb && <img src={job.player.thumb} alt="The player we analysed" className="h-14 w-auto rounded-lg" />}
         <p className="flex-1 text-sm text-muted">{job.player?.thumb ? (picked ? "Analysed the player you picked." : "Analysed this player.") : "Pick a player to try again."}</p>
         {canChange && !open && (
-          <button type="button" onClick={() => setOpen(true)} className="text-sm font-bold text-accent hover:text-accent-hot">
+          <button type="button" onClick={() => setOpen(true)} className="min-h-11 text-sm font-bold text-accent hover:text-accent-hot">
             Change player
           </button>
         )}

@@ -1,12 +1,13 @@
 /** Before/after example videos and a "How it works" list, shown under each feature's form. */
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 
 // #t=0.1 makes browsers paint the first frame instead of a black box before play.
 
 type Clip = { src?: string; label: string; caption: string; vertical?: boolean; message?: string };
 
 function ExampleVideo({ clip }: { clip: Clip }) {
+  const captionId = useId();
   const frame = `mx-auto w-full overflow-hidden rounded-3xl border border-line bg-panel ${
     clip.vertical ? "aspect-[9/16] max-w-xs" : "aspect-video"
   }`;
@@ -14,7 +15,7 @@ function ExampleVideo({ clip }: { clip: Clip }) {
     <figure className="space-y-2">
       <figcaption className="flex items-baseline justify-between gap-3">
         <span className="example-title headline text-2xl">{clip.label}</span>
-        <span className="text-right text-xs text-muted">{clip.caption}</span>
+        <span id={captionId} className="text-right text-sm text-muted">{clip.caption}</span>
       </figcaption>
       {clip.message && (
         <p className="action-fill ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md px-4 py-2.5 text-sm font-semibold shadow-[0_0_24px_color-mix(in_srgb,var(--accent-glow)_35%,transparent)]">
@@ -24,6 +25,7 @@ function ExampleVideo({ clip }: { clip: Clip }) {
       {clip.src ? (
         <video
           src={`${clip.src}#t=0.1`} controls muted playsInline preload="metadata"
+          aria-label={`${clip.label} example video`} aria-describedby={captionId}
           className={`${frame} video-frame object-contain`}
         />
       ) : (

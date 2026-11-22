@@ -2,6 +2,20 @@
 
 Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for project conventions. Work is on `main`. Metrics below are development data.
 
+## Upload-first match flow (2026-11-22)
+
+1. **Start on Home.** Drop an MP4 or MOV or choose a file to start a highlight reel. From a finished upload, **Go deeper** opens Coach or Breakdown with the saved recording. The feature pages remain in the navigation.
+2. **Wait on the result URL.** Auto-Cut reports processing stages, rally review and render counts, and a duration-based ETA. The first completed clip can play while the rest renders. Refreshing resumes polling. Completion and failure stop it.
+3. **Edit and reuse the result.** Rally cards show a thumbnail, rank, and time range. Move or remove rallies, export the selected order, save one clip, or open Coach with that rally selected. The backend reuses the saved clip for analysis. Older jobs and cached demos retain their original reel and rally list.
+4. **Recover from errors.** Home checks `/api/health`, which forwards to FastAPI’s `/health`. Upload retry keeps the chosen file. A failed result check offers a retry on the same job URL. Empty results explain how to film a clearer match. Upload and media URLs still honor `NEXT_PUBLIC_API_URL`.
+5. **Use the workflow by keyboard.** The skip link moves focus into the page, and rally controls keep focus after edits. Live regions announce job stages and rally changes. Cached demos have visible video descriptions, and the site respects reduced motion.
+
+Each phase passed frontend lint and build before the next phase began. The final frontend suite passed all 175 tests. The full FastAPI endpoint test file passed 130 cases, with the opt-in YouTube network test skipped. Playwright at 375 px covered mobile uploads, outages and retries, progress and refresh, keyboard rally editing, and all four cached results. Sampled text and control contrast passed in both themes. Lint still reports five existing image warnings.
+
+A live loopback run with the existing match example verified the Home upload, the first-clip preview during processing, ranged clip playback, the reordered download, and the handoff to Coach and Breakdown. Backend tests also verified the order of the concatenated clips and reuse of the saved rally for analysis.
+
+Physical iOS and Android file pickers, screen-reader speech, and a deployed Cloudflare tunnel drop and recovery need a manual pass. Demo accessibility uses text descriptions. Rally editing uses whole clips, as requested.
+
 ## Site-wide Coach style (2026-11-20)
 
 - The table-and-rubber palette is shared across the site. [STYLE.md](docs/STYLE.md) documents the dark and light tokens and the forehand, backhand, and improvement colors. `frontend/app/globals.css` maps the palette to Tailwind, and `frontend/app/training.css` holds shared form, card, upload, media-frame, and primary-button styles.

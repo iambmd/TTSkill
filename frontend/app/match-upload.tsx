@@ -73,7 +73,7 @@ export function MatchUpload() {
       >
         <input
           type="file" accept=".mp4,.mov,video/mp4,video/quicktime" disabled={busy || offline}
-          aria-label="Choose an MP4 or MOV match video"
+          aria-label="Choose a video or drop it here"
           aria-describedby={error ? "match-upload-error" : "match-upload-hint"}
           className="sr-only"
           onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }}

@@ -4,10 +4,10 @@ export const labelTextClass = "text-xs font-bold uppercase tracking-[0.14em] tex
 export const labelClass = `mb-2 block ${labelTextClass}`;
 /** Primary button without a size, for callers that need a smaller one. */
 export const buttonBaseClass =
-  "primary-button headline relative inline-flex items-center justify-center gap-2 overflow-hidden px-6 transition active:scale-[.98] disabled:cursor-wait";
+  "primary-button headline relative inline-flex items-center justify-center gap-2 overflow-hidden px-6 transition motion-safe:active:scale-[.98] disabled:cursor-wait";
 export const buttonClass = `${buttonBaseClass} h-14 text-2xl`;
 export const secondaryButtonClass =
-  "inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 text-sm font-bold uppercase tracking-wide transition hover:border-white/30 active:scale-[.98]";
+  "inline-flex h-12 items-center justify-center gap-2 rounded-xl border border-line bg-panel px-4 text-sm font-bold uppercase tracking-wide transition hover:border-white/30 motion-safe:active:scale-[.98]";
 
 export function PageIntro({ eyebrow, title, body }: { eyebrow: string; title: string; body: string }) {
   return (

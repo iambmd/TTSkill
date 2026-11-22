@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { OfflineNotice } from "../../offline-notice";
+import { demoDescriptions } from "@/lib/demo-descriptions";
 import type { Job } from "@/lib/submit";
 import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFamily } from "../../ui";
 import { AutoCutWaiting } from "./autocut-waiting";
@@ -23,15 +24,18 @@ function Stage({ job }: { job: Job }) {
   const vertical = job.kind !== "autocut";
   const pct = Math.round(job.progress * 100);
   const failed = job.status === "failed";
+  const description = job.kind !== "coach" && job.id === `demo-${job.kind}` ? demoDescriptions[job.kind] : null;
   // Hold the expected shape until metadata arrives, then switch to the clip's real one (a match filmed upright is vertical).
   const [ratio, setRatio] = useState<number | null>(null);
   return (
-    <div
+    <figure
       className={`video-frame mx-auto overflow-hidden border ${vertical ? "sm:w-[min(100%,calc(78svh*9/16))] lg:w-full" : ""}`}
     >
       {job.resultUrl ? (
         <video
           key={job.resultUrl} src={`${job.resultUrl}#t=0.001`} controls playsInline preload="metadata"
+          aria-label={job.kind === "autocut" ? "Match highlight reel" : job.kind === "match" ? "Pro match video" : "Technique breakdown video"}
+          aria-describedby={description ? "result-description" : undefined}
           onLoadedMetadata={(e) => {
             const v = e.currentTarget;
             if (v.videoWidth && v.videoHeight) setRatio(v.videoWidth / v.videoHeight);
@@ -66,7 +70,8 @@ function Stage({ job }: { job: Job }) {
           )}
         </div>
       )}
-    </div>
+      {job.resultUrl && description && <figcaption id="result-description" className="bg-panel p-3 text-sm text-muted">{description}</figcaption>}
+    </figure>
   );
 }
 
@@ -243,6 +248,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
 
   return (
     <>
+    <p role="status" className="sr-only">{job.status === "done" ? (job.kind === "autocut" && !job.resultUrl ? "No rallies found." : "Your result is ready.") : ""}</p>
     {offlineNotice && <div className="mx-auto mb-4 max-w-3xl">{offlineNotice}</div>}
     <div className={`mx-auto ${vertical ? "max-w-5xl lg:grid lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)] lg:items-start lg:gap-10" : "max-w-3xl"}`}>
       {(!ended || job.resultUrl) && (
@@ -254,7 +260,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
         <div className="space-y-3">
           <p className="eyebrow">{eyebrowFor(job)}</p>
           <h1 className="headline break-words text-5xl text-accent">{titleFor(job)}</h1>
-          {!failed && job.message && (job.kind !== "autocut" || job.status === "queued") && <p className="text-muted">{job.message}</p>}
+          {!failed && (job.kind !== "autocut" || job.status === "queued") && <p role={ended ? undefined : "status"} className="text-muted">{job.message}</p>}
           {failed && <JobFailure job={job} />}
           {job.kind === "autocut" && job.status === "done" && !job.resultUrl && <NoRallies />}
           {job.warning && (job.kind !== "autocut" || job.resultUrl) && <Warning>{job.warning}</Warning>}

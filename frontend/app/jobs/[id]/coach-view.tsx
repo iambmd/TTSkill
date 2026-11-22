@@ -7,6 +7,7 @@
  * plan to a word per line. */
 import Link from "next/link";
 import { coachingOf } from "@/lib/coaching";
+import { coachDemoDescriptions } from "@/lib/demo-descriptions";
 import type { CoachNotes, Job } from "@/lib/submit";
 import { Markdown } from "../../markdown";
 import { CheckIcon, DownloadIcon, Warning, secondaryButtonClass } from "../../ui";
@@ -43,6 +44,8 @@ function StepList({ todos, stopped }: { todos: Todo[]; stopped: boolean }) {
           <StepIcon status={t.status} stopped={stopped} />
           <span className={`min-w-0 flex-1 [overflow-wrap:anywhere] ${t.status === "completed" ? "text-muted" : ""}`}>
             {t.content}
+            {t.status === "completed" && <span className="sr-only"> (done)</span>}
+            {t.status === "in_progress" && !stopped && <span className="sr-only"> (in progress)</span>}
             {stopped && t.status === "in_progress" && <span className="font-normal text-red-300"> (stopped here)</span>}
           </span>
         </li>
@@ -156,9 +159,9 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
         <div className="space-y-3">
           <p className="eyebrow">TT Coach{job.engine === "deepagents" ? " · deep agent" : ""}</p>
           <h1 className="headline text-3xl [overflow-wrap:anywhere] sm:text-4xl">&ldquo;{str(job.params.request) ?? "Your request"}&rdquo;</h1>
-          {job.message && job.status !== "failed" && (
-            <p className="text-muted [overflow-wrap:anywhere]">
-              {running && <span className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent" />}
+          {job.status !== "failed" && (
+            <p role="status" className="text-muted [overflow-wrap:anywhere]">
+              {running && job.message && <span aria-hidden className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent" />}
               {job.message}
             </p>
           )}
@@ -175,13 +178,16 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
           <section key={o.kind} className="coach-output min-w-0 space-y-3">
             <div className="flex items-end justify-between gap-3">
               <div className="min-w-0">
-                <h2 className="headline text-3xl [overflow-wrap:anywhere]">{o.title}</h2>
-                <p className="text-sm text-muted [overflow-wrap:anywhere]">{o.summary}</p>
+                <h2 id={`output-${o.kind}-title`} className="headline text-3xl [overflow-wrap:anywhere]">{o.title}</h2>
+                <p id={`output-${o.kind}-description`} className="text-sm text-muted [overflow-wrap:anywhere]">
+                  {job.id === "demo-coach" ? coachDemoDescriptions[o.kind] ?? o.summary : o.summary}
+                </p>
               </div>
-              <a href={o.url} download className={`${secondaryButtonClass} h-11 shrink-0`}><DownloadIcon /> Save</a>
+              <a href={o.url} download aria-label={`Save ${o.title}`} className={`${secondaryButtonClass} h-11 shrink-0`}><DownloadIcon /> Save</a>
             </div>
             <video
               src={`${o.url}#t=0.001`} controls playsInline preload="metadata"
+              aria-labelledby={`output-${o.kind}-title`} aria-describedby={`output-${o.kind}-description`}
               className={`coach-video video-frame mx-auto block w-full border object-contain ${o.kind === "highlights" ? "aspect-video" : "max-h-[78svh]"}`}
             />
           </section>

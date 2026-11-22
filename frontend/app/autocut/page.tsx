@@ -7,6 +7,7 @@ import { submitJob } from "@/lib/submit";
 import { LIMITS } from "@/lib/validate";
 import { PageIntro, RadioTiles, SubmitBar, labelClass, labelTextClass } from "../ui";
 import { ExampleSection } from "../examples";
+import { demoDescriptions } from "@/lib/demo-descriptions";
 import { VideoPicker } from "../video-picker";
 
 const MODES = [
@@ -76,7 +77,7 @@ export default function AutoCutPage() {
             </div>
             <input
               id="top_n" name="top_n" type="range" min={A.top_n.min} max={A.top_n.max} value={topN}
-              onChange={(e) => setTopN(Number(e.target.value))} className="mt-3 h-8 w-full accent-accent"
+              onChange={(e) => setTopN(Number(e.target.value))} className="mt-3 h-11 w-full accent-accent sm:h-8"
             />
           </div>
         )}
@@ -84,8 +85,8 @@ export default function AutoCutPage() {
       <SubmitBar label="Cut my match" progress={progress} error={error} startingLabel={starting} blocked={blocked} />
     </form>
       <ExampleSection
-        before={{ src: "/examples/autocut-before.mp4", label: "Before", caption: "A 3.5-minute phone recording of a match" }}
-        after={{ src: demoAssets.autocut.url, label: "After", caption: `Highlights: the top 4 rallies, ${Math.round(demoAssets.autocut.duration)} s` }}
+        before={{ src: "/examples/autocut-before.mp4", label: "Before", caption: "A phone records both players as they serve, rally and get ready for the next point." }}
+        after={{ src: demoAssets.autocut.url, label: "After", caption: demoDescriptions.autocut }}
         steps={[
           "Upload your match or paste a video link.",
           "Choose a highlight reel or a cut of every rally.",

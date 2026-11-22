@@ -94,6 +94,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             {url && canPreview ? (
               <video
                 key={url} src={`${url}#t=0.001`} controls playsInline preload="metadata"
+                aria-label="Preview of your chosen video"
                 onLoadedMetadata={(e) => {
                   // videoWidth is 0 when the browser can't decode the picture (e.g. HEVC on some desktops):
                   // that's "unknown", not "no video", so the server makes that call.
@@ -121,7 +122,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                 </p>
               </div>
               <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
-                Swap
+                Swap<span className="sr-only"> video</span>
               </label>
               <button type="button" onClick={clear} aria-label="Remove video" className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white">
                 <CloseIcon />
@@ -158,7 +159,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
         ) : (
           <label
             htmlFor={id}
-            className={`upload-target relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden text-center transition active:scale-[.99] ${dragging ? "scale-[1.01] ring-4 ring-white" : ""}`}
+            className={`upload-target relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden text-center transition motion-safe:active:scale-[.99] ${dragging ? "motion-safe:scale-[1.01] ring-4 ring-white" : ""}`}
           >
             <span className="grid place-items-center">
               <UploadIcon className="size-9" />
