@@ -13,7 +13,7 @@ const featured = [
 
 export function HomeGear() {
   return (
-    <section aria-labelledby="home-gear-title" className="home-section" data-ball-space>
+    <section aria-labelledby="home-gear-title" className="home-section">
       <div className="home-section-heading">
         <h2 id="home-gear-title" className="section-title">Gear picks</h2>
         <Link href="/rubbers" prefetch={false} className="home-text-link">Rubber Finder <ChevronIcon className="size-4 -rotate-90" /></Link>

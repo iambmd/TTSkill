@@ -23,9 +23,9 @@ const equipmentPreview = {
 
 export default function Home() {
   return (
-    <div className="home-page" data-ball-space>
+    <div className="home-page">
       <HomeMotion />
-      <section aria-labelledby="match-title" className="home-hero" data-ball-space>
+      <section aria-labelledby="match-title" className="home-hero">
         <div className="home-hero-copy">
           <h1 id="match-title" className="headline">Highlights and coaching</h1>
           <p className="text-muted">Turn your match video into highlights and actionable coaching.</p>
@@ -35,7 +35,7 @@ export default function Home() {
       <HomeGear />
       <FeatureGrid equipment={equipmentPreview} />
       <DemoStrip />
-      <footer className="home-footer" data-ball-space>
+      <footer className="home-footer">
         <Link href="/" prefetch={false} className="headline text-2xl">TT<span className="text-accent">Skill</span></Link>
         <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-1">
           {footerLinks.map(([href, label]) => (

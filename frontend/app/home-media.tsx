@@ -45,9 +45,9 @@ export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?:
   }, []);
 
   return (
-    <section aria-labelledby="home-features-title" className="home-section" data-home-enter data-ball-space>
+    <section aria-labelledby="home-features-title" className="home-section" data-home-enter>
       <h2 id="home-features-title" className="section-title home-section-title">Explore TTSkill</h2>
-      <ul ref={gridRef} className="home-features" data-ball-space>
+      <ul ref={gridRef} className="home-features">
         {features.map((feature) => {
           const playing = !reduceMotion && active?.id === feature.id;
           return (
@@ -133,7 +133,7 @@ export function DemoStrip() {
   const [mode, setMode] = useState<DemoMode>("after");
 
   return (
-    <section aria-labelledby="home-demos-title" className="home-section" data-home-enter data-ball-space>
+    <section aria-labelledby="home-demos-title" className="home-section" data-home-enter>
       <div className="home-section-heading">
         <h2 id="home-demos-title" className="section-title">See it in action</h2>
         <div className="home-demo-toggle" role="group" aria-label="Demo version">
@@ -142,7 +142,7 @@ export function DemoStrip() {
           ))}
         </div>
       </div>
-      <div className="home-demos" data-ball-space>
+      <div className="home-demos">
         {demos.map((demo) => <DemoPlayer key={`${demo.id}-${mode}`} demo={demo} mode={mode} />)}
       </div>
     </section>

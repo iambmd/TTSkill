@@ -84,6 +84,18 @@ body {
   }
 }
 
+.click-ball {
+  position: fixed;
+  z-index: 40;
+  width: .6875rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-ball);
+  box-shadow: inset 1px 1px var(--training-on-action);
+  pointer-events: none;
+  opacity: 0;
+}
+
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;

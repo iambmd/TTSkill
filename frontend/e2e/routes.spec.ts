@@ -14,6 +14,36 @@ const pages = [
   ["/jobs/demo-match", /you play like/i],
 ] as const;
 
+test("the click ball follows navigation and the favicon uses the paddle", async ({ page }) => {
+  await page.goto("/coach");
+  const favicon = page.locator('link[rel="icon"]');
+  await expect(favicon).toHaveAttribute("href", "/paddle.svg");
+  await expect(favicon).toHaveAttribute("type", "image/svg+xml");
+
+  const ball = page.locator(".click-ball");
+  const animations = () => ball.evaluate(element => element.getAnimations().length);
+  await expect(ball).toHaveCSS("pointer-events", "none");
+
+  const request = page.getByLabel("What do you want?");
+  await request.click();
+  await expect.poll(animations).toBe(1);
+  await expect(request).toBeFocused();
+
+  const navigation = page.getByRole("navigation", { name: "Site navigation" });
+  await navigation.getByRole("link", { name: "Breakdown" }).click();
+  await expect(page).toHaveURL(/\/breakdown$/);
+  await expect.poll(animations).toBe(0);
+
+  const heading = page.getByRole("heading", { name: "Swing like the pros." });
+  await heading.click();
+  await expect.poll(animations).toBe(1);
+
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await expect.poll(animations).toBe(0);
+  await heading.click();
+  expect(await animations()).toBe(0);
+});
+
 for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 }]) {
   const mobile = viewport.width === 375;
   for (const theme of ["dark", "light"] as const) {

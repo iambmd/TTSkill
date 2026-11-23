@@ -323,18 +323,6 @@
   padding: .375rem .875rem;
 }
 
-.home-ball {
-  position: fixed;
-  z-index: 40;
-  width: .6875rem;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: var(--color-ball);
-  box-shadow: inset 1px 1px var(--training-on-action);
-  pointer-events: none;
-  opacity: 0;
-}
-
 @media (min-width: 40rem) {
   .home-hero { grid-template-columns: minmax(0, 2fr) minmax(13rem, 1fr); }
   .home-features { grid-template-columns: repeat(3, minmax(0, 1fr)); }

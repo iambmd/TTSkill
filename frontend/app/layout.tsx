@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Barlow, Barlow_Condensed } from "next/font/google";
+import { ClickBall } from "./click-ball";
 import { SiteHeader } from "./site-header";
 
 // Runs in <head> before paint so a saved light choice never flashes dark first. Key matches theme-toggle.tsx.
@@ -14,7 +15,7 @@ const condensed = Barlow_Condensed({
 export const metadata: Metadata = {
   title: "TTSkill",
   description: "AI technique breakdowns and automatic match highlights for table tennis.",
-  icons: { icon: { url: "/paddle-cursor.svg", type: "image/svg+xml" } },
+  icons: { icon: { url: "/paddle.svg", type: "image/svg+xml" } },
 };
 
 export const viewport: Viewport = {
@@ -36,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </a>
         <SiteHeader />
         <main id="main-content" tabIndex={-1} className="mx-auto max-w-5xl px-4 pt-6 pb-16 sm:pt-10">{children}</main>
+        <ClickBall />
       </body>
     </html>
   );
