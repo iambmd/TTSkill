@@ -1,5 +1,7 @@
 node_modules/
 .next/
+/frontend/playwright-report/
+/frontend/test-results/
 out/
 next-env.d.ts
 *.tsbuildinfo

@@ -2,6 +2,10 @@
 
 Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for project conventions. Work is on `main`. Metrics below are development data.
 
+## Frontend browser tests
+
+From `frontend/`, run `npx playwright install chromium` once, then `npm run test:e2e`. The runner starts a local Next.js server on port 3110 with an unreachable analysis backend and covers both themes at 1440 px and 375 px. Stop any existing `next dev` process in the checkout before running the suite or building.
+
 ## Home discovery page (2026-11-22)
 
 - Home serves its gear cards, mini quiz, and demo links independently of the analysis server. A failed `/api/health` replaces the upload target with the offline card. **Retry** rechecks health and focuses the upload target when the service is back.

@@ -42,6 +42,7 @@ selling the app.
 | **Barlow, Barlow Condensed** fonts (`backend/technique/fonts/`, plus `next/font/google` in the frontend) | SIL Open Font License 1.1 (`backend/technique/fonts/OFL.txt`) | You may bundle them and use them commercially. Keep `OFL.txt`, and don't sell the fonts on their own. |
 | **ESLint** and **eslint-config-next** (frontend development dependencies, added 2026-11-20) | MIT for both | Used for lint checks. The frontend lockfile records licenses for their transitive dependencies. |
 | **Playwright for Python** (optional purchase link checker) | Apache-2.0 | Used by `scripts/check_buy_links.py --browser`. The default checker uses the standard library. |
+| **Playwright Test**, **playwright** and **playwright-core** (frontend development dependencies) | Apache-2.0 | Run the browser tests in `frontend/e2e/`. The frontend lockfile records their transitive dependencies. |
 | **caniuse-lite** (npm, used by the build) | CC-BY-4.0 | Data used at build time; the attribution is in its package. |
 | **lightningcss** (npm, Tailwind's CSS engine, dev only), **certifi**, **orjson** (Python) | MPL-2.0 (orjson: MPL-2.0 AND (Apache-2.0 OR MIT)) | File-level copyleft, which only applies if you modify those files. |
 | **Pro facts** (heights, bat hands, grips, equipment setups in `players.json` and `frontend/lib/pros.json`, from Wikipedia, Olympedia, ultraspin, tabletennisteacher and others) | Facts aren't copyrightable; the source pages keep theirs | Keep the per-player sources (they're in the files), and don't copy page text. See #9 for the names. |

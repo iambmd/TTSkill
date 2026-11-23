@@ -39,7 +39,7 @@ export function ProPhoto({ name, wiki }: { name: string; wiki: string[] }) {
       <div className="grid size-20 place-items-center overflow-hidden rounded-2xl border border-line bg-white/[0.04]">
         {photo
           // eslint-disable-next-line @next/next/no-img-element -- remote Commons thumbnail, no need for next/image here
-          ? <img src={photo.src} alt={name} className="size-full object-cover object-top" loading="lazy" />
+          ? <img src={photo.src} alt={name} className="size-full object-cover object-top" loading="lazy" onError={() => setPhoto(null)} />
           : <span className="text-3xl font-bold text-muted">{initials(name)}</span>}
       </div>
       {photo && (

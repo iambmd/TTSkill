@@ -3,6 +3,15 @@
   transition-property: none;
 }
 
+/* The scroll container clips an outline drawn outside a link. */
+.site-nav-links a:focus-visible {
+  outline-offset: -2px;
+}
+
+.site-nav-links a[aria-current="page"]:focus-visible {
+  outline-color: var(--training-on-action);
+}
+
 :is([role="alert"], .text-red-100, .text-red-200, .text-red-300, .text-red-400) {
   color: var(--training-error);
 }

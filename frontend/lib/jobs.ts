@@ -25,7 +25,7 @@ async function backend(path: string, init?: RequestInit): Promise<Response> {
   }
 }
 
-/** Reachability check for Home. Cached demo mode can work without a backend. */
+/** Reachability check for Home. An offline backend is a successful probe with ok: false. */
 export async function backendHealth(): Promise<Response> {
   let ok = DEMO_MODE && !PUBLIC_API_URL;
   if (!ok && BACKEND_URL) {
@@ -33,7 +33,7 @@ export async function backendHealth(): Promise<Response> {
     const body = await res.json().catch(() => null);
     ok = res.ok && body?.ok === true;
   }
-  return Response.json({ ok }, { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } });
+  return Response.json({ ok }, { headers: { "cache-control": "no-store" } });
 }
 
 /** Summarizes a form for the job record, replacing files with their name and size. */

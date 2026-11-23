@@ -545,7 +545,7 @@ it("reports an offline tunnel and keeps local demo mode available", async () => 
   vi.stubGlobal("fetch", vi.fn(async () => new Response("tunnel error", { status: 530 })));
   const proxy = await route("health", { NEXT_PUBLIC_API_URL: "https://offline.trycloudflare.com" });
   const offline = await proxy.GET!(get(), ctx({}));
-  expect(offline.status).toBe(503);
+  expect(offline.status).toBe(200);
   expect(await offline.json()).toEqual({ ok: false });
   const demo = await route("health", { DEMO_MODE: "1" });
   expect((await demo.GET!(get(), ctx({}))).status).toBe(200);

@@ -219,7 +219,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
   if (error) {
     return (
       <div className="mx-auto max-w-xl space-y-4 rounded-3xl border border-red-500/30 bg-red-500/10 p-6">
-        <p className="section-title text-4xl">Job not found</p>
+        <h1 className="section-title text-4xl">Job not found</h1>
         <p role="alert" className="text-red-200">{error}</p>
         <Link href="/" className={secondaryButtonClass}>Back home</Link>
       </div>

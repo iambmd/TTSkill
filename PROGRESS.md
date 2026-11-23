@@ -456,3 +456,20 @@ These exact offers were excluded by the price screen. The amounts are recorded h
 
 - Moved the cursor from Home to the global stylesheet. Fine pointers keep the paddle-face hotspot, the text cursor on editable fields, and the native hand on interactive controls. The upload wait and disabled submit states keep their own cues.
 - Playwright MCP checked the cursor on Home, Coach, and Rubber Finder in both themes. A touch-emulated Coach page kept its default cursor, and the shared SVG returned HTTP 200.
+
+## Frontend browser audit (2026-11-22)
+
+| Page | Problem | Fix |
+| --- | --- | --- |
+| All pages | The browser requested a missing favicon on first load. | Added the existing paddle asset to the site metadata. |
+| Home | The routine offline health check generated a 503 in the browser console. | The frontend health probe returns `ok: false` as a normal response. Retry still checks whether live analysis is back. |
+| Desktop navigation | The horizontal scroller clipped the keyboard focus outline above and below the links. | Moved the outline inside the link and used a high-contrast outline on the selected tab. |
+| Pro Setups | Chen Meng and Sabine Winter each triggered a failed Wikipedia lookup before reaching the correct article. A failed portrait image could remain broken. | Used the canonical titles and restored the initials when a thumbnail fails. |
+| Pro Setups | The Fan Zhendong ALC blade and Dignics 09C rubber photos sometimes returned rate-limit pages instead of images. | Replaced the two photo URLs with verified JPEGs. [Fan Zhendong ALC](https://www.butterfly-global.com/en/products/detail/37221.html) · [Dignics 09C](https://www.butterfly-global.com/en/products/detail/06070.html) |
+| Job results | “Job not found” looked like a heading but was a paragraph. | Marked it as the page heading and kept the link back to Home. |
+
+Playwright MCP audited Home, Auto-Cut, Breakdown, Coach, Pro Match, Rubber Finder, Pro Setups, all four cached job results, an unavailable live job, and the 404 page. The matrix used dark and light mode at 1440 px and at 375 px with touch emulation. The local MCP server used the installed Chromium because the built-in connection expected a missing Google Chrome executable.
+
+With FastAPI running, a real drag-and-drop upload produced five rallies, a text-only Breakdown finished, and a video Coach job produced coaching notes and three outputs. The mobile pass exercised the quiz, Pro Setups search, buy-link destinations, theme persistence, navigation, Home’s before/after players, and cached videos for all four job types. The regression suite in `frontend/e2e/` starts Next.js with an unreachable backend and uses fixtures for third-party photos.
+
+The production build, all 180 frontend unit tests, and all 49 Playwright tests passed. Lint finished with five existing image warnings.

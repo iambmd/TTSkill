@@ -14,6 +14,7 @@ const condensed = Barlow_Condensed({
 export const metadata: Metadata = {
   title: "TTSkill",
   description: "AI technique breakdowns and automatic match highlights for table tennis.",
+  icons: { icon: { url: "/paddle-cursor.svg", type: "image/svg+xml" } },
 };
 
 export const viewport: Viewport = {
