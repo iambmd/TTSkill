@@ -29,6 +29,18 @@ describe("rubber purchase menu", () => {
     expect(menu.disclosure && menu.amazonDisclosure).toBe(true);
   });
 
+  it("puts other Amazon sellers after specialist retailers even with an affiliate tag", () => {
+    const other: BuyLink = { store: "Amazon", url: "https://www.amazon.com/dp/B100000000", type: "amazon-other" };
+    const mega: BuyLink = { ...links[2], status: "unverified" };
+    const menu = buyMenu({ buyLinks: [other, mega, links[3]] }, {
+      Amazon: { host: "amazon.com", param: "tag", tag: "example-20" },
+      Megaspin: { host: "megaspin.net", param: "aid", tag: "example" },
+    });
+    expect(menu.links.map(({ store }) => store)).toEqual(["Paddle Palace", "Megaspin", "Amazon"]);
+    expect(menu.links[1].status).toBe("unverified");
+    expect(menu.links[2].url).toBe(`${other.url}?tag=example-20`);
+  });
+
   it("preserves a legacy URL until a list is provided, including an explicit empty list", () => {
     const legacy = { name: "Legacy example", buyUrl: "https://example.com/product" };
     expect(buyMenu(withRubberBuyLinks(legacy), {}).links[0].url).toBe(legacy.buyUrl);

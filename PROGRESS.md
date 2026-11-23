@@ -289,24 +289,160 @@ The production frontend and a local FastAPI instance processed the existing matc
 
 ## US rubber purchase links (2026-11-22)
 
-The purchase catalog contains 202 verified links across 174 distinct names, covering 165 of the 984 ratings entries and 17 of the 21 distinct Pro Setups labels. Counts include separate display names that refer to the same model. Product discovery used the stores' own catalogs, and each published link returned HTTP 200 with a matching product name in Chromium or a direct HTTP check.
+The catalog has 320 verified links and 90 Megaspin links marked unverified. Verified coverage rose from 165 to 244 of the 984 Rubber Finder entries after reviewing 100 entries that started without a verified link.
 
-| Rubber | Links added | Anything not found or unverified |
+| Rubber Finder scope | Verified | Remaining gaps |
+| --- | ---: | --- |
+| This round’s 100 priority entries | 79 | 16 with a Megaspin candidate only and 5 with no confirmed US listing |
+| All 984 ratings entries | 244 | 740 without a verified link, down from 819 |
+| Previous high-priority entries | Existing Butterfly US, Paddle Palace, DHS Sports USA and JOOLA USA links plus additional Amazon links | Butterfly US Tenergy 64 still needs a title check. The two pro Hurricane 3 blue-sponge labels specifying 40° or 40.5° and 2.1 mm, the pro Hurricane 8 orange 37° and 2.1 mm, and Tibhar K3 Pro Special still lack exact verified matches. |
+
+The ten requested brands ranked first. Within that group and among the remaining brands, the audit used Megaspin’s popularity order where available, then exact listings at specialist stores and the catalog’s user ratings as tie-breakers. Current retailer and manufacturer listings provided a check against discontinued models. The audit skipped discontinued listings such as Butterfly Spin Art, Yasaka Rising Dragon, and DHS PF4-50. [Megaspin popularity order](https://www.megaspin.net/store/default.asp?brand=All&cid=rubbers&sort=popularity) · [Tibhar current rubber range](https://tibhar.info/en/product-category/rubbers/) · [Donic current rubber range](https://www.donic.com/belaege/)
+
+The trusted Butterfly Rubber tab listed 22 exact ASINs, including Roundell Soft. The JOOLA and STIGA storefronts showed rackets and accessories in the tabs checked. The audit found 20 exact Amazon other-seller listings with visible US offer prices that passed the threshold. Buy menus label them “Amazon (other seller)” and put them last even when an affiliate tag is configured. [Butterfly Rubber tab](https://www.amazon.com/stores/page/4325729E-0DDF-4FA8-A737-27BCC08A2070) · [JOOLA storefront](https://www.amazon.com/stores/JOOLANorthAmerica/page/54862E6E-D0CD-466E-BBDD-72DB8E617060) · [STIGA storefront](https://www.amazon.com/stores/STIGA/page/BC1F59CB-CE5D-44D6-BFC1-F7EF88B33AE4)
+
+The checker retried Megaspin product URLs using a desktop Chrome User-Agent with a 2.5-second delay between requests. The manual review links below still returned HTTP 403. The app labels these links “unverified” and shows “Not sold in the US yet” where the catalog has no US source.
+
+### Rejected Amazon offers
+
+These exact offers were excluded by the price screen. The amounts are recorded here for the audit.
+
+| Rubber | ASIN | Amazon offer vs. catalog reference |
 | --- | --- | --- |
-| Butterfly Tenergy 05, Tenergy 05 FX, Dignics 05, Dignics 09C, Zyre 03 | Butterfly US and Paddle Palace | Megaspin candidate links unverified |
-| Butterfly Tenergy 64 | Paddle Palace | [Butterfly US candidate](https://shop.butterflyonline.com/tenergy-64) unverified because its response did not contain a product title |
-| Butterfly Glayzer and Glayzer 09C | Separate Butterfly US and Paddle Palace pages for each model | Rejected the 09C page as a match for standard Glayzer |
-| DHS Hurricane 3 and Hurricane 3 Neo | Separate DHS Sports USA and Paddle Palace pages for each model | Megaspin candidate links unverified |
-| DHS Hurricane 3 National blue and orange, and Neo National blue | Paddle Palace product page for each sponge and edition | The two pro Hurricane 3 blue-sponge labels specifying 40° or 40.5° and 2.1 mm still have no exact verified match |
-| DHS Hurricane 8-80 | DHS Sports USA | Pro Hurricane 8 orange, 37°, 2.1 mm has no exact verified match |
-| JOOLA Trinity Charged | JOOLA USA | Megaspin candidate unverified |
-| JOOLA Dynaryz ZGR | JOOLA USA | An alternate JOOLA URL now opens Trinity Hybrid and was rejected |
-| Andro NuZN 55 and Rasanter R53, Nittaku Fastarc G-1 and Moristo SP, Tibhar Hybrid K3 and Quantum X Pro, Yasaka Mark V | Paddle Palace | No exact US product page verified for the pro label Tibhar K3 Pro Special |
-| Other ratings entries | Full per-model links in `shared/rubber-buy-links.json` | 819 ratings entries have no verified link from the requested sources |
+| DHS Hurricane 9 Pink | B0HR6G223Q | $14.95 vs. $38.00 |
+| DHS NEO Hurricane 3 Provincial (Blue Sponge) | B07TMG97NG | $66.95 vs. $100.00 |
+| DHS NEO Hurricane 3 Provincial (Blue Sponge) | B0HHMZ4YN2 | $52.22 vs. $100.00 |
 
-Megaspin blocked direct verification. The [Tenergy 05 candidate](https://www.megaspin.net/store/default.asp?pid=b-tenergy-05) remained unverified after a Chromium check. Amazon access did not allow confirmation of an official storefront and first-party seller, so there are no Amazon links in this audit. Paddle Palace's listings are retail links, including the models for which it is the US distributor. [Paddle Palace distributor information](https://www.paddlepalace.com/pages/about-us)
+<details>
+<summary>Ranked audit of 100 entries and Megaspin manual review links</summary>
 
-Frontend lint and build passed, along with 178 frontend tests and eight equipment tests. Chromium at 375 px verified both Gear pages, their link attributes, and the empty state. Tests also cover affiliate ordering, plain URLs when tags are unset, and legacy single-link records.
+| Rank | Rubber | Verified US sources | Megaspin manual review |
+| ---: | --- | --- | --- |
+| 1 | Xiom Vega Pro | Go Table Tennis, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-pro) |
+| 2 | Xiom Vega Europe | Go Table Tennis, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-europe) |
+| 3 | Xiom Omega IV Pro | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-iv-pro) |
+| 4 | Butterfly Tackiness Chop 2 | Paddle Palace | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-tack-chop-ii) |
+| 5 | Nittaku Hurricane Pro III Turbo Blue | Paddle Palace, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=n-h3-pro-t-b) |
+| 6 | Andro Rasanter V42 | Go Table Tennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=andro-rasanter-v42) |
+| 7 | Andro Rasanter V47 | Go Table Tennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=andro-rasanter-v47) |
+| 8 | Nittaku Hurricane Pro III Turbo Orange | Paddle Palace, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=n-h3-pro-t) |
+| 9 | Andro Rasanter R50 | Go Table Tennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=andro-rasanter-r50) |
+| 10 | Xiom Omega VII Hyper | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-hyper) |
+| 11 | Xiom Vega Korea | TableTennisStore, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-korea) |
+| 12 | Xiom Omega VII Tour | eTableTennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-tour) |
+| 13 | Xiom Omega VII Asia | eTableTennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-asia) |
+| 14 | Butterfly Roundell Soft | Amazon (official), TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-roundell-soft) |
+| 15 | Xiom Omega VII Euro | Go Table Tennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-euro) |
+| 16 | Xiom Vega Asia | TableTennisStore, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-asia) |
+| 17 | Donic Desto F1 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=d-desto-f1) |
+| 18 | Xiom Jekyll & Hyde V52.5 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-j-h-v525) |
+| 19 | Xiom Vega Tour | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-tour-r) |
+| 20 | Donic Desto F2 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=d-desto-f2) |
+| 21 | DHS NEO Skyline 3 TG3 | Paddle Palace | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-skyline-3-neo-40) |
+| 22 | DHS Skyline TG3 | Double Happiness USA, Paddle Palace | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-skyline-3-39) |
+| 23 | Xiom Omega 8 Pro | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-8-pro) |
+| 24 | Donic BlueGrip C1 | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=d-bluegrip-c1) |
+| 25 | DHS Tin Arc | Table Tennis One Stop Shopping | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-tinarc-med) |
+| 26 | DHS PF4 | Double Happiness USA | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-pf4) |
+| 27 | Stiga Mantra PRO M | Go Table Tennis, Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=s-mantra-pro-m) |
+| 28 | Tibhar Nimbus Soft | Table Tennis One Stop Shopping | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=t-nimbus-soft) |
+| 29 | JOOLA Rhyzer 43 | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=j-rhyzer-43) |
+| 30 | DHS Tin Arc 5 | Double Happiness USA, Megaspin | — |
+| 31 | DHS Hurricane 9 Pink | Double Happiness USA | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-9-pink) |
+| 32 | DHS G888 | Double Happiness USA | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-g888) |
+| 33 | Nittaku Flyatt Hard | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=nittaku-flyatt-hard) |
+| 34 | Tibhar Nimbus | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=t-nimbus) |
+| 35 | Xiom Vega X | Go Table Tennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-x) |
+| 36 | Xiom Omega V Euro | eTableTennis | — |
+| 37 | Tibhar Sinus | TableTennisStore | — |
+| 38 | Xiom Omega VII Pro | eTableTennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-pro) |
+| 39 | DHS G666 | Table Tennis One Stop Shopping | — |
+| 40 | Tibhar Sinus Sound | Table Tennis One Stop Shopping | — |
+| 41 | Xiom Vega Asia DF | TableTennisStore | — |
+| 42 | Xiom Vega Japan | Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-japan) |
+| 43 | Yasaka Original | Go Table Tennis | — |
+| 44 | Xiom Jekyll & Hyde Z52.5 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-j-h-z525) |
+| 45 | Tibhar Quantum S | Table Tennis One Stop Shopping | — |
+| 46 | DHS Gold Arc 5 | Table Tennis One Stop Shopping | — |
+| 47 | Tibhar Hybrid K2 | Table Tennis One Stop Shopping | — |
+| 48 | Andro Hexer | TableTennisStore | — |
+| 49 | DHS NEO Skyline 2 TG2 | Table Tennis One Stop Shopping | — |
+| 50 | Butterfly Roundell Hard | eTableTennis | — |
+| 51 | DHS Hurricane 2 (H2) | Table Tennis One Stop Shopping | — |
+| 52 | DHS NEO Hurricane 2 | Table Tennis One Stop Shopping | — |
+| 53 | Xiom Jekyll & Hyde V47.5 | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-j-h-v475) |
+| 54 | Donic Slice 40 | TableTennisStore | — |
+| 55 | Tibhar Rapid Soft | Table Tennis One Stop Shopping | — |
+| 56 | Xiom Vega Intro | Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=xiom-vega-intro) |
+| 57 | DHS Skyline TG2 | Table Tennis One Stop Shopping | — |
+| 58 | Stiga Mantra H | Amazon (other seller) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=s-mantra-h) |
+| 59 | DHS NEO Hurricane 3 Provincial (Blue Sponge) | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-prov-blue) |
+| 60 | JOOLA Samba | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=j-samba) |
+| 61 | Xiom Vega Elite | Amazon (other seller) | — |
+| 62 | Stiga Mantra M | Amazon (other seller) | — |
+| 63 | Tibhar Vari Spin | No US source found | — |
+| 64 | Tibhar Vari Spin D.TecS | No US source found | — |
+| 65 | Tibhar Speedy Spin | No US source found | — |
+| 66 | Donic Vario Big Slam | No US source found | — |
+| 67 | Donic Vario Soft | No US source found | — |
+| 68 | Sanwei Target National | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=sanwei-target-national) |
+| 69 | Sanwei Gear Hyper | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=sanwei-gear-hyper) |
+| 70 | Victas TRIPLE Double Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-t-d-extra) |
+| 71 | Victas V > 11 Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-11-extra) |
+| 72 | Gewo Nexxus EL Pro 53 Superselect | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-53-ss) |
+| 73 | Victas V > 22 Double Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-22-d-e) |
+| 74 | Gewo Nexxus XT Pro 48 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-xt-pro-48) |
+| 75 | Gewo Nexxus EL Pro 48 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-48) |
+| 76 | Gewo Nexxus EL Pro 48 Superselect | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-48-ss) |
+| 77 | Victas VS > 401 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-vs-401) |
+| 78 | Victas V > 15 Sticky | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-15-sticky) |
+| 79 | Sanwei Ultraspin T88 | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=sanwei-ultraspin-t88) |
+| 80 | Gewo Nexxus EL Pro 45 Superselect | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-45-ss) |
+| 81 | Victas V > 15 Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-15-extra) |
+| 82 | Gewo Nexxus EL Pro 50 Hard | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-50) |
+| 83 | Gewo Nexxus EL Pro 43 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-pro-43-el) |
+| 84 | Victas V > 20 Double Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-20-d-e) |
+| 85 | Victas V > 20 Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-20-e) |
+| 86 | Victas VJC > 07 Sticky Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-vjc-07-se) |
+| 87 | Victas VS > 402 Limber | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-vs-402-limb) |
+| 88 | Victas Ventus Extra | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-ventus-extra) |
+| 89 | Gewo Inventus XT Pro 50.0 | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-inventus-xt-pro-50) |
+| 90 | Gewo Nexxus XT Pro 50 Hard | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-xt-pro-50) |
+| 91 | Gewo Proton Neo 325 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-proton-neo-325) |
+| 92 | Victas VJ > 07 Regular | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-07-regular) |
+| 93 | Gewo Neoflexx EFT 40 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-40) |
+| 94 | Gewo Neoflexx EFT 45 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-45) |
+| 95 | Gewo Nexxus EL Pro 38 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-pro-38-el) |
+| 96 | Gewo Nexxus EL Pro 53 Hard | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-53) |
+| 97 | Gewo Codexx EL Pro 52 | TableTennisStore | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-codexx-el-pro-52) |
+| 98 | Gewo Neoflexx EFT 48 | eTableTennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-48) |
+| 99 | Victas V > 15 Stiff | Pending Megaspin review | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=victas-v-15-stiff) |
+| 100 | Gewo Proton Neo 375 | eTableTennis | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=gewo-proton-neo-375) |
+
+</details>
+
+<details>
+<summary>Megaspin manual review for previously covered entries</summary>
+
+| Rubber | Megaspin manual review |
+| --- | --- |
+| Butterfly Dignics 05 | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-dignics-05) |
+| Butterfly Dignics 09C | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-dignics-09c) |
+| Butterfly Glayzer | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-glayzer) |
+| Butterfly Glayzer 09C | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-glayzer-09c) |
+| Butterfly Tenergy 05 | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-tenergy-05) |
+| Butterfly Tenergy 05 FX | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-tenergy-05-fx) |
+| Butterfly Tenergy 64 | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-tenergy-64) |
+| Butterfly Zyre 03 | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=b-zyre-03) |
+| DHS Hurricane 3 (H3) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-3-39) |
+| DHS Hurricane 3 (National) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-h3-n) |
+| DHS Hurricane 3 National (Blue Sponge) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-h3-n-blue) |
+| DHS NEO Hurricane 3 | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-39) |
+| DHS NEO Hurricane 3 National (Blue Sponge) | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-n-bl) |
+| JOOLA Dynaryz ZGR | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=j-dynaryz-zgr) |
+| JOOLA Trinity Charged | [Unverified listing](https://www.megaspin.net/store/default.asp?pid=j-trinity-charged-h-c) |
+
+</details>
 
 ## Home discovery page (2026-11-22)
 

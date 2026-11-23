@@ -30,13 +30,16 @@ export function buyMenu(data: BuyLinkData, config: AffiliateConfig = affiliates)
     try { url = new URL(link.url); } catch { return []; }
     if (!["https:", "http:"].includes(url.protocol)) return [];
     const host = url.hostname.replace(/^www\./, "");
-    if (host === "amazon.com" && link.type !== "amazon-official") return [];
+    const isAmazon = link.type === "amazon-official" || link.type === "amazon-other";
+    if (isAmazon !== (host === "amazon.com")) return [];
     const rule = Object.hasOwn(config, link.store) ? config[link.store] : undefined;
     if (rule?.host !== host || !rule.tag || !rule.param) return [{ ...link, affiliate: false }];
     url.searchParams.set(rule.param, rule.tag);
     return [{ ...link, url: url.href, affiliate: true }];
   });
-  menu.sort((a, b) => Number(b.affiliate) - Number(a.affiliate) || priority(a) - priority(b));
+  menu.sort((a, b) => Number(a.type === "amazon-other") - Number(b.type === "amazon-other")
+    || Number(a.status === "unverified") - Number(b.status === "unverified")
+    || Number(b.affiliate) - Number(a.affiliate) || priority(a) - priority(b));
   return {
     links: menu,
     disclosure: Object.values(config).some((rule) => rule?.tag && rule.param),

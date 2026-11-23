@@ -4,7 +4,8 @@ import catalog from "../../shared/rubber-buy-links.json";
 export type BuyLink = {
   store: string;
   url: string;
-  type: "official" | "amazon-official" | "retailer";
+  type: "official" | "amazon-official" | "retailer" | "amazon-other";
+  status?: "unverified";
 };
 
 export type BuyLinkData = {

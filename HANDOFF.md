@@ -16,14 +16,14 @@ Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for p
 
 | Frontend environment variable | Effect |
 | --- | --- |
-| `NEXT_PUBLIC_AMAZON_TAG` | Appends `tag` to Amazon links after an official storefront and first-party seller have been verified. Also enables the Amazon Associate disclosure. |
+| `NEXT_PUBLIC_AMAZON_TAG` | Appends `tag` to approved Amazon product links and enables the Amazon Associate disclosure. |
 | `NEXT_PUBLIC_MEGASPIN_TAG` | Appends Megaspin's `aid` to its product URLs. |
 | `NEXT_PUBLIC_PADDLE_PALACE_TAG` | Supplies a Paddle Palace partner tag. |
 | `NEXT_PUBLIC_PADDLE_PALACE_TAG_PARAM` | Supplies the query parameter assigned by the Paddle Palace partner program. Set it together with the tag to activate the rule. |
 
-Set public tags in `frontend/.env.local` or in Vercel's project settings. Next.js inlines these values, so rebuild after changing them. The menu computes the order from the configured tags, then uses brand store, Amazon, Megaspin and Paddle Palace as the priority within each group. The official-store badge follows the brand link if it moves.
+Set public tags in `frontend/.env.local` or in Vercel's project settings. Next.js inlines these values, so rebuild after changing them. The menu prioritizes verified listings, then configured tags and store order. Amazon other-seller listings always appear last.
 
-Run `python3 scripts/check_buy_links.py` to check the catalog. It reports broken links, title mismatches, and requests it could not verify. To retry a site that blocks plain HTTP clients, install Python Playwright and Chromium with `python -m pip install playwright` and `python -m playwright install chromium`, then use `python scripts/check_buy_links.py --browser`. Before adding an Amazon listing, open its US product page and verify both the official brand storefront and the current **Sold by** field.
+Run `python3 scripts/check_buy_links.py` to check product titles, redirects, and Amazon other-seller prices. The checker sends a browser User-Agent and waits 2.5 seconds between Megaspin requests. To retry in Chromium, install Python Playwright and its browser, then add `--browser`. Use `amazon-official` for exact ASINs in Duke’s trusted storefronts. An `amazon-other` listing needs an exact product match and a visible US offer at least 70% of the catalog price, or of the official store or Paddle Palace price when catalog pricing is unavailable.
 
 ## Upload-first match flow (2026-11-22)
 

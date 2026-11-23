@@ -1,4 +1,11 @@
 {
+  "Andro Hexer": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/andro-hexer",
+      "type": "retailer"
+    }
+  ],
   "Andro Hexer Duro": [
     {
       "store": "Paddle Palace",
@@ -111,11 +118,50 @@
       "type": "retailer"
     }
   ],
+  "Andro Rasanter R50": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/copy-of-andro-rasanter-r53",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=andro-rasanter-r50",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "Andro Rasanter R53": [
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/andro-rasanter-r53-rubber",
       "type": "retailer"
+    }
+  ],
+  "Andro Rasanter V42": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/copy-of-andro-rasanter-v47",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=andro-rasanter-v42",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Andro Rasanter V47": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/copy-of-andro-rasanter-r37",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=andro-rasanter-v47",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Aibiss": [
@@ -132,6 +178,11 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B01ABHBNQG",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-bryce-highspeed-rubber",
       "type": "retailer"
@@ -144,9 +195,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07PST3WVH",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-dignics-05-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-dignics-05",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Dignics 09C": [
@@ -156,9 +218,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B085DJXRF3",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-dignics-09c-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-dignics-09c",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Dignics 64": [
@@ -166,6 +239,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/dignics-64-dig64p",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07Z5FXXLG",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -180,6 +258,11 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07Z5FJ32X",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-dignics-80-rubber",
       "type": "retailer"
@@ -190,6 +273,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/flextra",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B00JOC7L5C",
+      "type": "amazon-official"
     }
   ],
   "Butterfly Glayzer": [
@@ -199,9 +287,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0BWSM6XGF",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-glayzer-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-glayzer",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Glayzer 09C": [
@@ -211,9 +310,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0BWSKXGQ6",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-glayzer-09c-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-glayzer-09c",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Roundell": [
@@ -221,6 +331,36 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/roundell",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B002EENG7E",
+      "type": "amazon-official"
+    }
+  ],
+  "Butterfly Roundell Hard": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/butterfly-roundell-hard-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Butterfly Roundell Soft": [
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B003T11N1W",
+      "type": "amazon-official"
+    },
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/butterfly-roundell-soft",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-roundell-soft",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Rozena": [
@@ -228,6 +368,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/rozena-rubber",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B06XBQ6MM1",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -295,6 +440,19 @@
       "type": "retailer"
     }
   ],
+  "Butterfly Tackiness Chop 2": [
+    {
+      "store": "Paddle Palace",
+      "url": "https://www.paddlepalace.com/products/butterfly-tackiness-chop-ii-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-tack-chop-ii",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "Butterfly Tackiness Drive": [
     {
       "store": "Paddle Palace",
@@ -309,9 +467,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0018LMC9C",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-05-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-tenergy-05",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Tenergy 05 (reverse backhand)": [
@@ -333,9 +502,20 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0040YPWYQ",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-05-fx-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-tenergy-05-fx",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Tenergy 05 Hard": [
@@ -343,6 +523,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/tenergy-05-hard-tn05hp",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07HMYV98P",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -357,6 +542,11 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B08X12Q61P",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-19-rubber",
       "type": "retailer"
@@ -367,6 +557,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/tenergy-25",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B001OFBE6O",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -381,6 +576,11 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B004AV3OKS",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-25-fx-rubber",
       "type": "retailer"
@@ -388,9 +588,20 @@
   ],
   "Butterfly Tenergy 64": [
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B002V8LZ26",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-64-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-tenergy-64",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Butterfly Tenergy 64 FX": [
@@ -398,6 +609,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/tenergy-64-fx",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B00679MI6C",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -412,6 +628,11 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B00ARJRC2S",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-tenergy-80-rubber",
       "type": "retailer"
@@ -422,6 +643,11 @@
       "store": "Butterfly US",
       "url": "https://shop.butterflyonline.com/tenergy-80-fx",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B00JRG0ISW",
+      "type": "amazon-official"
     },
     {
       "store": "Paddle Palace",
@@ -436,8 +662,46 @@
       "type": "official"
     },
     {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0FSR7TPGX",
+      "type": "amazon-official"
+    },
+    {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/butterfly-zyre-03-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=b-zyre-03",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "DHS G666": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-g666-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "DHS G888": [
+    {
+      "store": "Double Happiness USA",
+      "url": "https://doublehappinessusa.com/products/dhs-g888-t-t-rubber",
+      "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-g888",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "DHS Gold Arc 5": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-goldarc-5-table-tennis-rubber",
       "type": "retailer"
     }
   ],
@@ -453,6 +717,11 @@
       "store": "DHS Sports USA",
       "url": "https://dhssportsusa.com/products/dhs-golden-arc-8-table-tennis-rubber",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0HJN79M79",
+      "type": "amazon-other"
     }
   ],
   "DHS H8-80": [
@@ -460,6 +729,13 @@
       "store": "DHS Sports USA",
       "url": "https://dhssportsusa.com/products/dhs-hurricane-8-80-table-tennis-rubber",
       "type": "official"
+    }
+  ],
+  "DHS Hurricane 2 (H2)": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-hurricane-2-tt-rubber",
+      "type": "retailer"
     }
   ],
   "DHS Hurricane 3": [
@@ -484,6 +760,17 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-3-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-3-39",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0BP9GSB1Z",
+      "type": "amazon-other"
     }
   ],
   "DHS Hurricane 3 (National)": [
@@ -496,6 +783,12 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-3-national-edition-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-h3-n",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "DHS Hurricane 3 (Provincial)": [
@@ -510,6 +803,17 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-3-national-blue-sponge-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-h3-n-blue",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0GS6ZY5N7",
+      "type": "amazon-other"
     }
   ],
   "DHS Hurricane 3 National (Orange Sponge)": [
@@ -552,6 +856,11 @@
       "store": "DHS Sports USA",
       "url": "https://dhssportsusa.com/products/dhs-hurricane-8-table-tennis-rubber-red-39-2-15",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0HJMMJHQJ",
+      "type": "amazon-other"
     }
   ],
   "DHS Hurricane 8 Hard": [
@@ -566,6 +875,11 @@
       "store": "DHS Sports USA",
       "url": "https://dhssportsusa.com/products/dhs-hurricane-8-80-table-tennis-rubber",
       "type": "official"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0GJMFVPVL",
+      "type": "amazon-other"
     }
   ],
   "DHS Hurricane 9 Blue": [
@@ -575,10 +889,30 @@
       "type": "retailer"
     }
   ],
+  "DHS Hurricane 9 Pink": [
+    {
+      "store": "Double Happiness USA",
+      "url": "https://doublehappinessusa.com/products/new-dhs-hurricane-9-t-t-rubber-pink",
+      "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-hurricane-9-pink",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "DHS Hurricane 9 Violet": [
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-9-violet-rubber",
+      "type": "retailer"
+    }
+  ],
+  "DHS NEO Hurricane 2": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-neo-hurricane-2-table-tennis-rubber",
       "type": "retailer"
     }
   ],
@@ -592,6 +926,17 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-3-neo-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-39",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07YTS36QH",
+      "type": "amazon-other"
     }
   ],
   "DHS NEO Hurricane 3 National (Blue Sponge)": [
@@ -599,6 +944,17 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/dhs-hurricane-3-neo-national-edition-blue-sponge-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-n-bl",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0HHMYQVBT",
+      "type": "amazon-other"
     }
   ],
   "DHS NEO Hurricane 3 National (blue sponge)": [
@@ -608,6 +964,47 @@
       "type": "retailer"
     }
   ],
+  "DHS NEO Hurricane 3 Provincial (Blue Sponge)": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-h3-neo-prov-blue",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "DHS NEO Skyline 2 TG2": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-neo-skyline-2-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "DHS NEO Skyline 3 TG3": [
+    {
+      "store": "Paddle Palace",
+      "url": "https://www.paddlepalace.com/products/dhs-skyline-tg-3-neo-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-skyline-3-neo-40",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "DHS PF4": [
+    {
+      "store": "Double Happiness USA",
+      "url": "https://doublehappinessusa.com/products/dhs-pf4-t-t-rubber-pimple-in",
+      "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-pf4",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "DHS Skyline 3-60 Soft": [
     {
       "store": "Paddle Palace",
@@ -615,11 +1012,61 @@
       "type": "retailer"
     }
   ],
+  "DHS Skyline TG2": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-skyline-2-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "DHS Skyline TG3": [
+    {
+      "store": "Double Happiness USA",
+      "url": "https://doublehappinessusa.com/products/dhs-skyline-3-t-t-rubber",
+      "type": "official"
+    },
+    {
+      "store": "Paddle Palace",
+      "url": "https://www.paddlepalace.com/products/dhs-skyline-3-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-skyline-3-39",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "DHS Tin Arc": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/dhs-tinarc-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-tinarc-med",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "DHS Tin Arc 3": [
     {
       "store": "DHS Sports USA",
       "url": "https://dhssportsusa.com/products/dhs-tin-arc-3-table-tennis-rubber",
       "type": "official"
+    }
+  ],
+  "DHS Tin Arc 5": [
+    {
+      "store": "Double Happiness USA",
+      "url": "https://doublehappinessusa.com/products/dhs-tinarc-5",
+      "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=dhs-tinarc-5-med",
+      "type": "retailer"
     }
   ],
   "Donic Acuda S1": [
@@ -662,6 +1109,14 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/donic-baracuda-big-slam-rubber",
       "type": "retailer"
+    }
+  ],
+  "Donic BlueGrip C1": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=d-bluegrip-c1",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Donic BlueGrip C2": [
@@ -790,11 +1245,37 @@
       "type": "retailer"
     }
   ],
+  "Donic Desto F1": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/donic-desto-f1",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=d-desto-f1",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "Donic Desto F1 Plus": [
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/donic-desto-f1-plus-rubber",
       "type": "retailer"
+    }
+  ],
+  "Donic Desto F2": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/donic-desto-f2",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=d-desto-f2",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Donic Desto F3": [
@@ -816,6 +1297,214 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/donic-desto-f4-rubber",
       "type": "retailer"
+    }
+  ],
+  "Donic Slice 40": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/donic-slice-40",
+      "type": "retailer"
+    }
+  ],
+  "Gewo Codexx EL Pro 52": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-codexx-el-pro-52-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-codexx-el-pro-52",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Inventus XT Pro 50.0": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-inventus-xt-pro-50",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Neoflexx EFT 40": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-neoflexx-eft-40-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-40",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Neoflexx EFT 45": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-neoflexx-eft-45-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-45",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Neoflexx EFT 48": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/gewo-neoflexx-eft-48-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nanoflexx-eft-48",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 38": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-el-pro-38-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-pro-38-el",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 43": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-el-pro-43-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-pro-43-el",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 45 Superselect": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-45-ss",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 48": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-el-pro-48-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-48",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 48 Superselect": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-48-ss",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 50 Hard": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-el-pro-50-hard-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-50",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 53 Hard": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-el-pro-53-hard-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-53",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus EL Pro 53 Superselect": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-el-pro-53-ss",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus XT Pro 48": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-xt-pro-48-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-xt-pro-48",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Nexxus XT Pro 50 Hard": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-nexxus-xt-pro-50-hard-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-nexxus-xt-pro-50",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Proton Neo 325": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/gewo-proton-neo-325-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-proton-neo-325",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Gewo Proton Neo 375": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/gewo-proton-neo-375-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=gewo-proton-neo-375",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "JOOLA Dynaryz ACC": [
@@ -851,6 +1540,12 @@
       "store": "JOOLA USA",
       "url": "https://joola.com/products/dynaryz-zgr-table-tennis-rubber",
       "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=j-dynaryz-zgr",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "JOOLA Dynaryz ZGX": [
@@ -858,6 +1553,14 @@
       "store": "JOOLA USA",
       "url": "https://joola.com/products/dynaryz-zgx-table-tennis-rubber",
       "type": "official"
+    }
+  ],
+  "JOOLA Rhyzer 43": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=j-rhyzer-43",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "JOOLA Rhyzer 48": [
@@ -881,11 +1584,25 @@
       "type": "official"
     }
   ],
+  "JOOLA Samba": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=j-samba",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "JOOLA Trinity Charged": [
     {
       "store": "JOOLA USA",
       "url": "https://joola.com/products/trinity-charged-hugo-calderano-rubber",
       "type": "official"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=j-trinity-charged-h-c",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "JOOLA Tronix ACC": [
@@ -958,6 +1675,14 @@
       "type": "retailer"
     }
   ],
+  "Nittaku Flyatt Hard": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=nittaku-flyatt-hard",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "Nittaku Flyatt Spin": [
     {
       "store": "Paddle Palace",
@@ -986,6 +1711,42 @@
       "type": "retailer"
     }
   ],
+  "Nittaku Hurricane Pro III Turbo Blue": [
+    {
+      "store": "Paddle Palace",
+      "url": "https://www.paddlepalace.com/products/nittaku-hurricane-pro-3-turbo-blue",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=n-h3-pro-t-b",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B07PDZBBD9",
+      "type": "amazon-other"
+    }
+  ],
+  "Nittaku Hurricane Pro III Turbo Orange": [
+    {
+      "store": "Paddle Palace",
+      "url": "https://www.paddlepalace.com/products/nittaku-hurricane-pro-3-turbo-orange-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=n-h3-pro-t",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B075MXJ2PN",
+      "type": "amazon-other"
+    }
+  ],
   "Nittaku Moristo DF": [
     {
       "store": "Paddle Palace",
@@ -998,6 +1759,30 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/nittaku-moristo-sp-rubber",
       "type": "retailer"
+    }
+  ],
+  "Sanwei Gear Hyper": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=sanwei-gear-hyper",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Sanwei Target National": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=sanwei-target-national",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Sanwei Ultraspin T88": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=sanwei-ultraspin-t88",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Stiga Airoc Astro S": [
@@ -1054,6 +1839,44 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/stiga-dna-platinum-xh-rubber",
       "type": "retailer"
+    }
+  ],
+  "Stiga Mantra H": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=s-mantra-h",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0748G1NQ6",
+      "type": "amazon-other"
+    }
+  ],
+  "Stiga Mantra M": [
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0748G37TH",
+      "type": "amazon-other"
+    }
+  ],
+  "Stiga Mantra PRO M": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/copy-of-stiga-dna-pro-h-1",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=s-mantra-pro-m",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0D2RDFQMT",
+      "type": "amazon-other"
     }
   ],
   "Stiga Mantra Sound": [
@@ -1175,6 +1998,13 @@
       "type": "retailer"
     }
   ],
+  "Tibhar Hybrid K2": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/tibhar-hybrid-k2-pro-tt-rubber",
+      "type": "retailer"
+    }
+  ],
   "Tibhar Hybrid K3": [
     {
       "store": "Paddle Palace",
@@ -1203,6 +2033,32 @@
       "type": "retailer"
     }
   ],
+  "Tibhar Nimbus": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/tibhar-nimbus",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=t-nimbus",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Tibhar Nimbus Soft": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/tibhar-nimbus-soft-tt-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=t-nimbus-soft",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
   "Tibhar Nimbus Sound": [
     {
       "store": "Paddle Palace",
@@ -1214,6 +2070,13 @@
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/tibhar-quantum-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Tibhar Quantum S": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/tibhar-quantum-s-tt-rubber",
       "type": "retailer"
     }
   ],
@@ -1238,10 +2101,31 @@
       "type": "retailer"
     }
   ],
+  "Tibhar Rapid Soft": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/tibhar-rapid-soft-tt-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Tibhar Sinus": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/tibhar-sinus",
+      "type": "retailer"
+    }
+  ],
   "Tibhar Sinus Alpha": [
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/tibhar-sinus-alpha-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Tibhar Sinus Sound": [
+    {
+      "store": "Table Tennis One Stop Shopping",
+      "url": "https://www.onestopshopping.store/product-page/tibhar-sinus-alpha-tt-rubber",
       "type": "retailer"
     }
   ],
@@ -1250,6 +2134,430 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/tibhar-super-defense-40-rubber",
       "type": "retailer"
+    }
+  ],
+  "Victas TRIPLE Double Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-triple-double-extra-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-t-d-extra",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 11 Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-11-extra-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-11-extra",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 15 Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-15-extra-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-15-extra",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 15 Sticky": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-15-sticky",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-15-sticky",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 15 Stiff": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-15-stiff",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 20 Double Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-20-double-extra-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-20-d-e",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 20 Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-20-extra",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-20-e",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas V > 22 Double Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-v-22-double-extra-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-22-d-e",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas VJ > 07 Regular": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-vj-07-regular-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-v-07-regular",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas VJC > 07 Sticky Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-vjc-07-sticky-extra-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-vjc-07-se",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas VS > 401": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-vs-401-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-vs-401",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas VS > 402 Limber": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-vs-402-limber-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-vs-402-limb",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Victas Ventus Extra": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/victas-ventus-extra-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=victas-ventus-extra",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Jekyll & Hyde V47.5": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-j-h-v475",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Jekyll & Hyde V52.5": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-jekyll-hyde-v52-5-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-j-h-v525",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Jekyll & Hyde Z52.5": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-jekyll-hyde-z52-5-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-j-h-z525",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega 8 Pro": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-8-pro",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega IV Pro": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-iv-pro",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega V Euro": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/xiom-omega-v-euro-offensive-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Xiom Omega VII Asia": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/xiom-omega-vii-asia-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-asia",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega VII Euro": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/xiom-omega-vii-euro",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-euro",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega VII Hyper": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-omega-vii-hyper-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-hyper",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega VII Pro": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/xiom-omega-vii-pro-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-pro",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Omega VII Tour": [
+    {
+      "store": "eTableTennis",
+      "url": "https://www.etabletennis.com/products/xiom-omega-vii-tour-offensive-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-omega-vii-tour",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Vega Asia": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-vega-asia",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-asia",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0040YTEMW",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Asia DF": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-vega-asia-df-offensive-table-tennis-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Xiom Vega Elite": [
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B003Y6S5Y0",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Europe": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/copy-of-xiom-vega-pro",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-europe",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B007QZV14G",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Intro": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-intro",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B01MRCLGND",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Japan": [
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-japan",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B00DKB3GT8",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Korea": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-vega-korea-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-korea",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B0CY31RWYW",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Pro": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/xiom-vega-pro",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-pro",
+      "type": "retailer",
+      "status": "unverified"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B005XNC4QM",
+      "type": "amazon-other"
+    }
+  ],
+  "Xiom Vega Tour": [
+    {
+      "store": "TableTennisStore",
+      "url": "https://tabletennisstore.us/products/xiom-vega-tour-table-tennis-rubber",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-tour-r",
+      "type": "retailer",
+      "status": "unverified"
+    }
+  ],
+  "Xiom Vega X": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/xiom-vega-x",
+      "type": "retailer"
+    },
+    {
+      "store": "Megaspin",
+      "url": "https://www.megaspin.net/store/default.asp?pid=xiom-vega-x",
+      "type": "retailer",
+      "status": "unverified"
     }
   ],
   "Yasaka Anti Power (Anti-spin)": [
@@ -1264,6 +2572,11 @@
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/yasaka-mark-v-rubber",
       "type": "retailer"
+    },
+    {
+      "store": "Amazon",
+      "url": "https://www.amazon.com/dp/B003B6WBTS",
+      "type": "amazon-other"
     }
   ],
   "Yasaka Mark V (reverse backhand)": [
@@ -1298,6 +2611,13 @@
     {
       "store": "Paddle Palace",
       "url": "https://www.paddlepalace.com/products/yasaka-mark-v-m2-rubber",
+      "type": "retailer"
+    }
+  ],
+  "Yasaka Original": [
+    {
+      "store": "Go Table Tennis",
+      "url": "https://gotabletennis.com/products/yasaka-mark-v-carbon-racket-copy",
       "type": "retailer"
     }
   ],
