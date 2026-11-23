@@ -24,11 +24,13 @@ const LEVEL_OPTIONS = [
 
 const fmt = (v: number | null) => (v === null ? "TBD" : v.toFixed(1));
 
-export function RubberFinder({ initialStyle, initialLevel, demo }: { initialStyle: Style; initialLevel: Level; demo: boolean }) {
+export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }: {
+  initialStyle: Style; initialLevel: Level; initialBudget: number; demo: boolean;
+}) {
   const [style, setStyle] = useState<Style>(initialStyle);
   const [type, setType] = useState<RubberType>("inverted");
   const [level, setLevel] = useState<Level>(initialLevel);
-  const [budget, setBudget] = useState("60");
+  const [budget, setBudget] = useState(String(initialBudget));
   const [rec, setRec] = useState<Recommendation | null>(null);
   const [error, setError] = useState<string | null>(null);
 

@@ -1,13 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import type { Level, Style } from "@/lib/rubbers";
+import { useEffect, useState } from "react";
+import type { Level, Recommendation, Rubber, Style } from "@/lib/rubbers";
+import { RubberBuyMenu } from "./rubber-buy-menu";
 
-export function GearQuiz({ results }: { results: Record<Style, Record<Level, string | undefined>> }) {
+const DEFAULT_BUDGET = 60;
+const BUDGETS = [
+  { value: 40, label: "$40" },
+  { value: DEFAULT_BUDGET, label: "$60" },
+  { value: 80, label: "$80" },
+  { value: 500, label: "$100+" },
+];
+
+export function GearQuiz() {
   const [style, setStyle] = useState<Style>();
   const [level, setLevel] = useState<Level>();
-  const pick = style && level ? results[style][level] : undefined;
+  const [budget, setBudget] = useState(DEFAULT_BUDGET);
+  const [result, setResult] = useState<{ query: string; pick?: Rubber; error?: boolean }>();
+  const query = style && level ? new URLSearchParams({ style, level, budget: String(budget) }).toString() : "";
+  const current = result?.query === query ? result : undefined;
+  const pick = current?.pick;
+
+  useEffect(() => {
+    if (!query) return;
+    const request = new AbortController();
+    fetch(`/api/rubbers?${query}&rubber_type=inverted&demo=1`, { signal: request.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("Couldn't load rubbers.");
+        const { results }: Recommendation = await response.json();
+        if (!request.signal.aborted) setResult({ query, pick: results[0] });
+      })
+      .catch(() => {
+        if (!request.signal.aborted) setResult({ query, error: true });
+      });
+    return () => request.abort();
+  }, [query]);
 
   return (
     <section aria-labelledby="home-quiz-title" className="home-quiz surface-card">
@@ -25,11 +53,25 @@ export function GearQuiz({ results }: { results: Record<Style, Record<Level, str
             <button key={value} type="button" aria-pressed={level === value} onClick={() => setLevel(value)}>{value}</button>
           ))}
         </fieldset>
+        <fieldset className="home-quiz-options">
+          <legend>Budget per sheet</legend>
+          {BUDGETS.map(({ value, label }) => (
+            <button key={value} type="button" aria-pressed={budget === value} onClick={() => setBudget(value)}>{label}</button>
+          ))}
+        </fieldset>
       </div>
-      {style && level && (
+      {query && (
         <div className="home-quiz-result">
-          <p role="status">{pick ? <>Your pick <strong className="text-accent">{pick}</strong></> : "See the closest picks in Rubber Finder."}</p>
-          <Link href={`/rubbers?style=${style}&level=${level}`} prefetch={false} className="home-text-link">Open Rubber Finder</Link>
+          <div className="min-w-0 space-y-2">
+            <p role="status">
+              {pick ? <>Your pick <strong className="text-accent">{pick.name}</strong>{pick.price !== null && <> · <span className="tabular-nums">${pick.price.toFixed(2)}</span></>}</>
+                : !current ? "Finding your rubber…"
+                : current.error ? "Couldn't load your pick. Try Rubber Finder."
+                : `Nothing under $${budget} yet. Try a higher budget.`}
+            </p>
+            {pick && <RubberBuyMenu product={pick.name} buyLinks={pick.buyLinks} buyLink={pick.buyLink} buyUrl={pick.buyUrl} />}
+          </div>
+          <Link href={`/rubbers?${query}`} prefetch={false} className="home-text-link">Open Rubber Finder</Link>
         </div>
       )}
     </section>

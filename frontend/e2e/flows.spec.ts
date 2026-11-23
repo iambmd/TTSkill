@@ -48,7 +48,7 @@ test("the quiz opens Rubber Finder and both gear pages expose clean purchase lin
   await quiz.getByRole("button", { name: /^advanced$/i }).click();
   await expect(quiz.getByRole("status")).toContainText("Your pick");
   await quiz.getByRole("link", { name: "Open Rubber Finder" }).click();
-  await expect(page).toHaveURL(/\/rubbers\?style=speed&level=advanced$/);
+  await expect(page).toHaveURL(/\/rubbers\?style=speed&level=advanced&budget=60$/);
   await expect(page.getByRole("radio", { name: /^Speed/ })).toBeChecked();
   await expect(page.getByRole("radio", { name: /^Advanced/ })).toBeChecked();
   const finderLinks = page.locator("main").getByRole("link", { name: /^Buy in the US:/ });
@@ -67,6 +67,46 @@ test("the quiz opens Rubber Finder and both gear pages expose clean purchase lin
   await expect(pro.getByRole("heading", { name: "Wang Chuqin" })).toBeVisible();
   await expectBuyLinks(pro.getByRole("link", { name: /^Buy in the US:/ }));
   await expectBuyLinks(pro.getByRole("link", { name: "Amazon (other seller)", exact: true }));
+});
+
+test("the offline Home quiz updates the top pick and carries the budget to Rubber Finder", async ({ page }) => {
+  await page.goto("/");
+  const quiz = page.getByRole("region", { name: "Find your rubber" });
+  const budget = quiz.getByRole("group", { name: "Budget per sheet" });
+  const result = quiz.getByRole("status");
+  const finder = quiz.getByRole("link", { name: "Open Rubber Finder" });
+  await expect(budget.getByRole("button", { name: "$60", exact: true })).toHaveAttribute("aria-pressed", "true");
+  await quiz.getByRole("button", { name: /^spin$/i }).click();
+  await quiz.getByRole("button", { name: /^intermediate$/i }).click();
+  await expect(result).toContainText("Your pick");
+  const defaultPick = await result.getByText(/\$\d+\.\d{2}/).textContent();
+  await expectBuyLinks(quiz.getByRole("link", { name: /^Buy in the US:/ }));
+
+  await budget.getByRole("button", { name: "$100+", exact: true }).click();
+  await expect(finder).toHaveAttribute("href", "/rubbers?style=spin&level=intermediate&budget=500");
+  await budget.getByRole("button", { name: "$40", exact: true }).click();
+  const price = await result.getByText(/\$\d+\.\d{2}/).textContent();
+  expect(price).not.toBe(defaultPick);
+  expect(Number(price?.slice(1))).toBeLessThanOrEqual(40);
+  const pick = (await result.locator("strong").textContent())!;
+  await expectBuyLinks(quiz.getByRole("link", { name: /^Buy in the US:/ }));
+
+  await finder.click();
+  await expect(page).toHaveURL(/\/rubbers\?style=spin&level=intermediate&budget=40$/);
+  await expect(page.getByRole("radio", { name: /^Spin/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /^Intermediate/ })).toBeChecked();
+  await expect(page.getByRole("spinbutton", { name: "Budget per sheet" })).toHaveValue("40");
+  await expect(page.locator("main ol").getByRole("listitem").first()).toContainText(pick);
+});
+
+test("the Home quiz suggests a higher budget when nothing fits", async ({ page }) => {
+  await page.route("**/api/rubbers?*budget=40&rubber_type=inverted&demo=1", route => route.fulfill({ json: { results: [] } }));
+  await page.goto("/");
+  const quiz = page.getByRole("region", { name: "Find your rubber" });
+  await quiz.getByRole("button", { name: "$40", exact: true }).click();
+  await quiz.getByRole("button", { name: /^spin$/i }).click();
+  await quiz.getByRole("button", { name: /^intermediate$/i }).click();
+  await expect(quiz.getByRole("status")).toHaveText("Nothing under $40 yet. Try a higher budget.");
 });
 
 test("mobile navigation keeps the selected theme and the cached demo plays", async ({ page }) => {

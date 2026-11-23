@@ -473,3 +473,11 @@ Playwright MCP audited Home, Auto-Cut, Breakdown, Coach, Pro Match, Rubber Finde
 With FastAPI running, a real drag-and-drop upload produced five rallies, a text-only Breakdown finished, and a video Coach job produced coaching notes and three outputs. The mobile pass exercised the quiz, Pro Setups search, buy-link destinations, theme persistence, navigation, Home’s before/after players, and cached videos for all four job types. The regression suite in `frontend/e2e/` starts Next.js with an unreachable backend and uses fixtures for third-party photos.
 
 The production build, all 180 frontend unit tests, and all 49 Playwright tests passed. Lint finished with five existing image warnings.
+
+## Home rubber quiz budget (2026-11-23)
+
+- The Home quiz adds $40, $60, $80, and $100+ chips in the existing style. It starts at $60 and treats $100+ as $500. It fetches the top inverted rubber and its catalog price from the bundled Rubber Finder rankings, so the quiz works when the analysis server is offline. If the budget has no matches, the quiz suggests raising it.
+- The quiz passes style, level, and budget to Rubber Finder. Finder accepts an initial budget from $1 to $500 and uses $60 when it is missing or invalid.
+- Spin and intermediate at $40 returns Friendship/729 Battle 2 Neo at $32. Its shared purchase menu includes an exact TokSpin listing, labeled as shipping from China. [Product listing](https://tokspin.com/product/friendship-729-battle-2-neo-table-tennis-rubber/) · [US delivery](https://tokspin.com/faq/)
+- The production build, 189 frontend unit tests, and 51 Playwright tests passed. Browser checks covered the offline quiz, purchase link, empty results, and the $40 field in Finder. Lint reported five existing image warnings.
+- Backend health and equipment tests passed. The broader backend run hit the Coach fallback `engineNote` assertion, which also fails on the original commit `03194f7`.

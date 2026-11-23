@@ -49,6 +49,7 @@ def model(name: str) -> str:
     name = re.sub(r"\bVega Euro(?:pean)?\b(?! DF)", "Vega Europe", name, flags=re.I)
     name = re.sub(r"\bJekyll (?:and|&) Hyde\b", "Jekyll Hyde", name, flags=re.I)
     name = re.sub(r"\bOmega 8 VIII\b", "Omega 8", name, flags=re.I)
+    name = re.sub(r"^(Friendship[/ ]729 Battle 2 Neo) Sticky Blue Sponge\b", r"\1", name, flags=re.I)
     name = re.sub(r"\bSkyline ([23])\s+TG[23]\b", r"Skyline TG\1", name, flags=re.I)
     name = re.sub(r"\bSkyline TG([23]) Neo\b", r"Neo Skyline TG\1", name, flags=re.I)
     name = re.sub(r"\b(DHS (?:Neo )?Skyline) ([23])\b(?![-\d])", r"\1 TG\2", name, flags=re.I)

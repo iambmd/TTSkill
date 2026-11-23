@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LEVELS, STYLES, recommend, rubberByName, type Level, type Style } from "@/lib/rubbers";
+import { rubberByName } from "@/lib/rubbers";
 import { GearQuiz } from "./home-quiz";
 import { RubberAffiliateDisclosure, RubberBuyMenu } from "./rubber-buy-menu";
 import { ChevronIcon } from "./ui";
@@ -10,12 +10,6 @@ const featured = [
   { name: "Butterfly Tenergy 05", tags: ["Spin", "Speed"] },
   { name: "DHS NEO Hurricane 3", tags: ["Spin", "Control"] },
 ];
-
-export const gearQuizResults = Object.fromEntries(STYLES.map((style) => [style, Object.fromEntries(LEVELS.map((level) => {
-  const { results } = recommend(style, "inverted", level);
-  const pick = results.find((rubber) => rubber.buyLinks?.length) ?? results[0];
-  return [level, pick?.name];
-}))])) as Record<Style, Record<Level, string | undefined>>;
 
 export function HomeGear() {
   return (
@@ -46,7 +40,7 @@ export function HomeGear() {
         })}
       </ul>
       <RubberAffiliateDisclosure />
-      <GearQuiz results={gearQuizResults} />
+      <GearQuiz />
     </section>
   );
 }

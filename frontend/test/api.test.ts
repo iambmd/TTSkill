@@ -409,6 +409,16 @@ describe("GET /api/rubbers", () => {
     expect(body.results.length).toBeGreaterThan(0);
     expect(fetchMock).not.toHaveBeenCalled();
   });
+  it("serves the Home quiz's $40 spin pick from the local inverted rankings", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await route("rubbers", { BACKEND_URL: "http://backend" });
+    const body = await (await GET!(url("style=spin&level=intermediate&budget=40&rubber_type=inverted&demo=1"), ctx({}))).json();
+    expect(body).toMatchObject({ style: "spin", type: "inverted", level: "intermediate", budget: 40 });
+    expect(body.results[0].price).toBeGreaterThan(0);
+    expect(body.results[0].price).toBeLessThanOrEqual(40);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 });
 
 // ------------------------------------------------------------------ players

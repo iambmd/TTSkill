@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { gearQuizResults, HomeGear } from "./home-gear";
+import { recommend, type Level, type Style } from "@/lib/rubbers";
+import { HomeGear } from "./home-gear";
 import { DemoStrip, FeatureGrid } from "./home-media";
 import { HomeMotion } from "./home-motion";
 import { MatchUpload } from "./match-upload";
@@ -9,6 +10,16 @@ const footerLinks = [
   ["/", "Home"], ["/coach", "Coach"], ["/breakdown", "Breakdown"], ["/match", "Pro Match"],
   ["/autocut", "Auto-Cut"], ["/rubbers", "Rubber Finder"], ["/pros", "Pro Setups"],
 ] as const;
+
+function equipmentPreviewName(style: Style, level: Level) {
+  const { results } = recommend(style, "inverted", level);
+  return (results.find((rubber) => rubber.buyLinks?.length) ?? results[0])?.name;
+}
+
+const equipmentPreview = {
+  spin: equipmentPreviewName("spin", "intermediate"),
+  speed: equipmentPreviewName("speed", "beginner"),
+};
 
 export default function Home() {
   return (
@@ -22,7 +33,7 @@ export default function Home() {
         <MatchUpload />
       </section>
       <HomeGear />
-      <FeatureGrid equipment={{ spin: gearQuizResults.spin.intermediate, speed: gearQuizResults.speed.beginner }} />
+      <FeatureGrid equipment={equipmentPreview} />
       <DemoStrip />
       <footer className="home-footer" data-ball-space>
         <Link href="/" prefetch={false} className="headline text-2xl">TT<span className="text-accent">Skill</span></Link>
