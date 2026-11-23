@@ -78,15 +78,10 @@ body {
   color: var(--training-ink);
 }
 
-@media (pointer: fine) {
-  body { cursor: url("/paddle-cursor.svg") 12 11, auto; }
-
-  :is(a[href], button:enabled, [role="button"]:not([aria-disabled="true"]), summary,
-      label[for], label:has(input:enabled), select:enabled,
-      input:is([type="file"], [type="checkbox"], [type="radio"]):enabled) { cursor: pointer; }
-
-  :is(input:not([type="file"], [type="checkbox"], [type="radio"]), textarea,
-      [contenteditable]:not([contenteditable="false"])) { cursor: text; }
+@media (any-pointer: fine) {
+  *, *::before, *::after, ::backdrop {
+    cursor: url("/paddle.svg") 7 7, auto;
+  }
 }
 
 :focus-visible {

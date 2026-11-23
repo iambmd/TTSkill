@@ -45,7 +45,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 
 
           expect((await page.goto(path))?.ok()).toBe(true);
           await expect(page.locator("main h1")).toHaveText(heading);
-          await expect(page.getByRole("button", { name: `Switch to ${theme === "light" ? "dark" : "light"} mode` })).toBeVisible();
+          const themeToggle = page.getByRole("button", { name: `Switch to ${theme === "light" ? "dark" : "light"} mode` });
+          await expect(themeToggle).toBeVisible();
           if (path === "/") await expect(page.locator("main").getByRole("alert")).toContainText("Live analysis is offline");
           if (path === "/rubbers") await expect(page.locator("main ol li").first()).toBeVisible();
 
@@ -55,12 +56,22 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 
           await expect(skip).toHaveCSS("outline-style", "solid");
           expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0);
 
-          const cursor = mobile ? "auto" : /paddle-cursor\.svg.*12 11, auto/;
-          await expect(page.locator("body")).toHaveCSS("cursor", cursor);
+          const paddle = /paddle\.svg.*7 7, auto/;
+          await expect(page.locator("body")).toHaveCSS("cursor", mobile ? "auto" : paddle);
+          if (mobile) {
+            await expect(skip).not.toHaveCSS("cursor", paddle);
+            await expect(themeToggle).not.toHaveCSS("cursor", paddle);
+          } else {
+            await expect(skip).toHaveCSS("cursor", paddle);
+            await expect(themeToggle).toHaveCSS("cursor", paddle);
+          }
           if (!mobile && path === "/coach") {
-            await expect(page.getByLabel("What do you want?")).toHaveCSS("cursor", "text");
+            await expect(page.getByLabel("What do you want?")).toHaveCSS("cursor", paddle);
+            const submit = page.getByRole("button", { name: "Ask the coach" });
+            await expect(submit).toBeDisabled();
+            await expect(submit).toHaveCSS("cursor", paddle);
             const coach = page.getByRole("navigation", { name: "Site navigation" }).getByRole("link", { name: "Coach" });
-            await expect(coach).toHaveCSS("cursor", "pointer");
+            await expect(coach).toHaveCSS("cursor", paddle);
             await coach.focus();
             await expect(coach).toHaveCSS("outline-offset", "-2px");
           }
