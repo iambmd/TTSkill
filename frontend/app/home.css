@@ -347,12 +347,6 @@
   .home-feature-copy { padding-inline: .625rem; }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  body:has(.home-page) { cursor: url("/home/paddle-cursor.svg") 12 11, auto; }
-  body:has(.home-page) :is(a, button:not(:disabled), label:has(input[type="file"]:enabled)) { cursor: pointer; }
-  body:has(.home-page) :is(input:not([type="file"]), textarea, [contenteditable="true"]) { cursor: text; }
-}
-
 @media (prefers-reduced-motion: no-preference) {
   .home-entered { animation: home-enter .28s ease-out both; }
   .home-equipment-picks[data-playing="true"] > div { animation: home-equipment-cycle 4s steps(1) infinite; }

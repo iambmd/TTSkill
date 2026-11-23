@@ -451,3 +451,8 @@ These exact offers were excluded by the price screen. The amounts are recorded h
 - Compared the layout reference with the production captures for hero copy and size, section order, typography and palette, the four-card rail and quiz, the five-tile grid, video framing, and footer navigation. Reframed the portrait clips in the smaller feature tiles and aligned the four buy buttons. The shared header stayed in its existing layout, and the full demo player shows the portrait frame with its coaching overlays intact. The hero copy matched the reference text.
 - Three Lighthouse 13.6 mobile runs against the local production builds scored **87, 91, 93** before and **94, 98, 98** after. Median Performance rose from **91 to 98**. Median LCP was 0.8 s before and 0.9 s after, median total blocking time fell from 380 ms to 170 ms, and CLS was zero throughout. Every initial load requested zero MP4s.
 - Frontend lint and build passed, along with all 179 frontend tests. Regenerating Home media from the cached examples reproduced the committed files byte for byte on this checkout.
+
+## Site-wide paddle cursor (2026-11-22)
+
+- Moved the cursor from Home to the global stylesheet. Fine pointers keep the paddle-face hotspot, the text cursor on editable fields, and the native hand on interactive controls. The upload wait and disabled submit states keep their own cues.
+- Playwright MCP checked the cursor on Home, Coach, and Rubber Finder in both themes. A touch-emulated Coach page kept its default cursor, and the shared SVG returned HTTP 200.

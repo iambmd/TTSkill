@@ -33,7 +33,7 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
   return (
     <div className={`grid gap-2 ${className}`}>
       {options.map((o) => (
-        <label key={o.value} className="cursor-pointer">
+        <label key={o.value}>
           <input
             type="radio" name={name} value={o.value} className="peer sr-only"
             {...(value !== undefined

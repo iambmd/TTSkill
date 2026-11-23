@@ -71,7 +71,7 @@ export function Plan({ job }: { job: Job }) {
   if (job.status === "done") {
     return (
       <details className="group coach-plan surface-card">
-        <summary className="flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+        <summary className="flex list-none items-center gap-2.5 px-4 py-3 text-sm font-semibold [&::-webkit-details-marker]:hidden">
           <span className="grid size-5 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-3" /></span>
           <span className="min-w-0 flex-1">{finished === todos.length ? "All steps done" : `${finished} of ${todos.length} steps done`}</span>
           <span className="shrink-0 text-xs font-normal text-muted">{todos.length} steps</span>
@@ -130,7 +130,7 @@ export function CoachNotesSection({ job, notes }: { job: Job; notes: CoachNotes 
 function DebugFiles({ files }: { files: NonNullable<Job["agentFiles"]> }) {
   return (
     <details className="group rounded-2xl border border-dashed border-line">
-      <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
+      <summary className="flex list-none items-center gap-3 px-4 py-3 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
         <span className="min-w-0 flex-1">Debug: the coach&apos;s working files ({files.length})</span>
         <span className="shrink-0 rounded bg-white/10 px-1.5 py-0.5 text-[0.65rem] uppercase tracking-widest">dev only</span>
         <span aria-hidden className="shrink-0 transition group-open:rotate-45">+</span>

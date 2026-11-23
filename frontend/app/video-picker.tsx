@@ -121,7 +121,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                   {meta && Number.isFinite(meta.duration) ? `${fmtDuration(meta.duration)} · ` : ""}{fmtSize(file.size)}
                 </p>
               </div>
-              <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
+              <label htmlFor={id} className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
                 Swap<span className="sr-only"> video</span>
               </label>
               <button type="button" onClick={clear} aria-label="Remove video" className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white">
@@ -151,7 +151,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
                 <p className="truncate font-semibold">YouTube video</p>
                 <p className="text-xs text-muted">We fetch it at up to 720p when you submit.</p>
               </div>
-              <label htmlFor={id} className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
+              <label htmlFor={id} className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
                 Upload instead
               </label>
             </div>
@@ -159,7 +159,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
         ) : (
           <label
             htmlFor={id}
-            className={`upload-target relative flex w-full cursor-pointer flex-col items-center justify-center overflow-hidden text-center transition motion-safe:active:scale-[.99] ${dragging ? "motion-safe:scale-[1.01] ring-4 ring-white" : ""}`}
+            className={`upload-target relative flex w-full flex-col items-center justify-center overflow-hidden text-center transition motion-safe:active:scale-[.99] ${dragging ? "motion-safe:scale-[1.01] ring-4 ring-white" : ""}`}
           >
             <span className="grid place-items-center">
               <UploadIcon className="size-9" />
@@ -172,7 +172,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
         )}
       </div>
       {onlyMeOption && (
-        <label htmlFor={onlyMeId} className="flex min-h-12 cursor-pointer items-center gap-3 rounded-xl border border-line bg-panel px-4 py-2">
+        <label htmlFor={onlyMeId} className="flex min-h-12 items-center gap-3 rounded-xl border border-line bg-panel px-4 py-2">
           <input
             id={onlyMeId} type="checkbox" name="only_me" value="1" checked={onlyMe}
             onChange={(e) => setOnlyMe(e.target.checked)} className="size-5 shrink-0 accent-accent"

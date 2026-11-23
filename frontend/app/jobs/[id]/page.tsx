@@ -285,7 +285,7 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           : !!job.rallies?.length && <Rallies rallies={job.rallies} full={job.params.mode === "full"} />)}
         {job.kind === "autocut" && job.status === "done" && job.canReuseVideo && <GoDeeper id={job.id} />}
         {job.kind !== "autocut" && <details className="group surface-card">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
+          <summary className="flex list-none items-center justify-between px-4 py-3.5 text-sm font-semibold text-muted [&::-webkit-details-marker]:hidden">
             Run details
             <span aria-hidden className="transition group-open:rotate-45">+</span>
           </summary>

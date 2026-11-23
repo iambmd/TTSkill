@@ -72,7 +72,7 @@ export default function BreakdownForm({ sourceJob, rallyId, clip }: { sourceJob?
       )}
       <div className="min-w-0 space-y-6">
         <details ref={textRef} className="group surface-card">
-          <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          <summary className="flex list-none items-center justify-between px-4 py-3.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
             No video? Describe the training instead
             <span aria-hidden className="text-muted transition group-open:rotate-45">+</span>
           </summary>

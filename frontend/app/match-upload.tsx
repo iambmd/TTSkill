@@ -93,7 +93,7 @@ export function MatchUpload() {
           className="sr-only"
           onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }}
         />
-        <span className={`upload-target match-dropzone flex flex-col items-center justify-center text-center ${busy ? "cursor-wait" : "cursor-pointer"}`}>
+        <span className={`upload-target match-dropzone flex flex-col items-center justify-center text-center ${busy ? "cursor-wait" : ""}`}>
           <span className="grid place-items-center"><UploadIcon /></span>
           <span className="section-title text-2xl" aria-live="polite">
             {busy ? percent === 100 ? "Starting your reel…" : `Uploading ${percent}%` : "Upload your match"}
