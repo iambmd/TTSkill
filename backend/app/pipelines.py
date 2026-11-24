@@ -166,8 +166,9 @@ def _progress(job_id: str):
 
 def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, player: str,
                   hand: str = "auto", stroke_type: str = "", selection: tuple | None = None,
-                  only_me: bool = False) -> None:
-    """Runs backend/technique and copies its breakdown.mp4 to result.mp4 for the job page."""
+                  only_me: bool = False, lang: str = "en") -> None:
+    """Runs backend/technique and copies its breakdown.mp4 to result.mp4 for the job page.
+    lang: the language the step cards, drill, video prompt and video labels are written in."""
     try:
         from technique.pipeline import run_text, run_video  # heavy imports (MediaPipe, OpenCV)
         from technique.strokes import label
@@ -187,10 +188,10 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
             else:
                 seed = None
             res = run_video(str(video), str(out), stroke, player or None, progress=report, hand=hand,
-                            stroke_type=stroke_type or None, identity=seed, picked=bool(selection))
+                            stroke_type=stroke_type or None, identity=seed, picked=bool(selection), lang=lang)
         else:
             res = run_text(text, str(out), stroke, player or None, progress=report,
-                           stroke_type=stroke_type or None)
+                           stroke_type=stroke_type or None, lang=lang)
         overlay = Path(res["outputs"]["overlay_video"])
         shutil.copyfile(overlay, jobs.job_dir(job_id) / "result.mp4")
         breakdown = json.loads((out / "breakdown.json").read_text())

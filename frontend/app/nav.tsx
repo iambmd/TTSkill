@@ -2,16 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef } from "react";
 
 const LINKS = [
-  ["/", "Home"], ["/coach", "Coach"], ["/breakdown", "Breakdown"], ["/match", "Pro match"], ["/autocut", "Auto-Cut"],
-  ["/rubbers", "Gear"],
+  ["/", "home"], ["/coach", "coach"], ["/breakdown", "breakdown"], ["/match", "match"], ["/autocut", "autocut"],
+  ["/rubbers", "gear"],
 ] as const;
 // The Gear link covers both equipment pages.
 const GEAR = ["/rubbers", "/pros"];
 
 export function Nav() {
+  const t = useTranslations("nav");
   const path = usePathname();
   const bar = useRef<HTMLDivElement>(null);
   // On a narrow phone the active link can sit off-screen; scroll the bar so it shows.
@@ -29,7 +31,7 @@ export function Nav() {
             key={href} href={href} aria-current={active ? "page" : undefined}
             className={`shrink-0 rounded-full px-2 py-2 text-[0.7rem] md:px-3.5 md:text-sm font-bold uppercase tracking-wide transition ${active ? "action-fill" : "text-white/70 hover:bg-white/5 hover:text-white"}`}
           >
-            {label}
+            {t(label)}
           </Link>
         );
       })}

@@ -1,12 +1,17 @@
 "use client";
 
+import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useId, useRef, useState } from "react";
 import { PlayerPicker } from "./player-picker";
 import { LIMITS, type Kind, fileProblem, fmtDuration, mediaProblem, minutes } from "@/lib/validate";
 import { linkProblem, youtubeId } from "@/lib/youtube";
 import { CheckIcon, CloseIcon, LinkIcon, PlayIcon, UploadIcon, inputClass, labelClass } from "./ui";
 
-const fmtSize = (b: number) => (b >= 1e9 ? `${(b / 1e9).toFixed(1)} GB` : `${(b / 1e6).toFixed(1)} MB`);
+type Format = ReturnType<typeof useFormatter>;
+const fmtSize = (b: number, f: Format, t: (k: string, v: Record<string, string>) => string) => {
+  const one = (n: number) => f.number(n, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return b >= 1e9 ? t("gb", { value: one(b / 1e9) }) : t("mb", { value: one(b / 1e6) });
+};
 type Meta = { duration: number; width: number; height: number };
 
 /**
@@ -30,6 +35,10 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   /** Offer "Only me in the video": skip finding players and follow whoever plays the most (Coach, Breakdown). */
   onlyMeOption?: boolean;
 }) {
+  const t = useTranslations("video");
+  const tc = useTranslations("common");
+  const tv = useTranslations("validation");
+  const format = useFormatter();
   const id = useId();
   const linkInputId = useId();
   const fileErrorId = useId();
@@ -41,8 +50,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
   const [dragging, setDragging] = useState(false);
   const [link, setLink] = useState("");
   const ytId = youtubeId(link);
-  const linkError = !file && link.trim() ? linkProblem(link) : null;
-  const fileError = file ? fileProblem(file) ?? (meta ? mediaProblem(meta) : null) : null;
+  const linkError = !file && link.trim() ? linkProblem(link, tv) : null;
+  const fileError = file ? fileProblem(file, tv) ?? (meta ? mediaProblem(meta, tv, tc) : null) : null;
   const [playerProblem, setPlayerProblem] = useState<string | null>(null);
   const [onlyMe, setOnlyMe] = useState(false);
   const onlyMeId = useId();
@@ -94,7 +103,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             {url && canPreview ? (
               <video
                 key={url} src={`${url}#t=0.001`} controls playsInline preload="metadata"
-                aria-label="Preview of your chosen video"
+                aria-label={t("preview")}
                 onLoadedMetadata={(e) => {
                   // videoWidth is 0 when the browser can't decode the picture (e.g. HEVC on some desktops):
                   // that's "unknown", not "no video", so the server makes that call.
@@ -106,7 +115,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
               />
             ) : (
               <div className="stripes flex aspect-video items-center justify-center px-6 text-center text-sm text-muted">
-                This browser can&apos;t preview the file, but it will still upload.
+                {t("cantPreview")}
               </div>
             )}
             <div className="flex items-center gap-3 border-t border-line bg-panel px-4 py-3">
@@ -118,13 +127,13 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
               <div className="min-w-0 flex-1">
                 <p className="truncate font-semibold">{file.name}</p>
                 <p className="text-xs text-muted">
-                  {meta && Number.isFinite(meta.duration) ? `${fmtDuration(meta.duration)} · ` : ""}{fmtSize(file.size)}
+                  {meta && Number.isFinite(meta.duration) ? `${fmtDuration(meta.duration)} · ` : ""}{fmtSize(file.size, format, tc)}
                 </p>
               </div>
               <label htmlFor={id} className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
-                Swap<span className="sr-only"> video</span>
+                {t("swap")}<span className="sr-only">{t("swapSr")}</span>
               </label>
-              <button type="button" onClick={clear} aria-label="Remove video" className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white">
+              <button type="button" onClick={clear} aria-label={t("remove")} className="grid size-11 shrink-0 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white">
                 <CloseIcon />
               </button>
             </div>
@@ -148,11 +157,11 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             <div className="flex items-center gap-3 border-t border-line bg-panel px-4 py-3">
               <span className="grid size-8 shrink-0 place-items-center rounded-full action-fill"><CheckIcon className="size-4" /></span>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">YouTube video</p>
-                <p className="text-xs text-muted">We fetch it at up to 720p when you submit.</p>
+                <p className="truncate font-semibold">{t("youtube")}</p>
+                <p className="text-xs text-muted">{t("youtubeHint")}</p>
               </div>
               <label htmlFor={id} className="inline-flex min-h-11 items-center rounded-lg border border-line px-3 py-2 text-xs font-bold uppercase tracking-wide hover:border-white/30">
-                Upload instead
+                {t("uploadInstead")}
               </label>
             </div>
           </div>
@@ -166,7 +175,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             </span>
             <span className="upload-title section-title text-2xl">{title}</span>
             <span className="max-w-xs text-sm font-medium">
-              {hint}<span className="hidden sm:inline"> Or drop a file here.</span>
+              {hint}<span className="hidden sm:inline">{t("drop")}</span>
             </span>
           </label>
         )}
@@ -178,8 +187,8 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             onChange={(e) => setOnlyMe(e.target.checked)} className="size-5 shrink-0 accent-accent"
           />
           <span className="text-sm">
-            <span className="font-semibold">Only me in the video</span>
-            <span className="block text-xs text-muted">Skip choosing a player: we follow whoever plays the most, at the table.</span>
+            <span className="font-semibold">{t("onlyMe")}</span>
+            <span className="block text-xs text-muted">{t("onlyMeHint")}</span>
           </span>
         </label>
       )}
@@ -192,7 +201,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
       )}
       {!file && (
         <div>
-          <label className={labelClass} htmlFor={linkInputId}>Or paste a video link</label>
+          <label className={labelClass} htmlFor={linkInputId}>{t("link")}</label>
           <div className="relative">
             <LinkIcon className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted" />
             <input
@@ -203,7 +212,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             />
             {link && (
               <button
-                type="button" onClick={() => setLink("")} aria-label="Clear link"
+                type="button" onClick={() => setLink("")} aria-label={t("clearLink")}
                 className="absolute top-1/2 right-1 grid size-11 -translate-y-1/2 place-items-center rounded-lg text-muted hover:bg-white/5 hover:text-white"
               >
                 <CloseIcon />
@@ -214,7 +223,7 @@ export function VideoPicker({ name = "video", linkName = "url", title, hint, kin
             id={`${linkInputId}-hint`} role={linkError ? "alert" : undefined}
             className={`mt-2 ${linkError ? "text-sm text-red-200" : "text-xs text-muted"}`}
           >
-            {linkError ?? `YouTube videos and Shorts, up to ${minutes(LIMITS.link_max_seconds[kind])}.`}
+            {linkError ?? t("linkHint", { minutes: minutes(LIMITS.link_max_seconds[kind], tc) })}
           </p>
         </div>
       )}

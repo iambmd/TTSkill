@@ -8,6 +8,7 @@
  * - two or more: ask which one.
  * The choice goes with the job as hidden player_time and player_box fields.
  */
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { playersEndpoint } from "@/lib/submit";
 
@@ -35,9 +36,10 @@ type Choice = { id: number; time: number; box: Box };
  * in several, and the backend then picks the frame that shows the most players. */
 export const FRAMES = 12;
 const MAX_W = 1280;
+// The English messages double as error identities (serverCanRead, tests); the page shows
+// their translation through `shown` below.
 export const PICK_PLAYER = "Tap the player to analyse.";
 const FINDING = "Finding the players in your video...";
-const FETCHING = "Fetching the video from YouTube to find the players...";
 /** The whole lookup (drawing frames + the request) never keeps the page waiting longer. */
 export const LOOKUP_TIMEOUT_MS = 30_000;
 /** A link is probed (~10 s) and downloaded whole before frames exist: a 3-minute video took
@@ -47,7 +49,6 @@ const LOAD_MS = 10_000;   // a playable file decodes its first frame well within
 const SEEK_MS = 6_000;
 export const TOO_LONG = "Finding the players took too long.";
 export const CANT_READ = "Your browser can't read frames from this video (often an iPhone HEVC file).";
-const SENDING = "Your browser can't read this video, so we're sending it to find the players";
 export const CHOOSE = "Choose “Analyse anyway” or try again.";
 export const NOBODY = "We couldn't spot a player in your video.";
 export const NOBODY_CHOOSE = "Choose “Analyse anyway” or pick another video.";
@@ -146,9 +147,9 @@ export function uploadForPlayers(file: File, kind: string, signal: AbortSignal, 
       const data = xhr.response ?? {};
       if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Found);
       // Our route answers {error}; FastAPI, reached directly, answers {detail}.
-      reject(new Error(data.error ?? (typeof data.detail === "string" ? data.detail : "Couldn't look for players.")));
+      reject(new Error(data.error ?? (typeof data.detail === "string" ? data.detail : COULDNT_LOOK)));
     };
-    xhr.onerror = () => { clearTimeout(timer); reject(new Error("The upload failed. Check your connection and try again.")); };
+    xhr.onerror = () => { clearTimeout(timer); reject(new Error(UPLOAD_FAILED)); };
     const body = new FormData();
     body.append("kind", kind);
     body.append("video", file);
@@ -159,7 +160,7 @@ export function uploadForPlayers(file: File, kind: string, signal: AbortSignal, 
 async function findPlayers(body: FormData, signal: AbortSignal): Promise<Found> {
   const res = await fetch("/api/players/detect", { method: "POST", body, signal });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error ?? "Couldn't look for players.");
+  if (!res.ok) throw new Error(data.error ?? COULDNT_LOOK);
   return data as Found;
 }
 
@@ -200,7 +201,11 @@ export function needsChoice(found: Pick<Found, "candidates" | "others" | "availa
   return pickerView(found, open) === "pick";
 }
 
-const WHY: Record<string, string> = { still: "barely moves", far: "far from the table", small: "far away", more: "also seen" };
+const WHY = new Set(["still", "far", "small", "more"]);
+const COULDNT_LOOK = "Couldn't look for players.";
+const UPLOAD_FAILED = "The upload failed. Check your connection and try again.";
+/** A failure's text in the page's language: our own errors by name, the server's as sent. */
+const KNOWN: Record<string, string> = { [TOO_LONG]: "tooLong", [CANT_READ]: "cantRead", [COULDNT_LOOK]: "couldntLook", [UPLOAD_FAILED]: "uploadFailed" };
 
 export function PlayerPicker({ previewUrl, duration, file = null, unreadable = false, link, kind, onProblem, jobId, onChoice }: {
   /** The chosen file's object URL and length, once the preview has loaded. */
@@ -218,6 +223,9 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   jobId?: string;
   onChoice?: (choice: { time: number; box: Box }) => void;
 }) {
+  const t = useTranslations("picker");
+  const shown = (message: string) => (KNOWN[message] ? t(KNOWN[message]) : message);
+  const why = (background: string) => t(`why.${WHY.has(background) ? background : "background"}`);
   const [found, setFound] = useState<Found | null>(null);
   const [finding, setFinding] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
@@ -308,7 +316,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
         .catch((e: Error) => {
           if (stale) return;
           controller.abort();   // a timeout: stop the request so the backend stops too
-          setFailed(e.name === "AbortError" ? TOO_LONG : e.message || "Couldn't look for players.");
+          setFailed(e.name === "AbortError" ? TOO_LONG : e.message || COULDNT_LOOK);
         })
         .finally(() => { if (!stale) { setFinding(false); setSending(null); } });
     }, link ? 600 : 0);   // let a pasted link settle before downloading it
@@ -326,7 +334,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   // A result page's "Change player" has no form to submit, so nothing to analyse anyway.
   const anyway = jobId ? null : (
     <button type="button" onClick={giveUp} className="text-sm font-bold text-accent hover:text-accent-hot">
-      Analyse anyway (auto-pick)
+      {t("anyway")}
     </button>
   );
 
@@ -342,17 +350,17 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
     return (
       <div className="flex items-center gap-3 rounded-xl border border-line bg-panel px-4 py-3">
         {keep}
-        <p className="flex-1 text-sm text-muted">We&apos;ll pick the player automatically.</p>
+        <p className="flex-1 text-sm text-muted">{t("autoPick")}</p>
         <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-accent hover:text-accent-hot">
-          Pick a player
+          {t("pickPlayer")}
         </button>
       </div>
     );
   }
   if (finding) {
     const what = sending !== null
-      ? (sending < 1 ? `${SENDING}... ${Math.round(sending * 100)}%` : `${FINDING}`)
-      : link && !previewUrl && !jobId ? FETCHING : FINDING;
+      ? (sending < 1 ? t("sending", { pct: Math.round(sending * 100) }) : t("finding"))
+      : link && !previewUrl && !jobId ? t("fetching") : t("finding");
     return (
       <div className="stripes space-y-2 rounded-xl border border-line bg-panel px-4 py-3">
         <div className="flex items-center gap-3">
@@ -360,7 +368,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
           {anyway}
         </div>
         {sending !== null && sending < 1 && (
-          <div role="progressbar" aria-label="Sending the video" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(sending * 100)}
+          <div role="progressbar" aria-label={t("sendingLabel")} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(sending * 100)}
                className="h-1.5 overflow-hidden rounded-full bg-white/10">
             <div className="h-full rounded-full bg-accent" style={{ width: `${sending * 100}%` }} />
           </div>
@@ -371,11 +379,11 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   if (failed) {
     return (
       <div role="alert" className="space-y-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
-        <p className="text-sm text-red-100">{failed} You can analyse anyway (we pick the player nearest the camera most often), or try again.</p>
+        <p className="text-sm text-red-100">{t("failedHint", { failed: shown(failed) })}</p>
         <div className="flex gap-5">
           {anyway}
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-muted hover:text-white">
-            Try again
+            {t("tryAgain")}
           </button>
         </div>
       </div>
@@ -393,13 +401,13 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
       <div role="alert" className="space-y-2 rounded-xl border border-line bg-panel px-4 py-3">
         {hidden}
         <p className="text-sm">
-          {NOBODY} <span className="text-muted">Film with your whole body in view, or analyse anyway and we&apos;ll look through the whole video.</span>
+          {t("nobody")} <span className="text-muted">{t("nobodyHint")}</span>
         </p>
         <div className="flex flex-wrap gap-5">
           {anyway}
           {others.length > 0 && (
             <button type="button" onClick={showEveryone} className="text-sm font-bold text-muted hover:text-white">
-              Show everyone we saw ({others.length})
+              {t("showEveryone", { n: others.length })}
             </button>
           )}
         </div>
@@ -412,9 +420,9 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
       <div className="flex items-center gap-3 rounded-xl border border-line bg-panel p-2 pr-4">
         {hidden}
         {chosen && <img src={chosen.thumb} alt="" className="h-14 w-auto rounded-lg" />}
-        <p aria-live="polite" className="flex-1 text-sm">Analysing this player</p>
+        <p aria-live="polite" className="flex-1 text-sm">{t("analysing")}</p>
         <button type="button" onClick={() => setOpen(true)} className="text-sm font-bold text-accent hover:text-accent-hot">
-          Change player
+          {t("change")}
         </button>
       </div>
     );
@@ -427,21 +435,21 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   return (
     <fieldset className="space-y-3">
       {hidden}
-      <legend className={`${kind === "coach" ? "headline" : "section-title"} mb-1 text-2xl`}>{kind === "breakdown" ? "Which player should we analyse?" : "Which one is you?"}</legend>
+      <legend className={`${kind === "coach" ? "headline" : "section-title"} mb-1 text-2xl`}>{kind === "breakdown" ? t("whichBreakdown") : t("whichYou")}</legend>
       <p className="text-sm text-muted">
-        {found.candidates.length > 1 ? `We see ${found.candidates.length} players. ` : ""}
-        {kind === "breakdown" ? "Tap the one to break down." : "Tap yourself so we analyse the right one."}
+        {found.candidates.length > 1 ? t("seePlayers", { n: found.candidates.length }) : ""}
+        {kind === "breakdown" ? t("tapBreakdown") : t("tapYou")}
       </p>
       {found.frame && (
         <div className="relative overflow-hidden rounded-2xl border border-line bg-black">
-          <img src={found.frame.image} alt="A frame from your video" className="block w-full" />
+          <img src={found.frame.image} alt={t("frame")} className="block w-full" />
           {found.frame.boxes.map(({ id, box }) => {
             const c = people.find((x) => x.id === id);
             if (!c) return null;
             const on = choice?.id === id;
             return (
               <button
-                key={id} type="button" aria-pressed={on} aria-label={`Player ${id + 1}`}
+                key={id} type="button" aria-pressed={on} aria-label={t("player", { n: id + 1 })}
                 onClick={() => select(c, found.frame!.time, box)}
                 style={{ left: pct(box[0]), top: pct(box[1]), width: pct(box[2] - box[0]), height: pct(box[3] - box[1]) }}
                 className={`absolute rounded-lg border-2 ${on ? "border-accent bg-accent/20 shadow-[0_0_24px_color-mix(in_srgb,var(--accent-glow)_60%,transparent)]" : `${c.background ? "border-dashed border-white/50" : "border-white/80"} bg-white/5 hover:border-accent`}`}
@@ -458,10 +466,10 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
               key={c.id} type="button" aria-pressed={on} onClick={() => select(c)}
               className={`relative shrink-0 overflow-hidden rounded-xl border-2 ${on ? "border-accent" : "border-line hover:border-white/40"}`}
             >
-              <img src={c.thumb} alt={`Player ${c.id + 1}${c.background ? `, ${WHY[c.background] ?? "background"}` : ""}`} className={`h-24 w-auto ${c.background && !on ? "opacity-70" : ""}`} />
+              <img src={c.thumb} alt={c.background ? t("playerWhy", { n: c.id + 1, why: why(c.background) }) : t("player", { n: c.id + 1 })} className={`h-24 w-auto ${c.background && !on ? "opacity-70" : ""}`} />
               {c.background && (
                 <span className="absolute inset-x-0 bottom-0 bg-black/70 px-1 py-0.5 text-center text-[10px] font-semibold uppercase tracking-wide text-muted">
-                  {WHY[c.background] ?? "background"}
+                  {why(c.background)}
                 </span>
               )}
             </button>
@@ -470,10 +478,10 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
       </div>
       {!showOthers && others.length > 0 && (
         <button type="button" onClick={showEveryone} className="text-sm font-bold text-muted hover:text-white">
-          Not here? Show everyone we saw ({others.length} more)
+          {t("showMore", { n: others.length })}
         </button>
       )}
-      {!choice && <p role="alert" className="text-sm text-red-200">{PICK_PLAYER}</p>}
+      {!choice && <p role="alert" className="text-sm text-red-200">{t("pick")}</p>}
     </fieldset>
   );
 }

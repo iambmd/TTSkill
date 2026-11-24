@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { recommend, type Level, type Style } from "@/lib/rubbers";
 import { HomeGear } from "./home-gear";
 import { DemoStrip, FeatureGrid } from "./home-media";
@@ -7,8 +8,8 @@ import { MatchUpload } from "./match-upload";
 import "./home.css";
 
 const footerLinks = [
-  ["/", "Home"], ["/coach", "Coach"], ["/breakdown", "Breakdown"], ["/match", "Pro Match"],
-  ["/autocut", "Auto-Cut"], ["/rubbers", "Rubber Finder"], ["/pros", "Pro Setups"],
+  ["/", "home"], ["/coach", "coach"], ["/breakdown", "breakdown"], ["/match", "match"],
+  ["/autocut", "autocut"], ["/rubbers", "rubbers"], ["/pros", "pros"],
 ] as const;
 
 function equipmentPreviewName(style: Style, level: Level) {
@@ -22,13 +23,14 @@ const equipmentPreview = {
 };
 
 export default function Home() {
+  const t = useTranslations("home");
   return (
     <div className="home-page">
       <HomeMotion />
       <section aria-labelledby="match-title" className="home-hero">
         <div className="home-hero-copy">
-          <h1 id="match-title" className="headline">Highlights and coaching</h1>
-          <p className="text-muted">Turn your match video into highlights and actionable coaching.</p>
+          <h1 id="match-title" className="headline">{t("title")}</h1>
+          <p className="text-muted">{t("intro")}</p>
         </div>
         <MatchUpload />
       </section>
@@ -37,9 +39,9 @@ export default function Home() {
       <DemoStrip />
       <footer className="home-footer">
         <Link href="/" prefetch={false} className="headline text-2xl">TT<span className="text-accent">Skill</span></Link>
-        <nav aria-label="Footer" className="flex flex-wrap items-center gap-x-5 gap-y-1">
+        <nav aria-label={t("footer")} className="flex flex-wrap items-center gap-x-5 gap-y-1">
           {footerLinks.map(([href, label]) => (
-            <Link key={href} href={href} prefetch={false} className="inline-flex min-h-11 items-center text-sm font-semibold hover:text-accent">{label}</Link>
+            <Link key={href} href={href} prefetch={false} className="inline-flex min-h-11 items-center text-sm font-semibold hover:text-accent">{t(`footerLinks.${label}`)}</Link>
           ))}
         </nav>
       </footer>

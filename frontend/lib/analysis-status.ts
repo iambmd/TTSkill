@@ -1,7 +1,10 @@
-export const ANALYSIS_OFFLINE = "Our analysis server is offline right now, try again in a few minutes";
+import { english } from "./english";
 
+export const ANALYSIS_OFFLINE = english("offline")("analysis");
+
+/** The analysis server is down. Pages show their own translated notice; the message is the English default. */
 export class AnalysisOfflineError extends Error {
-  constructor() { super(ANALYSIS_OFFLINE); }
+  constructor(message = ANALYSIS_OFFLINE) { super(message); }
 }
 
 export function unavailableStatus(status: number) {

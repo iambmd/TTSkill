@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 type Theme = "dark" | "light";
@@ -7,6 +8,7 @@ type Theme = "dark" | "light";
 const KEY = "ttskill-theme";
 
 export function ThemeToggle() {
+  const t = useTranslations("theme");
   const [theme, setTheme] = useState<Theme>("dark");
   useEffect(() => {
     setTheme(document.documentElement.dataset.theme === "light" ? "light" : "dark");
@@ -24,7 +26,7 @@ export function ThemeToggle() {
   return (
     <button
       type="button" onClick={flip} aria-pressed={light}
-      aria-label={light ? "Switch to dark mode" : "Switch to light mode"}
+      aria-label={light ? t("toDark") : t("toLight")}
       className="grid size-11 shrink-0 place-items-center rounded-full border border-line text-muted transition hover:border-accent hover:text-fg"
     >
       {light ? <MoonIcon /> : <SunIcon />}

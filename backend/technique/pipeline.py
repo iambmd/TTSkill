@@ -202,14 +202,15 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
               progress: Optional[Progress] = None, hand: str = "auto",
               stroke_type: Optional[str] = None, trust_hand: bool = False,
               assume_hand: Optional[str] = None, chosen: Optional[dict] = None,
-              identity: Optional[np.ndarray] = None, picked: bool = False) -> dict:
+              identity: Optional[np.ndarray] = None, picked: bool = False, lang: str = "en") -> dict:
     """hand: auto | left | right (the player's bat hand, used when the paddle isn't visible;
     with trust_hand, always used).
     chosen, identity: a choose_window result and the player seed already computed for this
     video (Coach's pose step), so the candidate rallies aren't scanned again.
     picked: the seed is a player the user tapped (for the "we lost the player you picked" message).
     stroke: a broad stroke, or "" / "auto" to read it from the swing.
-    stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect."""
+    stroke_type: a key of strokes.STROKE_TYPES, or None to auto-detect.
+    lang: the language of the breakdown's text, its video prompt and the video's labels ("en", "vi")."""
     t0 = time.time()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -263,7 +264,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
     frame_times = sorted(set([round(x, 2) for x in np.linspace(0.2, max(0.3, dur - 0.2), 6)] + keys))
     a = get_analyzer(analyzer)
     _log(progress, f"analysing with {a.name}")
-    kind = dict(stroke_type=stroke_type, detected=detected is not None)
+    kind = dict(stroke_type=stroke_type, detected=detected is not None, lang=lang)
     analysing = timing.stage(f"analyzer ({a.name})")
     analysing.__enter__()
     try:
@@ -287,13 +288,13 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
             s.key_time_s = k
     (out / "breakdown.json").write_text(b.model_dump_json(indent=2))
 
-    prompts = build_prompts(b)
-    (out / "video_prompt.json").write_text(json.dumps(prompts, indent=2))
+    prompts = build_prompts(b, lang=lang)
+    (out / "video_prompt.json").write_text(json.dumps(prompts, indent=2, ensure_ascii=False))
     generated = generate_video(prompts, str(out / "generated.mp4"), t2v_provider)
 
     _log(progress, "rendering pose-overlay breakdown video")
     with timing.stage("render"):
-        overlay = render_breakdown(clip, track, b, str(out / "breakdown.mp4"), side)
+        overlay = render_breakdown(clip, track, b, str(out / "breakdown.mp4"), side, lang=lang)
 
     result = {
         "kind": "technique_breakdown",
@@ -325,7 +326,7 @@ def run_video(src: str, out_dir: str, stroke: str = "forehand", player: Optional
 
 def run_text(text: str, out_dir: str, stroke: str = "forehand", player: Optional[str] = None,
              analyzer: str = "auto", t2v_provider: str = "none",
-             progress: Optional[Progress] = None, stroke_type: Optional[str] = None) -> dict:
+             progress: Optional[Progress] = None, stroke_type: Optional[str] = None, lang: str = "en") -> dict:
     t0 = time.time()
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -339,7 +340,7 @@ def run_text(text: str, out_dir: str, stroke: str = "forehand", player: Optional
         stroke_type = strokes.LEGACY_TYPE.get(normalize_stroke(stroke))
     st = strokes.STROKE_TYPES.get(stroke_type or "")
     stroke = st.stroke if st else normalize_stroke(stroke)
-    kind = dict(stroke_type=stroke_type, detected=detected is not None)
+    kind = dict(stroke_type=stroke_type, detected=detected is not None, lang=lang)
     a = get_analyzer(analyzer)
     try:
         b = a.from_text(text, stroke, player, **kind)
@@ -349,10 +350,10 @@ def run_text(text: str, out_dir: str, stroke: str = "forehand", player: Optional
     if b.stroke_type not in strokes.STROKE_TYPES:
         b.stroke_type = stroke_type
     (out / "breakdown.json").write_text(b.model_dump_json(indent=2))
-    prompts = build_prompts(b)
-    (out / "video_prompt.json").write_text(json.dumps(prompts, indent=2))
+    prompts = build_prompts(b, lang=lang)
+    (out / "video_prompt.json").write_text(json.dumps(prompts, indent=2, ensure_ascii=False))
     generated = generate_video(prompts, str(out / "generated.mp4"), t2v_provider)
-    video = render_text_only(b, str(out / "breakdown.mp4"))
+    video = render_text_only(b, str(out / "breakdown.mp4"), lang=lang)
     result = {
         "kind": "technique_breakdown", "input": "text", "stroke": stroke, "analyzer": b.source,
         "stroke_type": b.stroke_type, "stroke_type_detected": detected,

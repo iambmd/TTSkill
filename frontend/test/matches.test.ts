@@ -1,13 +1,13 @@
 /** Pro-match results: the best match comes first, in the cards and in the demo data. */
 import { createElement } from "react";
-import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import demoJobs from "@/lib/demo-jobs.json";
 import type { ProMatch } from "@/lib/submit";
 import { Matches } from "@/app/jobs/[id]/matches";
+import { renderIntl } from "./intl";
 
 const demo = demoJobs["demo-match"] as unknown as { message: string; matches: ProMatch[] };
-const render = (matches: ProMatch[], stroke = "forehand") => renderToStaticMarkup(createElement(Matches, { matches, stroke }));
+const render = (matches: ProMatch[], stroke = "forehand") => renderIntl(createElement(Matches, { matches, stroke }));
 
 describe("pro match cards", () => {
   it("cached demo lists the matches best first, and the headline names the first", () => {

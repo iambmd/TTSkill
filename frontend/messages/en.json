@@ -1,0 +1,684 @@
+{
+  "metadata": {
+    "title": "TTSkill",
+    "description": "AI technique breakdowns and automatic match highlights for table tennis."
+  },
+  "layout": {
+    "skip": "Skip to main content"
+  },
+  "header": {
+    "siteNav": "Site navigation"
+  },
+  "nav": {
+    "home": "Home",
+    "coach": "Coach",
+    "breakdown": "Breakdown",
+    "match": "Pro match",
+    "autocut": "Auto-Cut",
+    "gear": "Gear"
+  },
+  "theme": {
+    "toDark": "Switch to dark mode",
+    "toLight": "Switch to light mode"
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "vi": "Vietnamese",
+    "englishOnly": "English only",
+    "englishOnlyHint": "This saved example was made in English."
+  },
+  "common": {
+    "optional": "optional",
+    "before": "Before",
+    "after": "After",
+    "retry": "Retry",
+    "checking": "Checking…",
+    "starting": "Starting...",
+    "checkingLink": "Checking the link...",
+    "uploading": "Uploading...",
+    "uploadingPct": "Uploading {pct}%",
+    "download": "Download",
+    "save": "Save",
+    "cm": "{value} cm",
+    "mb": "{value} MB",
+    "gb": "{value} GB",
+    "minutes": "{n, plural, one {# minute} other {# minutes}}",
+    "seconds": "{n, plural, one {# second} other {# seconds}}",
+    "minShort": "{n} min",
+    "range": "{start} – {end}"
+  },
+  "hands": {
+    "auto": "Auto",
+    "right": "Right",
+    "left": "Left",
+    "rightHanded": "right-handed",
+    "leftHanded": "left-handed"
+  },
+  "grips": {
+    "shakehand": "Shakehand",
+    "penhold": "Penhold",
+    "shakehandSub": "Handshake grip, most players",
+    "penholdSub": "Held like a pen"
+  },
+  "strokes": {
+    "forehand": "Forehand",
+    "backhand": "Backhand",
+    "serve": "Serve",
+    "flick": "Flick",
+    "block": "Block",
+    "footwork": "Footwork",
+    "chop": "Chop",
+    "forehand_topspin": "Forehand topspin",
+    "forehand_drive": "Forehand drive",
+    "forehand_loop_backspin": "Forehand loop vs backspin",
+    "backhand_topspin": "Backhand topspin",
+    "backhand_flick": "Backhand flick",
+    "backhand_push": "Backhand push",
+    "backhand_block": "Backhand block",
+    "forehand_block": "Forehand block"
+  },
+  "offline": {
+    "analysis": "Our analysis server is offline right now, try again in a few minutes",
+    "analysisSentence": "Our analysis server is offline right now, try again in a few minutes.",
+    "home": "Live analysis is offline right now. Explore the demos below."
+  },
+  "errors": {
+    "uploadTooBig": "That video is too big to upload here. Try a shorter clip.",
+    "uploadUnfinished": "The upload didn't finish. Choose the video again or retry the upload.",
+    "uploadConnection": "The upload didn't finish. Check your connection and try again.",
+    "unreachable": "Can't reach the TTSkill backend. Check that it is running (make dev), then try again.",
+    "rejected": "Backend rejected the request",
+    "stubJob": "Stub mode: no backend configured, so nothing is processed.",
+    "rerunNeedsBackend": "Changing the player needs the TTSkill backend.",
+    "jobNotFound": "Job not found",
+    "noStubResult": "No result in stub mode",
+    "noRallyClips": "This match has no editable rally clips.",
+    "exportFailed": "Couldn't make this download. Try again.",
+    "pickRally": "Choose at least one available rally, once each.",
+    "pickStyle": "Pick spin or speed.",
+    "pickType": "Pick a rubber type.",
+    "pickLevel": "Pick your level.",
+    "budget": "Enter a budget between {min} and {max}."
+  },
+  "validation": {
+    "or": "{list} or {last}",
+    "uploadType": "Upload a video file: {types}.",
+    "uploadSize": "That file is {mb} MB. Upload one under {max} MB, or trim it first.",
+    "tooShort": "That clip is only {seconds} s long. Upload at least {min} seconds of play.",
+    "tooLong": "That video is {length} long. Uploads can be up to {max}: trim it and try again.",
+    "tooSmall": "That video is only {width}x{height}, too small to see the stroke. Re-record it at 480p or higher (your phone's normal video setting is fine).",
+    "heightNumber": "Enter your height as a number in cm, between {min} and {max}.",
+    "heightRange": "Height must be between {min} and {max} cm. Leave it empty and we estimate it from the table.",
+    "feetInches": "Enter whole feet and inches as numbers, e.g. 5 ft 10 in.",
+    "inchesRange": "Inches go from 0 to 11.",
+    "heightFeetRange": "Height must be between {range}. Leave it empty and we estimate it from the table.",
+    "ftIn": "{ft} ft {inch} in",
+    "and": "{a} and {b}",
+    "textLength": "{label} can be up to {max} characters (it has {n}). Shorten it and try again.",
+    "choice": "{label} must be {options}.",
+    "wholeNumber": "{label} must be a whole number.",
+    "number": "{label} must be a number.",
+    "between": "{label} must be between {min} and {max}.",
+    "openMatch": "Open your match result or upload the video again.",
+    "chooseRally": "Open your match result and choose a rally again.",
+    "chooseVideoAgain": "Choose the video again.",
+    "unknownJob": "Unknown job.",
+    "sendFrames": "Send at least one frame of the video, or a YouTube link.",
+    "maxFrames": "Send at most {max} frames.",
+    "frameTimes": "Each frame needs its time in the video, in seconds.",
+    "frameSize": "Each frame must be under {max} KB.",
+    "frameType": "Frames must be JPEG or PNG images.",
+    "onlyMe": "“Only me in the video” must be ticked or not.",
+    "pickAgain": "The player you picked didn't come through. Pick the player again.",
+    "linkHint": "Paste a youtube.com/watch, youtu.be or Shorts link.",
+    "playlist": "That's a playlist. Open one video from it and paste that video's link.",
+    "channel": "That's a channel link. Open one of its videos and paste that video's link.",
+    "notYoutube": "Only YouTube links work here. {hint} Or upload the file.",
+    "badYoutube": "That isn't a YouTube video link we can use. {hint}",
+    "unknownStroke": "Unknown stroke: {stroke}. Leave it blank to auto-detect.",
+    "unknownStrokeType": "Unknown stroke type: {stroke}. Pick one from the list, or leave it blank to auto-detect.",
+    "breakdownInput": "Upload a clip, paste a YouTube link, or describe the training.",
+    "coachRequest": "Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.",
+    "coachVideo": "Add a video: upload a clip or paste a YouTube link.",
+    "matchVideo": "Upload a clip of yourself or paste a YouTube link.",
+    "autocutVideo": "Upload a match video or paste a YouTube link.",
+    "labels": {
+      "request": "Your request",
+      "description": "The description",
+      "trainingDescription": "The training description",
+      "playerName": "The player's name",
+      "hand": "Bat hand",
+      "stroke": "Stroke",
+      "grip": "Grip",
+      "mode": "Mode",
+      "language": "Language",
+      "topN": "Rallies in the reel",
+      "threshold": "Hit threshold",
+      "gap": "Max gap",
+      "minHits": "Min hits"
+    }
+  },
+  "home": {
+    "title": "Highlights and coaching",
+    "intro": "Turn your match video into highlights and actionable coaching.",
+    "footer": "Footer",
+    "footerLinks": {
+      "home": "Home",
+      "coach": "Coach",
+      "breakdown": "Breakdown",
+      "match": "Pro Match",
+      "autocut": "Auto-Cut",
+      "rubbers": "Rubber Finder",
+      "pros": "Pro Setups"
+    },
+    "upload": {
+      "chooseType": "Choose an MP4 or MOV video.",
+      "empty": "That file is empty. Choose another recording.",
+      "label": "Upload your match",
+      "startingReel": "Starting your reel…",
+      "hint": "MP4 or MOV · Up to {mb} MB",
+      "progress": "Upload progress",
+      "retry": "Retry upload"
+    },
+    "gear": {
+      "title": "Gear picks",
+      "finder": "Rubber Finder",
+      "featured": "Featured rubbers",
+      "playStyle": "Play style",
+      "tags": {
+        "spin": "Spin",
+        "speed": "Speed",
+        "control": "Control"
+      }
+    },
+    "quiz": {
+      "title": "Find your rubber",
+      "playStyle": "Play style",
+      "level": "Level",
+      "budget": "Budget per sheet",
+      "yourPick": "Your pick",
+      "finding": "Finding your rubber…",
+      "failed": "Couldn't load your pick. Try Rubber Finder.",
+      "nothing": "Nothing under {budget} yet. Try a higher budget.",
+      "open": "Open Rubber Finder"
+    },
+    "features": {
+      "title": "Explore TTSkill",
+      "autocut": {
+        "title": "Auto-Cut",
+        "description": "Trim a match to its rallies."
+      },
+      "coach": {
+        "title": "Coach",
+        "description": "Get feedback on your match."
+      },
+      "breakdown": {
+        "title": "Technique Breakdown",
+        "description": "See what makes a stroke work."
+      },
+      "equipment": {
+        "title": "Equipment",
+        "description": "Find rubber for your game."
+      },
+      "match": {
+        "title": "Pro styles",
+        "description": "Compare your swing with the pros."
+      },
+      "spinPick": "Spin pick",
+      "speedPick": "Speed pick",
+      "preview": "{title} preview",
+      "tryIt": "Try it",
+      "tryItLabel": "Try it: {title}"
+    },
+    "demos": {
+      "title": "See it in action",
+      "version": "Demo version",
+      "autocut": {
+        "title": "Match highlights",
+        "before": "A phone recording of two players during points and the gaps between them."
+      },
+      "breakdown": {
+        "title": "Stroke breakdown",
+        "before": "Ma Long practices a forehand loop at full speed."
+      },
+      "play": "Play {title} {mode}",
+      "video": "{title}, {mode}",
+      "modes": {
+        "before": "before",
+        "after": "after"
+      }
+    }
+  },
+  "demoDescriptions": {
+    "autocut": "Four table tennis rallies play back to back, with the time spent waiting between points cut out.",
+    "breakdown": "Ma Long lowers his stance, then brushes upward through a forehand loop against backspin. Slow motion and freeze frames mark the key positions.",
+    "match": "Clips of Fan Zhendong, Ma Long and Tomokazu Harimoto show how each player moves through a forehand, with cues at key positions.",
+    "coachHighlights": "The two players trade shots across five rallies, shown one after another with the longer exchanges first.",
+    "coachBreakdown": "The near-side player in teal hits a forehand topspin. The clip slows and pauses to show how to load low, lift through the ball and finish high."
+  },
+  "examples": {
+    "eyebrow": "Example",
+    "title": "See it on a real clip.",
+    "howItWorks": "How it works",
+    "defaultSteps": "What happens to your video.",
+    "videoLabel": "{label} example video",
+    "comingSoon": "Example video coming soon"
+  },
+  "matchSource": {
+    "rally": "Using your selected rally",
+    "match": "Using your uploaded match",
+    "clip": "Rally {id} · {start} – {end} in the match",
+    "change": "Choose a different video"
+  },
+  "submit": {
+    "blockedHint": "Add a video or link to start"
+  },
+  "coach": {
+    "eyebrow": "TT Coach",
+    "title": "Ask your coach.",
+    "body": "One request, one video. The coach finds your rallies and your best strokes, compares you with the pros, and shows each result as soon as it's ready.",
+    "examples": {
+      "one": "Here's my match: show my best rallies and fix my forehand",
+      "two": "Which pros do I play like? Compare my backhand",
+      "three": "Cut the dead time and tell me what to work on"
+    },
+    "rallyRequest": "Coach my stroke in this rally.",
+    "ask": "What do you want?",
+    "placeholder": "e.g. Show my best rallies and fix my forehand",
+    "videoTitle": "Add your video",
+    "videoHint": "A match or a practice clip, with the sound on.",
+    "submit": "Ask the coach",
+    "example": {
+      "localPlan": "Local coaching plan, reply and videos",
+      "coachPlan": "The coach’s plan, reply and videos",
+      "comingSoon": "Example result coming soon",
+      "coachSays": "Coach says",
+      "caption": "A phone records a match, with the player in teal nearest the camera and their opponent across the table.",
+      "message": "Here's my match, show my best rallies and fix my forehand",
+      "stepsTitle": "What the coach does.",
+      "steps": {
+        "one": "A LangChain deepagents agent running Claude reads your request and the video you sent.",
+        "two": "It writes a to-do list for the job, and you watch it tick off live.",
+        "three": "It calls its tools: Auto-Cut finds your best rallies by sound, and Technique Breakdown tracks your pose to check your forehand.",
+        "four": "It only coaches a real stroke: one inside a rally, right on a ball-contact sound, from your playing stance. Swings after the point ends don't count.",
+        "five": "Helper agents split the work: a clip analyst, a pro matcher and a coach writer, each with its own notes.",
+        "six": "Claude writes your reply: what went well, the fix to work on, and a drill, with the videos it made."
+      }
+    }
+  },
+  "breakdown": {
+    "eyebrow": "Technique Breakdown",
+    "title": "Swing like the pros.",
+    "body": "Drop in a clip of a player you admire and get a step-by-step coaching video of their stroke.",
+    "needInput": "Upload a clip, paste a YouTube link, or describe the player's training instead.",
+    "videoTitle": "Upload a clip",
+    "videoHint": "A few seconds of the stroke. Side-on, full body in frame works best.",
+    "describe": "No video? Describe the training instead",
+    "trainingLabel": "Training description",
+    "trainingPlaceholder": "Paste notes, a transcript, or a description of how the player trains this stroke.",
+    "characters": "{n}/{max} characters",
+    "player": "Player",
+    "playerPlaceholder": "e.g. Fan Zhendong",
+    "stroke": "Stroke",
+    "autoDetect": "Auto-detect from the swing",
+    "strokeHint": "Pick one to get that stroke's coaching steps, or leave it and we read it from the video.",
+    "hand": "Bat hand",
+    "handHint": "Auto finds the paddle in the video. Pick a hand if the overlay tracks the wrong arm.",
+    "submit": "Break it down",
+    "beforeCaption": "Ma Long repeats a forehand loop in practice, stepping into each swing and returning to his ready stance.",
+    "steps": {
+      "one": "We find the few seconds where the swing happens and track the player's body with pose detection, frame by frame.",
+      "two": "We work out which hand holds the bat and which stroke it is, unless you picked one.",
+      "three": "We pick the key moments of the swing: the backswing, the contact and the follow-through.",
+      "four": "AI turns those moments into three short cues, like \"Turn waist\" or \"Brush up\", plus a practice drill.",
+      "five": "We render a vertical coaching video: slow motion into each cue, a freeze frame, and a coloured trail on the bat hand."
+    }
+  },
+  "autocut": {
+    "eyebrow": "Match Auto-Cut",
+    "title": "Cut the dead time.",
+    "body": "Turn a match recording into a short reel or keep every rally.",
+    "videoTitle": "Upload your match",
+    "videoHint": "A phone recording of your match works.",
+    "modes": {
+      "highlights": "Highlights",
+      "highlightsSub": "A short reel of your best rallies",
+      "full": "Full match",
+      "fullSub": "Every rally, dead time cut"
+    },
+    "whatToMake": "What to make",
+    "topN": "Rallies in the reel",
+    "submit": "Cut my match",
+    "beforeCaption": "A phone records both players as they serve, rally and get ready for the next point.",
+    "steps": {
+      "one": "Upload your match or paste a video link.",
+      "two": "Choose a highlight reel or a cut of every rally.",
+      "three": "Watch the result and download it to share."
+    }
+  },
+  "match": {
+    "eyebrow": "Find my pro match",
+    "title": "Who do you play like?",
+    "body": "Film yourself hitting a few strokes. We match your height, build and swing to the closest pros and show you their breakdowns.",
+    "videoTitle": "Upload your swing",
+    "videoHint": "Full body in frame, a few forehands or backhands. Side-on with the table visible works best.",
+    "stroke": "Stroke to compare",
+    "grip": "Your grip",
+    "gripHint": "Pros with your grip come first.",
+    "height": "Your height",
+    "heightUnit": "Height unit",
+    "units": {
+      "cm": "cm",
+      "ft": "ft / in",
+      "feet": "ft",
+      "inches": "in"
+    },
+    "cmPlaceholder": "e.g. 175",
+    "feet": "Feet",
+    "inches": "Inches",
+    "heightHint": "{min}–{max} cm. Leave it empty and we estimate it from the table in the frame (76 cm high, 274 cm long).",
+    "hand": "Bat hand",
+    "submit": "Find my match",
+    "beforeCaption": "A player records their forehand, bending their knees and rotating through the shot.",
+    "steps": {
+      "one": "We track your body with pose detection and measure your build: limb lengths compared with your height, and how wide you stand.",
+      "two": "If you don't give your height, we estimate it from the table in the frame, which is always 76 cm high and 274 cm long.",
+      "three": "We compare you only with pros who play with the same hand, and pros with your grip come first.",
+      "four": "The 3 pros closest to your height and build are your matches. We then line up your swing against each of theirs to show where your form differs.",
+      "five": "You get a score and notes for each pro, plus one video of their technique breakdowns to learn from."
+    }
+  },
+  "video": {
+    "preview": "Preview of your chosen video",
+    "cantPreview": "This browser can't preview the file, but it will still upload.",
+    "swap": "Swap",
+    "swapSr": " video",
+    "remove": "Remove video",
+    "youtube": "YouTube video",
+    "youtubeHint": "We fetch it at up to 720p when you submit.",
+    "uploadInstead": "Upload instead",
+    "drop": " Or drop a file here.",
+    "onlyMe": "Only me in the video",
+    "onlyMeHint": "Skip choosing a player: we follow whoever plays the most, at the table.",
+    "link": "Or paste a video link",
+    "clearLink": "Clear link",
+    "linkHint": "YouTube videos and Shorts, up to {minutes}."
+  },
+  "picker": {
+    "pick": "Tap the player to analyse.",
+    "finding": "Finding the players in your video...",
+    "fetching": "Fetching the video from YouTube to find the players...",
+    "tooLong": "Finding the players took too long.",
+    "cantRead": "Your browser can't read frames from this video (often an iPhone HEVC file).",
+    "sending": "Your browser can't read this video, so we're sending it to find the players... {pct}%",
+    "sendingLabel": "Sending the video",
+    "couldntLook": "Couldn't look for players.",
+    "uploadFailed": "The upload failed. Check your connection and try again.",
+    "anyway": "Analyse anyway (auto-pick)",
+    "autoPick": "We'll pick the player automatically.",
+    "pickPlayer": "Pick a player",
+    "failedHint": "{failed} You can analyse anyway (we pick the player nearest the camera most often), or try again.",
+    "tryAgain": "Try again",
+    "nobody": "We couldn't spot a player in your video.",
+    "nobodyHint": "Film with your whole body in view, or analyse anyway and we'll look through the whole video.",
+    "showEveryone": "Show everyone we saw ({n})",
+    "showMore": "Not here? Show everyone we saw ({n} more)",
+    "analysing": "Analysing this player",
+    "change": "Change player",
+    "whichBreakdown": "Which player should we analyse?",
+    "whichYou": "Which one is you?",
+    "seePlayers": "We see {n} players. ",
+    "tapBreakdown": "Tap the one to break down.",
+    "tapYou": "Tap yourself so we analyse the right one.",
+    "frame": "A frame from your video",
+    "player": "Player {n}",
+    "playerWhy": "Player {n}, {why}",
+    "why": {
+      "still": "barely moves",
+      "far": "far from the table",
+      "small": "far away",
+      "more": "also seen",
+      "background": "background"
+    }
+  },
+  "job": {
+    "video": {
+      "autocut": "Match highlight reel",
+      "match": "Pro match video",
+      "breakdown": "Technique breakdown video"
+    },
+    "status": {
+      "queued": "In the queue",
+      "running": "Processing",
+      "done": "Done",
+      "failed": "Failed"
+    },
+    "failed": "Failed",
+    "noVideo": "No video",
+    "progress": "Job progress",
+    "titles": {
+      "failed": "Something went wrong",
+      "playLike": "You play like {name}",
+      "buildingBreakdown": "Building your breakdown",
+      "findingMatch": "Finding your pro match",
+      "cutting": "Cutting your match",
+      "noRallies": "No rallies found",
+      "allRallies": "All {n} rallies",
+      "topRallies": "Top {n} rallies",
+      "allDone": "All done"
+    },
+    "autoDetected": " (auto-detected)",
+    "techniqueBreakdown": "Technique breakdown",
+    "fromTable": " (from the table)",
+    "findMatch": "Find my pro match",
+    "autocut": "Match Auto-Cut · {mode}",
+    "fullMatch": "Full match",
+    "highlights": "Highlights",
+    "everyRally": "Every rally",
+    "rally": "Rally {n}",
+    "goDeeper": "Go deeper",
+    "deeper": {
+      "coachTitle": "Coach this match",
+      "coachBody": "Ask what to work on in the match you uploaded.",
+      "breakdownTitle": "Break down a stroke",
+      "breakdownBody": "Get a step-by-step look at a stroke from this video."
+    },
+    "failure": "We couldn't finish this analysis. Try again or upload a shorter clip.",
+    "tryAnother": "Try another recording",
+    "noRalliesHint": "Try filming closer to the table in a quieter spot, with both players in frame.",
+    "notFoundOpen": "Open the match result again or upload a new video.",
+    "notReachable": "The job isn't reachable.",
+    "notAJob": "The server didn't send a job.",
+    "notFound": "Job not found",
+    "backHome": "Back home",
+    "loading": "Loading your result…",
+    "noRalliesSr": "No rallies found.",
+    "ready": "Your result is ready.",
+    "newBreakdown": "New breakdown",
+    "matchAgain": "Match again",
+    "cutAnother": "Cut another",
+    "runDetails": "Run details"
+  },
+  "autocutWaiting": {
+    "title": "Reel progress",
+    "stages": {
+      "preparing": "Getting your video ready",
+      "extracting_audio": "Preparing the recording",
+      "finding_rallies": "Finding rallies",
+      "ranking": "Choosing the highlights",
+      "rendering": "Making your reel"
+    },
+    "waiting": "Waiting to start",
+    "count": " ({done} of {total})",
+    "slow": "Taking a little longer than expected…",
+    "left": "About {time} left",
+    "preview": "First clip preview"
+  },
+  "rallies": {
+    "title": "Your rallies",
+    "hint": "Move or remove rallies to choose what goes in your download.",
+    "moved": "Rally {id} moved to position {position}.",
+    "removed": "Rally {id} removed.",
+    "exportFailed": "Couldn't make this download. Check the selection and try again.",
+    "ready": "Your highlights are ready to download.",
+    "rally": "Rally {id}",
+    "rank": "Rank {id} · {length}",
+    "inMatch": "{start} – {end} in match",
+    "up": "Up",
+    "down": "Down",
+    "remove": "Remove",
+    "moveUp": "Move rally {id} up",
+    "moveDown": "Move rally {id} down",
+    "removeLabel": "Remove rally {id}",
+    "downloadLabel": "Download rally {id}",
+    "coachLabel": "Coach this stroke from rally {id}",
+    "coach": "Coach this stroke",
+    "none": "No rallies selected. Reset the selection to bring them back.",
+    "preparing": "Preparing your download…",
+    "retry": "Retry download",
+    "downloadAll": "Download highlights",
+    "restored": "Original rally selection restored.",
+    "reset": "Reset selection",
+    "again": "Download again"
+  },
+  "coachView": {
+    "done": " (done)",
+    "inProgress": " (in progress)",
+    "stoppedHere": " (stopped here)",
+    "planning": "The coach is planning...",
+    "noPlan": "No plan was recorded.",
+    "allDone": "All steps done",
+    "someDone": "{done} of {total} steps done",
+    "steps": "{n} steps",
+    "plan": "The plan",
+    "stopped": "Stopped",
+    "progressText": "{done} of {total} · {pct}%",
+    "progress": "Coach progress",
+    "stoppedEarly": "The job stopped before the coach wrote them.",
+    "noStroke": "The coach didn't find a stroke of yours to coach. Try a clip where you're closer to the camera.",
+    "yourCoaching": "Your coaching",
+    "noNotes": "No coaching notes for this video.",
+    "notesSoon": "Your coaching notes appear here once the coach has written them.",
+    "debug": "Debug: the coach's working files ({n})",
+    "devOnly": "dev only",
+    "deepAgent": " · deep agent",
+    "yourRequest": "Your request",
+    "backupPlan": "Finished the analysis with the backup plan.",
+    "saveLabel": "Save {title}",
+    "askAgain": "Ask again"
+  },
+  "steps": {
+    "grip": "Grip",
+    "stance": "Stance",
+    "swingPath": "Swing path",
+    "contactPoint": "Contact point",
+    "followThrough": "Follow-through",
+    "stepByStep": "Step by step",
+    "tryThis": "Try this",
+    "details": "The details"
+  },
+  "matches": {
+    "title": "Your closest pros",
+    "bodyMatch": "body match",
+    "swingMatch": "Swing match",
+    "noClip": "No {stroke} clip of {name} yet, so there's no swing comparison.",
+    "noMatchingClip": "No matching clip of {name} yet, so there's no swing comparison."
+  },
+  "analysedPlayer": {
+    "rerunFailed": "Couldn't start again with that player.",
+    "thumb": "The player we analysed",
+    "picked": "Analysed the player you picked.",
+    "this": "Analysed this player.",
+    "pickToRetry": "Pick a player to try again.",
+    "change": "Change player",
+    "starting": "Starting again with that player..."
+  },
+  "gear": {
+    "rubbers": "Rubber finder",
+    "pros": "Pro setups",
+    "tabs": "Equipment pages"
+  },
+  "rubbers": {
+    "eyebrow": "Rubber finder",
+    "title": "Pick your rubber",
+    "body": "Tell us how you play and what you can spend. Pricier rubbers are usually better, so we start near your budget and rank by what players who use them think.",
+    "style": "Style",
+    "styles": {
+      "spin": "Spin",
+      "spinSub": "Loops and heavy topspin",
+      "speed": "Speed",
+      "speedSub": "Drives and fast hits"
+    },
+    "type": "Rubber type",
+    "types": {
+      "inverted": "Inverted",
+      "short_pips": "Short pips",
+      "long_pips": "Long pips",
+      "anti_spin": "Anti-spin"
+    },
+    "level": "Level",
+    "levels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "budget": "Budget per sheet",
+    "budgetHint": "Nothing over budget. We rank in {step} steps down from it, best rated first in each step.",
+    "loadFailed": "Couldn't load rubbers. Try again.",
+    "thickness": "Sponge thickness",
+    "thicknesses": {
+      "maxOr": "{mm} or max",
+      "range": "{from}-{to} mm",
+      "ox": "OX (no sponge) to {to} mm"
+    },
+    "pipsNote": "PingSense has no pips rubbers yet, so there is nothing to rank. They're on the list.",
+    "nothing": "Nothing matches yet. Try another level.",
+    "ratings": "Speed {speed} · Spin {spin} · Control {control}",
+    "score": "score {score}",
+    "tbd": "TBD",
+    "source": "Ratings and prices: revspin.net user reviews, via PingSense. Scores are out of 10."
+  },
+  "pros": {
+    "eyebrow": "Pro setups",
+    "title": "What the pros use",
+    "body": "Blade and rubbers for {n} of the best. Search for your favourite player.",
+    "player": "Player",
+    "placeholder": "e.g. Ma Long",
+    "unconfirmed": "Unconfirmed",
+    "blade": "Blade",
+    "forehand": "Forehand",
+    "backhand": "Backhand",
+    "source": "Source:",
+    "notHere": "Not here yet",
+    "notHereHint": "We have {n} players so far. More are coming.",
+    "wikipedia": "Wikipedia",
+    "gripLeft": "{grip} (left-handed)",
+    "sourceGeneral": "Widely reported setup, not confirmed on a current page",
+    "notes": {
+      "Ma Long": "Profile updated June 2024. He used Tenergy 05 on the backhand before.",
+      "Timo Boll": "Retired in 2025; his long-time setup.",
+      "Wang Manyu": "Blade from her player page; rubbers from an older undated list.",
+      "Chen Meng": "Blade from June 2026 (she won Tokyo on a Viscaria). Rubbers from an undated list.",
+      "Ding Ning": "Retired; single undated list.",
+      "Xu Xin": "Retired from the national team; last widely reported setup.",
+      "Ma Lin": "Retired; setup from his playing years.",
+      "Kuai Man": "Single undated list.",
+      "Sabine Winter": "Her player page lists an inverted Rasanter R53 backhand, not anti-spin. We couldn't find a source for an anti-spin backhand."
+    }
+  },
+  "buy": {
+    "amazonOther": "Amazon (other seller)",
+    "official": "Official store",
+    "unverified": "(unverified)",
+    "disclosure": "As an affiliate, TTSkill may earn a commission from qualifying purchases.",
+    "amazonDisclosure": " As an Amazon Associate I earn from qualifying purchases.",
+    "notSold": "Not sold in the US yet",
+    "check": "Check US listing",
+    "buy": "Buy in the US",
+    "stores": "US stores for {product}",
+    "linkLabel": "{action}: {product} at {store}{unverified}",
+    "unverifiedSuffix": " (unverified)",
+    "alsoAt": "Also at"
+  }
+}

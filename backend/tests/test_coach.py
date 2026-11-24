@@ -173,7 +173,7 @@ def test_render_and_match_reuse_the_window_the_pose_step_chose(tmp_path, monkeyp
     import technique.pipeline as pipeline
     seen = {}
     win = {"start": 34.6, "end": 42.6, "reason": "busy rally", "hit_times": [36.0], "paddle": {"left": 1, "right": 9}}
-    session = SimpleNamespace(need_video=lambda: tmp_path / "v.mp4", dir=tmp_path, update=lambda **kw: None,
+    session = SimpleNamespace(need_video=lambda: tmp_path / "v.mp4", dir=tmp_path, update=lambda **kw: None, lang="en",
                               pose={"bat_hand": "right", "stroke_type": "forehand_drive"}, hand="auto",
                               window=win, identity="seed", seed=lambda video: "seed", selection=None,
                               add_output=lambda *a: None)

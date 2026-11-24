@@ -141,9 +141,9 @@ def test_without_a_key_the_offline_cards_are_used(monkeypatch, tmp_path):
     from agent.tools import Session
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     monkeypatch.setattr(fixed, "_frames_at", lambda clip, times: [])
-    monkeypatch.setattr(fixed, "offline_report", lambda f, c, t: report(summary="offline"))
+    monkeypatch.setattr(fixed, "offline_report", lambda f, c, t, lang="en": report(summary="offline"))
     updates = {}
-    s = SimpleNamespace(update=lambda **kw: updates.update(kw))
+    s = SimpleNamespace(update=lambda **kw: updates.update(kw), lang="en")
     out = fixed.write_coaching(s, "fix", {"key_times_s": [1, 2, 3]}, Path("c"), None)
     assert out.summary == "offline" and "no ANTHROPIC_API_KEY" in updates["engineNote"]
 

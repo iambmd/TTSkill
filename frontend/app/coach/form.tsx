@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useLocale, useTranslations } from "next-intl";
 import { useRef, useState } from "react";
 import { submitJob, type RallyClip } from "@/lib/submit";
 import { LIMITS, textProblem } from "@/lib/validate";
@@ -9,23 +10,25 @@ import { VideoPicker } from "../video-picker";
 import { MatchSource } from "../match-source";
 import { CoachExample } from "./example";
 
-const EXAMPLES = [
-  "Here's my match: show my best rallies and fix my forehand",
-  "Which pros do I play like? Compare my backhand",
-  "Cut the dead time and tell me what to work on",
-];
+const EXAMPLES = ["one", "two", "three"] as const;
 
 export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: string; rallyId?: string; clip?: RallyClip }) {
+  const t = useTranslations("coach");
+  const tc = useTranslations("common");
+  const tv = useTranslations("validation");
+  const te = useTranslations("errors");
+  const tAll = useTranslations();
+  const locale = useLocale();
   const router = useRouter();
   const askRef = useRef<HTMLTextAreaElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const [starting, setStarting] = useState("Starting...");
-  const [ask, setAsk] = useState(sourceJob && rallyId ? "Coach my stroke in this rally." : "");
+  const [starting, setStarting] = useState(tc("starting"));
+  const [ask, setAsk] = useState(sourceJob && rallyId ? t("rallyRequest") : "");
   const [videoProblem, setVideoProblem] = useState<string | null>(null);
   const most = LIMITS.text_chars.coach_request;
   const length = ask.trim().length;
-  const askError = textProblem(ask, "coach_request", "Your request");
+  const askError = textProblem(ask, "coach_request", tv("labels.request"), tv);
   // An empty or whitespace-only request is ignored, like an empty chat message: nothing to send.
   const blocked = length === 0 || !!askError || !!videoProblem;
 
@@ -41,16 +44,16 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
     const hasVideo = !!video && video.size > 0;
     form.set("request", ask.trim());
     if (!hasVideo && !url && !sourceJob) {
-      setError("Add a video: upload a clip or paste a YouTube link.");
+      setError(tv("coachVideo"));
       return;
     }
     if (!hasVideo) form.delete("video");
     if (hasVideo || !url) form.delete("url");
-    setStarting(form.has("url") ? "Checking the link..." : "Starting...");
+    setStarting(form.has("url") ? tc("checkingLink") : tc("starting"));
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("coach", form, setProgress);
+      const job = await submitJob("coach", form, setProgress, te);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);
@@ -62,13 +65,15 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
     <>
       <form onSubmit={onSubmit} noValidate className="coach-surface coach-form feature-form">
         <PageIntro
-          eyebrow="TT Coach"
-          title="Ask your coach."
-          body="One request, one video. The coach finds your rallies and your best strokes, compares you with the pros, and shows each result as soon as it's ready."
+          eyebrow={t("eyebrow")}
+          title={t("title")}
+          body={t("body")}
         />
+        {/* The coach writes its notes, cards and video text in the page's language. */}
+        <input type="hidden" name="lang" value={locale} />
         <div className="coach-request">
           <div className="flex items-end justify-between">
-            <label className={labelClass} htmlFor="request">What do you want?</label>
+            <label className={labelClass} htmlFor="request">{t("ask")}</label>
             <span aria-hidden className={`mb-2 text-xs tabular-nums ${askError ? "font-bold text-red-200" : "text-muted"}`}>
               {length}/{most}
             </span>
@@ -77,11 +82,11 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
             ref={askRef} id="request" name="request" rows={3} value={ask} onChange={(e) => setAsk(e.target.value)}
             aria-invalid={!!askError} aria-describedby="request-error"
             className={`${inputClass} ${askError ? "border-red-500/50" : ""}`}
-            placeholder="e.g. Show my best rallies and fix my forehand"
+            placeholder={t("placeholder")}
           />
           <FieldError id="request-error">{askError}</FieldError>
           <div className="coach-prompts mt-3 grid gap-2">
-            {EXAMPLES.map((x) => (
+            {EXAMPLES.map((key) => t(`examples.${key}`)).map((x) => (
               <button
                 key={x} type="button"
                 onClick={() => { setAsk(x); askRef.current?.focus(); }}
@@ -94,12 +99,12 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
         </div>
         <div className="coach-upload">
           {sourceJob ? <MatchSource job={sourceJob} rallyId={rallyId} clip={clip} form="coach" /> : (
-            <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title="Add your video" hint="A match or a practice clip, with the sound on." />
+            <VideoPicker findPlayer onlyMeOption kind="coach" onProblem={setVideoProblem} title={t("videoTitle")} hint={t("videoHint")} />
           )}
         </div>
         <SubmitBar
-          label="Ask the coach" progress={progress} error={error} startingLabel={starting}
-          blocked={blocked} blockedHint="Add a video or link to start"
+          label={t("submit")} progress={progress} error={error} startingLabel={starting}
+          blocked={blocked} blockedHint={tAll("submit.blockedHint")}
         />
       </form>
       <div className="coach-surface coach-example"><CoachExample /></div>

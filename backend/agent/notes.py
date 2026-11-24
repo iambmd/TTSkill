@@ -9,10 +9,12 @@ from __future__ import annotations
 import re
 from typing import Optional
 
+import i18n
+
 # The coaching call lists the fixes most important first, as "1. ...", "2. ...".
 _FIRST = re.compile(r"^\s*1[.)]\s+(.+?)\s*$", re.M)
-# A labelled drill: "**Drill:** ...", "Drill: ..." (not just the word "drill" in a sentence).
-_DRILL = re.compile(r"\bdrill\s*\**\s*:\s*\**\s*(.+?)\s*$", re.I | re.M)
+# A labelled drill: "**Drill:** ...", "Drill: ..." or "Bài tập: ..." (not just the word in a sentence).
+_DRILL = re.compile(r"(?:\bdrill|bài tập)\s*\**\s*:\s*\**\s*(.+?)\s*$", re.I | re.M)
 
 
 def first_fix(markdown: str) -> str:
@@ -20,18 +22,18 @@ def first_fix(markdown: str) -> str:
     return m.group(1) if m else ""
 
 
-def build(markdown: str, fix: str = "", drill: str = "") -> Optional[dict]:
+def build(markdown: str, fix: str = "", drill: str = "", lang: str = "en") -> Optional[dict]:
     """{markdown, fix, drill}, or None when there is nothing to show. A fix or drill the text
-    doesn't already hold is added as its own labelled line, so neither can go missing."""
+    doesn't already hold is added as its own labelled line (in `lang`), so neither can go missing."""
     md = (markdown or "").strip()
     if not md:
         return None
     fix, drill = (fix or "").strip(), (drill or "").strip()
     extra = []
     if fix and not first_fix(md) and fix not in md:
-        extra.append(f"**Biggest fix:** {fix}")
+        extra.append(f"**{i18n.t(lang, 'notes.fix')}:** {fix}")
     if drill and not _DRILL.search(md) and drill not in md:
-        extra.append(f"**Drill:** {drill}")
+        extra.append(f"**{i18n.t(lang, 'notes.drill')}:** {drill}")
     md = "\n\n".join([md, *extra])
     found = _DRILL.search(md)
     return {"markdown": md, "fix": first_fix(md) or fix, "drill": drill or (found.group(1) if found else "")}

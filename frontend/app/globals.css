@@ -18,18 +18,26 @@
 }
 
 @theme inline {
-  --font-sans: var(--font-barlow), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-barlow-condensed), "Arial Narrow", ui-sans-serif, sans-serif;
 }
 
-/* Condensed italic caps for headings, buttons and numbers. */
+/* Condensed italic caps for headings, buttons and numbers. Barlow Condensed is loaded at 600/700 only. */
 @utility headline {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-style: italic;
   text-transform: uppercase;
   letter-spacing: -0.005em;
   line-height: 0.92;
+}
+
+/* Big figures (progress, scores, ranks, prices): condensed, so they stay compact next to longer Vietnamese labels. */
+@utility stat {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
 }
 
 @utility eyebrow {

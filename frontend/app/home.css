@@ -190,7 +190,6 @@
   padding-inline: .625rem;
   font-size: .875rem;
   font-weight: 700;
-  text-transform: capitalize;
 }
 
 .home-quiz-options button:hover, .home-demo-toggle button:hover { background: var(--training-field); }

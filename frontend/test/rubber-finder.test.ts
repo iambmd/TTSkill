@@ -1,6 +1,6 @@
-import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
 import RubbersPage from "@/app/rubbers/page";
+import { renderIntl } from "./intl";
 
 it.each([
   { budget: "1", expected: 1 },
@@ -13,6 +13,6 @@ it.each([
   { budget: ["40", "80"], expected: 60 },
 ])("sets the Finder budget to $expected for query value $budget", async ({ budget, expected }) => {
   const page = await RubbersPage({ searchParams: Promise.resolve({ budget }) });
-  const html = renderToStaticMarkup(page);
+  const html = renderIntl(page);
   expect(html).toMatch(new RegExp(`<input[^>]+id="budget"[^>]+value="${expected}"`));
 });

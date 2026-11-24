@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 type Photo = { src: string; page: string };
@@ -27,6 +28,7 @@ async function findPhoto(titles: string[]): Promise<Photo | null> {
 const initials = (name: string) => name.split(" ").map((w) => w[0]).slice(0, 2).join("");
 
 export function ProPhoto({ name, wiki }: { name: string; wiki: string[] }) {
+  const t = useTranslations("pros");
   const [photo, setPhoto] = useState<Photo | null>(null);
   useEffect(() => {
     let live = true;
@@ -44,7 +46,7 @@ export function ProPhoto({ name, wiki }: { name: string; wiki: string[] }) {
       </div>
       {photo && (
         <figcaption className="mt-1 text-[0.6rem] text-muted">
-          <a href={photo.page} target="_blank" rel="noreferrer" className="underline">Wikipedia</a>
+          <a href={photo.page} target="_blank" rel="noreferrer" className="underline">{t("wikipedia")}</a>
         </figcaption>
       )}
     </figure>
@@ -99,13 +101,14 @@ function Item({ part, label, name, img }: { part: "blade" | "fh" | "bh"; label: 
 export function SetupStrip({ blade, fh, bh, images }: {
   blade: string; fh: string; bh: string; images: { blade?: ProductImage; fh?: ProductImage; bh?: ProductImage };
 }) {
+  const t = useTranslations("pros");
   return (
     <div className="flex items-center gap-1.5 rounded-2xl bg-white/[0.03] p-3">
-      <Item part="blade" label="Blade" name={blade} img={images.blade} />
+      <Item part="blade" label={t("blade")} name={blade} img={images.blade} />
       <span aria-hidden className="text-muted">→</span>
-      <Item part="fh" label="Forehand" name={fh} img={images.fh} />
+      <Item part="fh" label={t("forehand")} name={fh} img={images.fh} />
       <span aria-hidden className="text-muted">→</span>
-      <Item part="bh" label="Backhand" name={bh} img={images.bh} />
+      <Item part="bh" label={t("backhand")} name={bh} img={images.bh} />
     </div>
   );
 }

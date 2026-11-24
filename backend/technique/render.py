@@ -22,6 +22,8 @@ from .pose import CONNECTIONS, L_WRIST, NOSE, R_WRIST, PoseTrack, _interp_nan
 from .schema import StrokeBreakdown
 from .strokes import label as stroke_label
 
+import i18n
+
 W, H, FPS = 1080, 1920, 30
 VID_Y, VID_H = 400, 1080          # video area: y range [400, 1480)
 CUE_Y = VID_Y + VID_H + 36        # cue block under the footage
@@ -111,10 +113,12 @@ def _brand(d):
     d.text((x + d.textlength("TT", font=f), 52), "SKILL", font=f, fill=ACCENT)
 
 
-def _header(d, b: StrokeBreakdown):
+def _header(d, b: StrokeBreakdown, lang: str = "en"):
     """Persistent two-line title: the stroke, then the hook in the accent colour."""
     _brand(d)
-    d.text((56, 56), stroke_label(b.stroke_type or b.stroke).upper(), font=_fit(d, stroke_label(b.stroke_type or b.stroke).upper(), "bold", 48, W - 380), fill=WHITE)
+    name = (i18n.stroke_label(b.stroke_type or b.stroke, lang) if i18n.norm(lang) != "en"
+            else stroke_label(b.stroke_type or b.stroke)).upper()
+    d.text((56, 56), name, font=_fit(d, name, "bold", 48, W - 380), fill=WHITE)
     fh = font("display", 76)
     lines = _wrap(d, b.headline.upper(), fh, W - 112)
     while len(lines) > 2 and fh.size > 48:
@@ -149,10 +153,10 @@ def _chips(d, steps, active: int):
         x = box[2] + 12
 
 
-def layer_step(b: StrokeBreakdown, k: int, paused: bool = False) -> np.ndarray:
+def layer_step(b: StrokeBreakdown, k: int, paused: bool = False, lang: str = "en") -> np.ndarray:
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _header(d, b)
+    _header(d, b, lang)
     _chips(d, b.steps, k)
     s = b.steps[k]
     col = phase(k)
@@ -166,7 +170,7 @@ def layer_step(b: StrokeBreakdown, k: int, paused: bool = False) -> np.ndarray:
         _rich_line(d, (60, y + 64), s.lines[1], s.highlight_words, font("medium", 40), base=GREY, acc=col)
     if paused:
         f = font("bold", 26)
-        t = "PAUSED"
+        t = i18n.t(lang, "paused")
         tw = d.textlength(t, font=f)
         x0, y0 = W - 56 - tw - 44, VID_Y + 24
         d.rounded_rectangle((x0, y0, x0 + tw + 44, y0 + 44), 10, fill=(10, 12, 18, 210))
@@ -176,14 +180,15 @@ def layer_step(b: StrokeBreakdown, k: int, paused: bool = False) -> np.ndarray:
     return np.array(img)
 
 
-def layer_intro(b: StrokeBreakdown) -> np.ndarray:
+def layer_intro(b: StrokeBreakdown, lang: str = "en") -> np.ndarray:
     """Hook card: the header, then what the video will show."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _header(d, b)
-    f = font("display", 120)
+    _header(d, b, lang)
+    cues = i18n.t(lang, "cues")
+    f = _fit(d, "3" + cues, "display", 120, W - 112, 72)
     x = 56
-    for word, col in (("3", ACCENT), (" CUES TO COPY", WHITE)):
+    for word, col in (("3", ACCENT), (cues, WHITE)):
         d.text((x, CUE_Y), word, font=f, fill=col)
         x += d.textlength(word, font=f)
     sub = " · ".join(s.title.upper() for s in b.steps)
@@ -194,11 +199,11 @@ def layer_intro(b: StrokeBreakdown) -> np.ndarray:
     return np.array(img)
 
 
-def layer_recap(b: StrokeBreakdown) -> np.ndarray:
+def layer_recap(b: StrokeBreakdown, lang: str = "en") -> np.ndarray:
     """All three cues on one line joined with '+', each in its colour, plus one summary line."""
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _header(d, b)
+    _header(d, b, lang)
     words = [(s.title.upper(), phase(i)) for i, s in enumerate(b.steps)]
     size = 92
     while size > 44:
@@ -228,13 +233,13 @@ def layer_recap(b: StrokeBreakdown) -> np.ndarray:
     return np.array(img)
 
 
-def layer_drill(b: StrokeBreakdown) -> np.ndarray:
+def layer_drill(b: StrokeBreakdown, lang: str = "en") -> np.ndarray:
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    _header(d, b)
-    d.text((60, CUE_Y), "TRY THIS", font=font("bold", 40), fill=ACCENT)
+    _header(d, b, lang)
+    d.text((60, CUE_Y), i18n.t(lang, "try_this"), font=font("bold", 40), fill=ACCENT)
     y = CUE_Y + 62
-    for ln in _wrap(d, b.drill or "Shadow the stroke 20 times, checking each cue.", font("semibold", 52), W - 120)[:3]:
+    for ln in _wrap(d, b.drill or i18n.t(lang, "default_drill"), font("semibold", 52), W - 120)[:3]:
         d.text((60, y), ln, font=font("semibold", 52), fill=WHITE)
         y += 66
     return np.array(img)
@@ -468,9 +473,10 @@ def _read_frames(video: str) -> list[np.ndarray]:
 
 
 def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path: str,
-                     side: str = "right", height: int = H, preset: str = "veryfast") -> str:
+                     side: str = "right", height: int = H, preset: str = "veryfast", lang: str = "en") -> str:
     """height: output height (1920 = the 1080x1920 house size; Coach renders 1280, 720 wide,
-    with preset "superfast": 2.25x fewer pixels to draw, blend and encode)."""
+    with preset "superfast": 2.25x fewer pixels to draw, blend and encode).
+    lang: the language of the burned-in labels (the breakdown's own text is already in it)."""
     frames = _read_frames(video)
     if not frames:
         raise RuntimeError("no frames in clip")
@@ -504,14 +510,14 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
     tail = int(0.35 * fps_src)
 
     def gen() -> Iterator[np.ndarray]:
-        intro = layer_intro(b)
+        intro = layer_intro(b, lang)
         start = max(0, keys[0] - lead - int(1.0 * fps_src))
         for _ in range(int(pace["hook_s"] * FPS)):
             yield blend(scene.draw(start, trail=False), intro)
         cur = start
         for si, kf in enumerate(keys):
             col = phase(si)
-            play, paused = layer_step(b, si), layer_step(b, si, paused=True)
+            play, paused = layer_step(b, si, lang=lang), layer_step(b, si, paused=True, lang=lang)
             call = layer_callouts(b.steps[si].callouts, col)
             for fi in range(cur, max(cur, kf - lead)):          # real speed first
                 yield blend(scene.draw(fi, trail_color=col), play)
@@ -527,12 +533,12 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
                 for _ in range(2):
                     yield fr
             cur = min(n - 1, kf + tail)
-        last = layer_step(b, len(keys) - 1)
+        last = layer_step(b, len(keys) - 1, lang=lang)
         end = min(n, cur + int(0.6 * fps_src))
         for fi in range(cur, end):
             yield blend(scene.draw(fi, trail_color=phase(len(keys) - 1)), last)
         hold = max(cur, end - 1)
-        recap, drill = layer_recap(b), layer_drill(b)
+        recap, drill = layer_recap(b, lang), layer_drill(b, lang)
         for _ in range(int(pace["recap_s"] * FPS)):
             yield blend(scene.draw(hold, trail=False), recap)
         for _ in range(int(pace["practice_s"] * FPS)):
@@ -542,7 +548,7 @@ def render_breakdown(video: str, track: PoseTrack, b: StrokeBreakdown, out_path:
     return out_path
 
 
-def render_text_only(b: StrokeBreakdown, out_path: str) -> str:
+def render_text_only(b: StrokeBreakdown, out_path: str, lang: str = "en") -> str:
     """Text input with no clip: the same cards over a simple table graphic."""
     pace = style.pacing()
 
@@ -550,9 +556,9 @@ def render_text_only(b: StrokeBreakdown, out_path: str) -> str:
         base = np.full((H, W, 3), BG, np.uint8)
         cv2.rectangle(base, (140, VID_Y + 700), (940, VID_Y + 740), (120, 70, 30), -1)
         cv2.line(base, (540, VID_Y + 640), (540, VID_Y + 700), (200, 200, 200), 4)
-        cards = [(layer_intro(b), pace["hook_s"] + 0.5)]
-        cards += [(layer_step(b, si), pace["seconds_per_step"]) for si in range(len(b.steps))]
-        cards += [(layer_recap(b), pace["recap_s"]), (layer_drill(b), pace["practice_s"])]
+        cards = [(layer_intro(b, lang), pace["hook_s"] + 0.5)]
+        cards += [(layer_step(b, si, lang=lang), pace["seconds_per_step"]) for si in range(len(b.steps))]
+        cards += [(layer_recap(b, lang), pace["recap_s"]), (layer_drill(b, lang), pace["practice_s"])]
         for si, (layer, secs) in enumerate(cards):
             fr = blend(base, layer)
             if 1 <= si <= len(b.steps):

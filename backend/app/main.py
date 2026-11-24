@@ -234,12 +234,14 @@ def create_breakdown(
     staged: str = Form(""),
     source_job: str = Form(""),
     source_rally: str = Form(""),
+    lang: str = Form("en"),
 ) -> dict:
     if stroke not in STROKES:
         raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
     if stroke_type and stroke_type not in STROKE_TYPES:
         raise validate.Invalid(f"Unknown stroke type: {stroke_type}. Pick one from the list, or leave it blank to auto-detect.")
     validate.choice(hand, "hand", "Bat hand")
+    validate.choice(lang, "lang", "Language")
     selection = validate.player_selection(player_time, player_box)
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     player = validate.text(player, "player", "The player's name")
@@ -256,6 +258,7 @@ def create_breakdown(
     solo = solo and bool(staged or link)
     if solo:
         params["only_me"] = True
+    params["lang"] = lang
     if source_job:
         params["source_job"] = source_job
         if source_rally:
@@ -263,7 +266,8 @@ def create_breakdown(
     job = jobs.create("breakdown", params)
     # The tapped player goes last, and only when there is one, so other calls are unchanged.
     args = (text, stroke, player, hand, stroke_type) + ((selection,) if selection and (staged or link) else ())
-    kwargs = {"only_me": True} if solo else {}
+    # Likewise only_me and a language other than English go as keywords only when set.
+    kwargs = ({"only_me": True} if solo else {}) | ({"lang": lang} if lang != "en" else {})
     if link:
         jobqueue.submit(background, fetch_then, job["id"], link["url"], run_breakdown, *args, **kwargs)
     else:
@@ -319,12 +323,14 @@ def create_coach(
     staged: str = Form(""),
     source_job: str = Form(""),
     source_rally: str = Form(""),
+    lang: str = Form("en"),
 ) -> dict:
     """TT Coach: one request about one video, handled by the deep agent (agent/coach.py).
     Falls back to the classic pipelines when there is no API key or the agent fails."""
     from agent.coach import run_coach
 
     request = validate.text(request, "coach_request", "Your request")
+    validate.choice(lang, "lang", "Language")
     selection = validate.player_selection(player_time, player_box)
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
@@ -339,6 +345,7 @@ def create_coach(
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     if solo:
         params["only_me"] = True
+    params["lang"] = lang
     if source_job:
         params["source_job"] = source_job
         if source_rally:
@@ -350,8 +357,9 @@ def create_coach(
         from agent.fixed import prepare
         jobqueue.submit(background, prepare, job["id"], jobqueue.prepare_link(path), selection, solo,
                         lane="prepare", kind="prepare")
+    kwargs = ({"only_me": True} if solo else {}) | ({"lang": lang} if lang != "en" else {})
     jobqueue.submit(background, run_coach, job["id"], path, link and link["url"], request,
-                        *((selection,) if selection else ()), **({"only_me": True} if solo else {}))
+                    *((selection,) if selection else ()), **kwargs)
     return job
 
 
@@ -555,6 +563,8 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
     if stored is not None:
         path = jobs.job_dir(job["id"]) / stored.name
         shutil.copyfile(stored, path)
+    # The same language as the first run (jobs from before `lang` are English).
+    lang = {"lang": p["lang"]} if p.get("lang", "en") != "en" else {}
     if old["kind"] == "breakdown":
         fn, args = run_breakdown, (p.get("text") or "", p.get("stroke") or "", p.get("player") or "",
                                    p.get("hand") or "auto",
@@ -563,12 +573,14 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
         fn, args = run_match, (p.get("stroke") or "forehand", p.get("height_cm"), p.get("hand") or "auto",
                                p.get("grip") or "shakehand", selection)
     else:
-        jobqueue.submit(background, run_coach, job["id"], path, url, p.get("request") or "", selection)
+        jobqueue.submit(background, run_coach, job["id"], path, url, p.get("request") or "", selection, **lang)
         return job
+    if old["kind"] != "breakdown":
+        lang = {}   # Pro match text isn't translated yet
     if url:
-        jobqueue.submit(background, fetch_then, job["id"], url, fn, *args)
+        jobqueue.submit(background, fetch_then, job["id"], url, fn, *args, **lang)
     else:
-        jobqueue.submit(background, fn, job["id"], path, *args)
+        jobqueue.submit(background, fn, job["id"], path, *args, **lang)
     return job
 
 

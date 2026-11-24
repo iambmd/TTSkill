@@ -65,6 +65,7 @@
 }
 
 .section-title {
+  font-family: var(--font-display);
   font-weight: 700;
   line-height: 1.15;
 }
@@ -187,7 +188,8 @@ a.primary-button:hover {
 
   .site-nav {
     display: grid;
-    grid-template-columns: auto minmax(0, 1fr);
+    /* Theme toggle, language toggle, logo; the links take the row below. */
+    grid-template-columns: auto auto minmax(0, 1fr);
     height: auto;
     row-gap: 0.25rem;
     padding-block: 0.5rem 0.25rem;
@@ -209,6 +211,13 @@ a.primary-button:hover {
       font-size: 0.875rem;
       letter-spacing: 0.025em;
       white-space: nowrap;
+    }
+
+    /* Vietnamese labels run longer: tighter type keeps all six links on a 360-390 px phone. */
+    .site-nav-links a:lang(vi) {
+      font-size: 0.8125rem;
+      letter-spacing: 0;
+      padding-inline: 0.125rem;
     }
   }
 }
@@ -236,7 +245,7 @@ a.primary-button:hover {
 }
 
 .feature-form + .example-section .example-title {
-  font-family: var(--font-sans);
+  font-family: var(--font-display);
   font-style: normal;
   letter-spacing: normal;
   line-height: 1.15;

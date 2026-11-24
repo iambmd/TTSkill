@@ -19,6 +19,7 @@ from typing import Callable, Optional
 
 import numpy as np
 
+import i18n
 import timing
 from app import cache
 
@@ -78,13 +79,15 @@ def run_fixed(s: Session, request: str) -> None:
     want_reel = "cut_highlights" in keys
     want_stroke = bool(keys & {"extract_pose", "render_breakdown", "match_players"})
     wing = stroke if stroke in ("forehand", "backhand") else None
-    noun = wing or "stroke"
-    labels = ([("download", "Download the video")] if "download_url" in keys else []) + [("rallies", "Find the rallies")]
+    lang = s.lang
+    noun = i18n.t(lang, f"noun.{wing or 'stroke'}")
+    say = lambda key, **kw: i18n.t(lang, key, **kw)   # noqa: E731
+    labels = ([("download", say("todo.download"))] if "download_url" in keys else []) + [("rallies", say("todo.rallies"))]
     if want_reel:
-        labels.append(("reel", "Cut the best rallies"))
+        labels.append(("reel", say("todo.reel")))
     if want_stroke:
-        labels += [("pose", f"Track you at your {noun}s"), ("pros", "Find the pros closest to you"),
-                   ("coach", "Write the coaching"), ("render", f"Render your {noun}")]
+        labels += [("pose", say("todo.pose", noun=noun)), ("pros", say("todo.pros")),
+                   ("coach", say("todo.coach")), ("render", say("todo.render", noun=noun))]
     todos = [{"content": label, "status": "pending"} for _, label in labels]
     index = {k: i for i, (k, _) in enumerate(labels)}
     files: dict[str, str] = {}
@@ -100,14 +103,14 @@ def run_fixed(s: Session, request: str) -> None:
     reel: list[Future] = []   # the highlight cut, started by the play check
     try:
         if "download" in index:
-            mark("download", "in_progress", status="running", message="Downloading the video...")
+            mark("download", "in_progress", status="running", message=say("msg.download"))
             TOOLS["download_url"](s, s.url)
             mark("download", "completed")
         video = s.need_video()
         with timing.stage("hash video"):
             key = cache.video_key(video)
 
-        mark("rallies", "in_progress", status="running", message="Listening for ball contacts...")
+        mark("rallies", "in_progress", status="running", message=say("msg.listening"))
         with timing.stage("audio hits -> rallies (cached per video)"):
             (raw, min_hits), _ = cache.cached(key, "audio_rallies", lambda: heard(video, s.dir))
         s.rallies = raw   # until the play check below has run
@@ -131,7 +134,7 @@ def run_fixed(s: Session, request: str) -> None:
             files["/rallies.json"] = json.dumps([r.to_dict() for r in kept])
             if want_reel and not kept:
                 mark("reel", "completed")
-                errors.append("No rallies were heard, so there is no reel. Film closer to the table, with the sound on.")
+                errors.append(say("no_rallies"))
 
         background["rallies"] = _in_thread(pool, play_check)
         mark("rallies", "completed")
@@ -140,7 +143,7 @@ def run_fixed(s: Session, request: str) -> None:
 
         report = facts = None
         if want_stroke:
-            mark("pose", "in_progress", message=f"Tracking you at your {noun}s...")
+            mark("pose", "in_progress", message=say("msg.pose", noun=noun))
             try:
                 facts, clip, track = analyse_stroke(s, video, key, wing, raw)
             except ToolError as e:
@@ -148,7 +151,7 @@ def run_fixed(s: Session, request: str) -> None:
                 facts = None
             mark("pose", "completed")
             if facts is not None:
-                mark("pros", "in_progress", message="Comparing you with the pros...")
+                mark("pros", "in_progress", message=say("msg.pros"))
                 try:
                     match = match_pros(s, facts, clip, track, wing or facts["stroke"])
                     facts["closest_pros"] = match["facts"]
@@ -157,7 +160,7 @@ def run_fixed(s: Session, request: str) -> None:
                     traceback.print_exc()
                     errors.append(f"Pro match: {e}")
                 mark("pros", "completed")
-                mark("coach", "in_progress", message="Writing your coaching...")
+                mark("coach", "in_progress", message=say("msg.coach"))
                 kept = _wait(background.pop("rallies"), errors, "Finding the rallies")
                 rallies_done(kept)
                 if kept is not None:
@@ -167,8 +170,8 @@ def run_fixed(s: Session, request: str) -> None:
                 files["/facts.json"] = json.dumps(facts, indent=1, default=str)   # what the coaching is based on
                 report = write_coaching(s, request, facts, clip, track)
                 mark("coach", "completed", summary=report.summary,
-                     coaching=notes.build(report.summary, fix=report.recap, drill=report.drill))
-                mark("render", "in_progress", message=f"Rendering your {noun}...")
+                     coaching=notes.build(report.summary, fix=report.recap, drill=report.drill, lang=lang))
+                mark("render", "in_progress", message=say("msg.render", noun=noun))
                 render(s, facts, report, clip, track)
                 mark("render", "completed")
         for name, fut in background.items():
@@ -181,7 +184,7 @@ def run_fixed(s: Session, request: str) -> None:
         summary = report.summary if report else ""
         if errors:
             summary = (summary + "\n\n" if summary else "") + " ".join(errors)
-        s.update(status="done", progress=1.0, message="Done.", summary=summary or "Done.",
+        s.update(status="done", progress=1.0, message=say("msg.done"), summary=summary or say("msg.done"),
                  warning=" ".join(errors) or None,   # shown beside the coaching, not inside it
                  todos=[{**t, "status": "completed"} for t in todos], agentFiles=_files(files))
     finally:
@@ -353,7 +356,7 @@ def compile_pros(s: Session, match: dict) -> None:
         result = compile_matches(match["matches"], match["stroke"], s.dir / "match" / "parts", s.dir / "pro_matches.mp4")
     if result:
         top = match["matches"][0]
-        s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",
+        s.add_output("match", i18n.t(s.lang, "out.match", name=top["name"]), "pro_matches.mp4",
                      ", ".join(f"{m['name']} {m['score']}%" for m in match["matches"]))
 
 
@@ -381,7 +384,7 @@ def write_coaching(s: Session, request: str, facts: dict, clip: Path, track):
     labelled = list(zip(["preparation", "contact", "finish"], frames))
     if os.environ.get("ANTHROPIC_API_KEY"):
         try:
-            report, model = brief.write(request, facts, labelled)
+            report, model = brief.write(request, facts, labelled, lang=s.lang)
             s.update(engine="pipeline", engineNote=f"fixed pipeline + one {model} call")
             return report
         except Exception as e:
@@ -389,32 +392,34 @@ def write_coaching(s: Session, request: str, facts: dict, clip: Path, track):
             s.update(engineNote=f"the coaching call failed ({type(e).__name__}); offline cards")
     else:
         s.update(engine="pipeline", engineNote="fixed pipeline, no ANTHROPIC_API_KEY: offline cards")
-    return offline_report(facts, clip, track)
+    return offline_report(facts, clip, track, s.lang)
 
 
-def offline_report(facts: dict, clip: Path, track):
-    """The offline analyzer's breakdown, as a report (no Claude)."""
+def offline_report(facts: dict, clip: Path, track, lang: str = "en"):
+    """The offline analyzer's breakdown, as a report (no Claude), in `lang`."""
     from technique.analyze import OfflineAnalyzer
 
     from .brief import Card, CoachReport
 
     b = OfflineAnalyzer().from_video(str(clip), facts["stroke"], facts["key_times_s"], {}, facts["key_times_s"],
                                      None, contact_metrics=facts["at_contact"], stroke_type=facts["stroke_type"],
-                                     detected=True)
+                                     detected=True, lang=lang)
     cards = [Card(moment=m, title=st.title, lines=(st.lines + ["", ""])[:2], callouts=st.callouts[:2])
              for m, st in zip(["preparation", "contact", "finish"], b.steps)]
     pros = facts.get("closest_pros") or []
     c = facts["at_contact"]
-    seen = [f"{name} about {c[k]}°" for name, k in (("elbow", "elbow_angle_deg"), ("knees", "knee_angle_deg"))
+    say = lambda key, **kw: i18n.t(lang, key, **kw)   # noqa: E731
+    seen = [say(f"offline.{name}", deg=c[k]) for name, k in (("elbow", "elbow_angle_deg"), ("knees", "knee_angle_deg"))
             if c.get(k) is not None]
+    stroke = (facts["stroke_label"].lower() if i18n.norm(lang) == "en"
+              else i18n.stroke_label(facts.get("stroke_type") or facts["stroke"], lang))
     opening = " ".join(filter(None, [
-        f"Your {facts['stroke_label'].lower()}, measured at contact: {', '.join(seen)}." if seen
-        else f"Your {facts['stroke_label'].lower()}.",
-        f"You play most like {pros[0]['name']} ({pros[0]['score']}% body match)." if pros else ""]))
+        say("offline.measured", stroke=stroke, seen=", ".join(seen)) if seen else say("offline.stroke", stroke=stroke),
+        say("offline.like", name=pros[0]["name"], score=pros[0]["score"]) if pros else ""]))
     fixes = "\n".join(f"{i}. **{card.title.capitalize()}.** {' '.join(x for x in card.lines if x)}"
                       for i, card in enumerate(cards, 1))
-    summary = "\n\n".join(filter(None, [opening, f"**What to work on first:**\n{fixes}" if cards else "",
-                                       f"**Drill:** {b.drill}" if b.drill else ""]))
+    summary = "\n\n".join(filter(None, [opening, f"**{say('offline.first')}:**\n{fixes}" if cards else "",
+                                       f"**{say('notes.drill')}:** {b.drill}" if b.drill else ""]))
     return CoachReport(summary=summary, headline=b.headline, stroke_type=facts["stroke_type"], grip=b.grip,
                        stance=b.stance, swing_path=b.swing_path, contact_point=b.contact_point,
                        follow_through=b.follow_through, cards=cards, recap=b.recap or "", drill=b.drill or "")
@@ -440,8 +445,8 @@ def render(s: Session, facts: dict, report, clip: Path, track) -> None:
     (out / "breakdown.json").write_text(b.model_dump_json(indent=2))
     with timing.stage("render"):
         render_breakdown(str(clip), track, b, str(out / "breakdown.mp4"), facts["bat_hand"],
-                         height=RENDER_HEIGHT, preset="superfast")
+                         height=RENDER_HEIGHT, preset="superfast", lang=s.lang)
     shutil.copyfile(out / "breakdown.mp4", s.dir / "breakdown.mp4")
-    s.add_output("breakdown", f"{b.stroke_type or b.stroke} breakdown".replace("_", " ").capitalize(),
-                 "breakdown.mp4", b.headline)
+    from .tools import breakdown_title
+    s.add_output("breakdown", breakdown_title(b.stroke_type or b.stroke, s.lang), "breakdown.mp4", b.headline)
     s.update(breakdown=json.loads(b.model_dump_json()))

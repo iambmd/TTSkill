@@ -1,17 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import demoAssets from "@/lib/demo-assets.json";
-import { demoDescriptions } from "@/lib/demo-descriptions";
 import { ChevronIcon, PauseIcon, PlayIcon } from "./ui";
 
 const features = [
-  { id: "autocut", title: "Auto-Cut", description: "Trim a match to its rallies.", demo: "/jobs/demo-autocut", clip: "autocut-after" },
-  { id: "coach", title: "Coach", description: "Get feedback on your match.", demo: "/jobs/demo-coach", clip: "coach-after-breakdown" },
-  { id: "breakdown", title: "Technique Breakdown", description: "See what makes a stroke work.", demo: "/jobs/demo-breakdown", clip: "breakdown-after" },
-  { id: "equipment", title: "Equipment", description: "Find rubber for your game.", demo: "/rubbers?demo=1" },
-  { id: "match", title: "Pro styles", description: "Compare your swing with the pros.", demo: "/jobs/demo-match", clip: "match-after" },
+  { id: "autocut", demo: "/jobs/demo-autocut", clip: "autocut-after" },
+  { id: "coach", demo: "/jobs/demo-coach", clip: "coach-after-breakdown" },
+  { id: "breakdown", demo: "/jobs/demo-breakdown", clip: "breakdown-after" },
+  { id: "equipment", demo: "/rubbers?demo=1" },
+  { id: "match", demo: "/jobs/demo-match", clip: "match-after" },
 ] as const;
 
 const motionQuery = "(prefers-reduced-motion: reduce)";
@@ -30,6 +30,7 @@ function Poster({ clip }: { clip: string }) {
 type FeatureId = (typeof features)[number]["id"];
 
 export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?: string } }) {
+  const t = useTranslations("home.features");
   const reduceMotion = useSyncExternalStore(subscribeToMotion, () => window.matchMedia(motionQuery).matches, () => false);
   const [active, setActive] = useState<{ id: FeatureId; hover: boolean }>();
   const gridRef = useRef<HTMLUListElement>(null);
@@ -46,10 +47,11 @@ export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?:
 
   return (
     <section aria-labelledby="home-features-title" className="home-section" data-home-enter>
-      <h2 id="home-features-title" className="section-title home-section-title">Explore TTSkill</h2>
+      <h2 id="home-features-title" className="section-title home-section-title">{t("title")}</h2>
       <ul ref={gridRef} className="home-features">
         {features.map((feature) => {
           const playing = !reduceMotion && active?.id === feature.id;
+          const title = t(`${feature.id}.title`);
           return (
             <li key={feature.id} className="home-feature surface-card home-lift"
               onPointerEnter={(event) => {
@@ -61,15 +63,15 @@ export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?:
                   <div className="home-equipment-preview" aria-hidden>
                     <span className="home-rubber-sheet" />
                     <div className="home-equipment-picks" data-playing={playing}>
-                      <div><span>Spin pick</span><strong>{equipment.spin}</strong></div>
-                      <div><span>Speed pick</span><strong>{equipment.speed}</strong></div>
+                      <div><span>{t("spinPick")}</span><strong>{equipment.spin}</strong></div>
+                      <div><span>{t("speedPick")}</span><strong>{equipment.speed}</strong></div>
                     </div>
                   </div>
                 ) : <>
                   <Poster clip={feature.clip} />
                   {playing && <video src={`/home/${feature.clip}.mp4`} autoPlay loop muted playsInline aria-hidden />}
                 </>}
-                <button type="button" className="home-feature-play" aria-label={`${feature.title} preview`} aria-pressed={playing}
+                <button type="button" className="home-feature-play" aria-label={t("preview", { title })} aria-pressed={playing}
                   onClick={() => {
                     if (!window.matchMedia(motionQuery).matches) setActive(playing ? undefined : { id: feature.id, hover: false });
                   }}>
@@ -77,10 +79,10 @@ export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?:
                 </button>
               </div>
               <div className="home-feature-copy">
-                <h3 className="section-title text-lg">{feature.title}</h3>
-                <p className="text-sm text-muted">{feature.description}</p>
-                <Link href={feature.demo} prefetch={false} className="home-text-link" aria-label={`Try it: ${feature.title}`}>
-                  Try it <ChevronIcon className="size-4 -rotate-90" />
+                <h3 className="section-title text-lg">{title}</h3>
+                <p className="text-sm text-muted">{t(`${feature.id}.description`)}</p>
+                <Link href={feature.demo} prefetch={false} className="home-text-link" aria-label={t("tryItLabel", { title })}>
+                  {t("tryIt")} <ChevronIcon className="size-4 -rotate-90" />
                 </Link>
               </div>
             </li>
@@ -92,17 +94,18 @@ export function FeatureGrid({ equipment }: { equipment: { spin?: string; speed?:
 }
 
 type DemoMode = "before" | "after";
-const demos = [
-  { id: "autocut", title: "Match highlights", before: "A phone recording of two players during points and the gaps between them." },
-  { id: "breakdown", title: "Stroke breakdown", before: "Ma Long practices a forehand loop at full speed." },
-] as const;
+const demos = [{ id: "autocut" }, { id: "breakdown" }] as const;
 
 function DemoPlayer({ demo, mode }: { demo: (typeof demos)[number]; mode: DemoMode }) {
+  const t = useTranslations();
+  const title = t(`home.demos.${demo.id}.title`);
+  // Lower case in the labels: "Play match highlights after", "Match highlights, after".
+  const modeLabel = t(`home.demos.modes.${mode}`);
   const [started, setStarted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const clip = `${demo.id}-${mode}`;
   const src = mode === "before" ? `/examples/${clip}.mp4` : demoAssets[demo.id].url;
-  const description = mode === "before" ? demo.before : demoDescriptions[demo.id];
+  const description = mode === "before" ? t(`home.demos.${demo.id}.before`) : t(`demoDescriptions.${demo.id}`);
 
   function play() {
     const player = videoRef.current;
@@ -115,14 +118,14 @@ function DemoPlayer({ demo, mode }: { demo: (typeof demos)[number]; mode: DemoMo
 
   return (
     <figure className="home-demo surface-card">
-      <figcaption className="home-demo-title section-title text-lg">{demo.title}</figcaption>
+      <figcaption className="home-demo-title section-title text-lg">{title}</figcaption>
       <div className="home-demo-media">
-        {!started && <button type="button" className="home-demo-start" aria-label={`Play ${demo.title.toLowerCase()} ${mode}`} onClick={play}>
+        {!started && <button type="button" className="home-demo-start" aria-label={t("home.demos.play", { title: title.toLowerCase(), mode: modeLabel })} onClick={play}>
           <Poster clip={clip} />
           <span><PlayIcon className="size-6" /></span>
         </button>}
         <video ref={videoRef} controls playsInline preload="none" hidden={!started} tabIndex={0}
-          aria-label={`${demo.title}, ${mode}`} aria-describedby={`${clip}-description`} />
+          aria-label={t("home.demos.video", { title, mode: modeLabel })} aria-describedby={`${clip}-description`} />
       </div>
       <p id={`${clip}-description`} className="sr-only">{description}</p>
     </figure>
@@ -131,14 +134,15 @@ function DemoPlayer({ demo, mode }: { demo: (typeof demos)[number]; mode: DemoMo
 
 export function DemoStrip() {
   const [mode, setMode] = useState<DemoMode>("after");
+  const t = useTranslations();
 
   return (
     <section aria-labelledby="home-demos-title" className="home-section" data-home-enter>
       <div className="home-section-heading">
-        <h2 id="home-demos-title" className="section-title">See it in action</h2>
-        <div className="home-demo-toggle" role="group" aria-label="Demo version">
+        <h2 id="home-demos-title" className="section-title">{t("home.demos.title")}</h2>
+        <div className="home-demo-toggle" role="group" aria-label={t("home.demos.version")}>
           {(["before", "after"] as const).map((option) => (
-            <button key={option} type="button" aria-pressed={mode === option} onClick={() => setMode(option)}>{option}</button>
+            <button key={option} type="button" aria-pressed={mode === option} onClick={() => setMode(option)}>{t(`common.${option}`)}</button>
           ))}
         </div>
       </div>

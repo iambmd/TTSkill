@@ -19,6 +19,8 @@ from .schema import STROKES, Step, StrokeBreakdown
 from .strokes import STROKE_TYPES
 from .style import prompt_guide
 
+import i18n
+
 DEFAULT_MODEL = os.environ.get("TECHNIQUE_MODEL", "claude-opus-5-5")
 
 SYSTEM = (
@@ -56,13 +58,16 @@ class ClaudeAnalyzer:
         self.model = model
         self.client = client or anthropic.Anthropic()
 
-    def _call(self, content: list) -> StrokeBreakdown:
+    def _call(self, content: list, lang: str = "en") -> StrokeBreakdown:
         # Structured output (the schema is the pydantic model) instead of a forced tool
         # call, which current models reject. "default" fallbacks retry a declined request
         # on Anthropic's recommended model inside the same call.
         import time
 
         import timing
+        rule = i18n.instruction(lang)
+        if rule:   # after the system prompt, in the user turn
+            content = [*content, {"type": "text", "text": rule.strip()}]
         begin = time.monotonic()
         msg = self.client.beta.messages.parse(
             model=self.model,
@@ -95,7 +100,7 @@ class ClaudeAnalyzer:
 
     def from_video(self, video: str, stroke: str, frame_times: list[float], pose_summary: dict,
                    key_times: list[float], player: Optional[str] = None,
-                   stroke_type: Optional[str] = None, detected: bool = False) -> StrokeBreakdown:
+                   stroke_type: Optional[str] = None, detected: bool = False, lang: str = "en") -> StrokeBreakdown:
         content: list = [{
             "type": "text",
             "text": (
@@ -114,10 +119,10 @@ class ClaudeAnalyzer:
             content.append({"type": "text", "text": f"t={t:.2f}s"})
             content.append({"type": "image",
                             "source": {"type": "base64", "media_type": "image/jpeg", "data": b64}})
-        return self._call(content)
+        return self._call(content, lang)
 
     def from_text(self, text: str, stroke: str, player: Optional[str] = None,
-                  stroke_type: Optional[str] = None, detected: bool = False) -> StrokeBreakdown:
+                  stroke_type: Optional[str] = None, detected: bool = False, lang: str = "en") -> StrokeBreakdown:
         return self._call([{
             "type": "text",
             "text": (
@@ -125,7 +130,7 @@ class ClaudeAnalyzer:
                 f"Description of their training/technique from the user:\n{text}\n\n"
                 "Write the breakdown. Leave key_time_s empty (null) for all 3 steps."
             ),
-        }])
+        }], lang)
 
 
 # ------------------------------------------------------------------ offline fallback
@@ -302,67 +307,255 @@ _TEMPLATES.update(forehand=_TEMPLATES["forehand_topspin"], backhand=_TEMPLATES["
                   flick=_TEMPLATES["backhand_flick"])
 
 
+# The same templates in Vietnamese (docs/glossary_vi.md): highlight words are copied from the lines,
+# callouts are already in caps.
+_TEMPLATES_VI = {
+    "forehand_topspin": _t(
+        "Hạ thấp. Vung lên qua bóng.",
+        "Cầm ngang, thả lỏng; ngón trỏ dọc mặt trái tay, ngón cái mềm.",
+        "Từ thấp lên cao và ra trước, lực từ chân và hông; mặt vợt úp qua đỉnh bóng.",
+        "Vợt kết thúc gần trán, rồi nhanh chóng về tư thế chuẩn bị.",
+        [("Hạ thấp", ["Dồn trọng tâm vào chân sau.", "Chân sau là nguồn lực."],
+          ["chân sau", "nguồn lực"], ["TRỌNG TÂM SAU"]),
+         ("Vung lên", ["Vợt bắt đầu dưới bóng.", "Giật cần quỹ đạo đi lên."],
+          ["dưới bóng", "đi lên"], ["CHẠM BÓNG PHÍA TRƯỚC"]),
+         ("Kết thúc cao", ["Vợt kết thúc ngang trán.", "Động tác gọn giúp về nhanh."],
+          ["ngang trán", "về nhanh"], ["VỀ TƯ THẾ"])],
+        "Hạ thấp, vung lên, kết thúc cao.",
+        "Vung tay không 20 lần trước gương, kiểm tra từng điểm."),
+    "forehand_drive": _t(
+        "Lăng ngắn. Đánh xuyên bóng.",
+        "Cầm ngang, chắc tay lúc chạm bóng; mặt vợt hơi úp.",
+        "Lăng vợt ngắn về hông, rồi vung ra trước thẳng xuyên qua bóng.",
+        "Kết thúc gọn trước mặt; về tư thế nhanh.",
+        [("Lăng ngắn", ["Lăng vợt nhỏ về hông.", "Vung to sẽ bị muộn."],
+          ["nhỏ", "muộn"], ["LĂNG VỢT NGẮN"]),
+         ("Đánh xuyên", ["Chạm bóng ở điểm cao nhất.", "Đẩy ra trước, không lên trên."],
+          ["điểm cao nhất", "ra trước"], ["MẶT VỢT HƠI ÚP"]),
+         ("Về nhanh", ["Vợt dừng trước mũi.", "Sẵn sàng cho cú phản công."],
+          ["trước mũi", "phản công"], ["GỌN GÀNG"])],
+        "Lăng ngắn, đánh xuyên, về nhanh.",
+        "Đánh thuận tay qua lại 2 phút, đều và chắc."),
+    "forehand_loop_backspin": _t(
+        "Hạ thấp. Nâng bóng xoáy xuống.",
+        "Cầm ngang, lỏng khi lăng vợt để cổ tay thêm lực miết.",
+        "Bắt đầu dưới mép bàn và vung dốc lên, miết lên phía sau bóng.",
+        "Kết thúc cao trên đầu; chân đẩy bạn đứng lên lại.",
+        [("Hạ thấp", ["Khuỵu gối, vợt dưới mặt bàn.", "Xoáy xuống kéo bóng đi xuống."],
+          ["dưới mặt bàn", "đi xuống"], ["BẮT ĐẦU THẤP"]),
+         ("Vung dốc", ["Miết lên phía sau bóng.", "Đợi bóng rơi sau điểm cao nhất."],
+          ["phía sau bóng", "sau điểm cao nhất"], ["VUNG DỐC LÊN"]),
+         ("Lên cao", ["Vợt kết thúc trên đầu.", "Chân đẩy bạn về tư thế."],
+          ["trên đầu", "Chân"], ["KẾT THÚC CAO"])],
+        "Hạ thấp, vung dốc, lên cao.",
+        "Nhờ bạn gò dài và giật 10 quả liên tục."),
+    "backhand_topspin": _t(
+        "Khuỷu tay trước. Mở cẳng tay.",
+        "Cầm ngang, ngón cái hơi cao hơn ở mặt thuận tay.",
+        "Vợt về trước bụng, rồi cẳng tay mở ra trước và lên, khuỷu tay làm trục.",
+        "Vợt kết thúc hướng về đích ngang tầm mắt; khuỷu tay ở phía trước.",
+        [("Khuỷu trước", ["Vợt đặt trước bụng.", "Khuỷu tay là trục xoay."],
+          ["trước bụng", "trục xoay"], ["KHUỶU TAY LÀM TRỤC"]),
+         ("Mở tay", ["Cẳng tay mở ra trước và lên.", "Chạm bóng phía trước người."],
+          ["ra trước và lên", "phía trước"], ["CHẠM BÓNG PHÍA TRƯỚC"]),
+         ("Đứng vuông", ["Thả lỏng tay sau khi chạm.", "Đứng vuông bàn để kịp hai bên."],
+          ["Thả lỏng", "hai bên"], ["VỀ TƯ THẾ"])],
+        "Khuỷu trước, mở tay, đứng vuông.",
+        "Đôi trái tay 50 quả, giữ khuỷu tay yên."),
+    "backhand_flick": _t(
+        "Bước vào. Vẩy qua đỉnh bóng.",
+        "Cầm ngang, lỏng hơn một chút để cổ tay gập về sau.",
+        "Bước chân vào gầm bàn, gập cổ tay về sau, rồi vẩy ngắn, nhanh ra trước và lên.",
+        "Kết thúc nhỏ; lùi ra khỏi bàn ngay.",
+        [("Bước vào", ["Chân bước vào gầm bàn.", "Đứng xa thì cổ tay không làm việc được."],
+          ["gầm bàn", "cổ tay"], ["BƯỚC VÀO"]),
+         ("Bật cổ tay", ["Gập cổ tay, rồi bật mạnh.", "Chạm bóng ở đỉnh nảy."],
+          ["bật mạnh", "đỉnh nảy"], ["CỔ TAY NHANH"]),
+         ("Lùi ra", ["Đẩy chân trước để lùi ra.", "Bóng trả về sẽ rất nhanh."],
+          ["Đẩy chân trước", "rất nhanh"], ["VỀ TƯ THẾ"])],
+        "Bước vào, bật cổ tay, lùi ra.",
+        "Nhờ bạn giao ngắn; vẩy 10 quả, lùi về sau mỗi quả."),
+    "backhand_push": _t(
+        "Mở mặt vợt. Gò ngắn.",
+        "Cầm ngang thả lỏng; mặt vợt mở hướng lên trần.",
+        "Động tác ngắn ra trước và xuống dưới bóng, do cẳng tay dẫn.",
+        "Vợt dừng thấp hướng về lưới; không vung lớn.",
+        [("Mở mặt vợt", ["Mặt vợt ngửa lên trần.", "Mặt vợt mở xử lý được xoáy xuống."],
+          ["ngửa lên trần", "xoáy xuống"], ["MỞ GÓC VỢT"]),
+         ("Lướt dưới", ["Cẳng tay đưa ra trước và xuống.", "Chạm sớm, ngay sau khi bóng nảy."],
+          ["ra trước và xuống", "sớm"], ["DƯỚI BÓNG"]),
+         ("Giữ thấp", ["Kết thúc thấp hướng về lưới.", "Ở đây kiểm soát hơn sức mạnh."],
+          ["thấp", "kiểm soát"], ["KIỂM SOÁT, KHÔNG DÙNG LỰC"])],
+        "Mở mặt vợt, lướt dưới, giữ thấp.",
+        "Gò trái tay chéo góc 30 quả."),
+    "backhand_block": _t(
+        "Ngắn và chắc. Mượn lực đối thủ.",
+        "Cầm ngang thả lỏng; vợt trước người, mặt vợt úp qua bóng.",
+        "Gần như không lăng vợt: chạm bóng sớm và đẩy nhẹ ra trước từ cẳng tay.",
+        "Vợt ở phía trước và về ngay; quả tiếp theo đến rất nhanh.",
+        [("Vợt sẵn", ["Vợt trước người trước khi nảy.", "Không kịp lăng vợt khi bị giật."],
+          ["trước người", "Không kịp"], ["SẴN SÀNG SỚM"]),
+         ("Góc chắc", ["Úp mặt vợt qua bóng.", "Xoáy lên của đối thủ làm phần việc."],
+          ["Úp mặt vợt", "Xoáy lên"], ["MẶT VỢT ÚP"]),
+         ("Về nhanh", ["Hấp thụ lực, rồi về tư thế.", "Động tác ngắn giữ bạn trong pha bóng."],
+          ["Hấp thụ", "tư thế"], ["GỌN GÀNG"])],
+        "Vợt sẵn, góc chắc, về nhanh.",
+        "Nhờ bạn giật vào trái tay; chặn 30 quả về cùng một điểm."),
+    "forehand_block": _t(
+        "Vợt phía trước. Chạm sớm.",
+        "Cầm ngang; vợt trước hông phải (hông trái với người thuận tay trái), mặt vợt úp.",
+        "Đưa cẳng tay ra trước một đoạn ngắn, chạm bóng ngay sau khi nảy.",
+        "Dừng vợt ở phía trước và về tư thế chuẩn bị.",
+        [("Vợt sẵn", ["Vợt ra trước, khuỵu gối.", "Lăng vợt lớn là quá muộn."],
+          ["ra trước", "quá muộn"], ["SẴN SÀNG SỚM"]),
+         ("Chạm sớm", ["Chạm ngay sau khi bóng nảy.", "Lực của đối thủ đưa bóng về."],
+          ["ngay sau khi bóng nảy", "Lực"], ["MẶT VỢT ÚP"]),
+         ("Về nhanh", ["Vợt dừng, về tư thế.", "Quả tiếp theo đã đến rồi."],
+          ["về tư thế", "Quả tiếp theo"], ["GỌN GÀNG"])],
+        "Vợt sẵn, chạm sớm, về nhanh.",
+        "Nhờ bạn giật vào thuận tay; chặn 30 quả, rồi xen kẽ phản công."),
+    "chop": _t(
+        "Từ cao xuống thấp. Cắt dưới bóng.",
+        "Cầm ngang, cổ tay chắc; mặt vợt mở.",
+        "Từ ngang vai đi xuống và ra trước, cắt dưới bóng khi bóng rơi.",
+        "Vợt kết thúc thấp cạnh đầu gối; bước vào lại cho quả sau.",
+        [("Vợt cao", ["Lùi lại, vợt ngang vai.", "Độ cao cho bạn khoảng để cắt xuống."],
+          ["ngang vai", "cắt xuống"], ["BẮT ĐẦU CAO"]),
+         ("Cắt xuống", ["Đợi bóng rơi xuống trước.", "Cắt dưới phía sau bóng."],
+          ["rơi xuống", "dưới"], ["MẶT VỢT MỞ"]),
+         ("Kết thúc thấp", ["Vợt kết thúc gần đầu gối.", "Bước nhỏ vào lại cho quả sau."],
+          ["đầu gối", "Bước nhỏ"], ["KIỂM SOÁT XOÁY XUỐNG"])],
+        "Vợt cao, cắt xuống, kết thúc thấp.",
+        "Nhờ bạn giật nhẹ; cắt 10 quả về sâu."),
+    "serve": _t(
+        "Giấu xoáy. Giao ngắn.",
+        "Cầm ngang lỏng, ngón tay thả lỏng để cổ tay bật nhanh.",
+        "Miết nhanh ngang đáy hoặc cạnh bóng, thấp sát mặt bàn.",
+        "Kết thúc ngắn, đưa vợt về trước nhanh cho bóng thứ ba.",
+        [("Tung thẳng", ["Mở lòng bàn tay, tung cao từ 16 cm.", "Tung đúng luật giữ được điểm."],
+          ["Mở lòng bàn tay", "đúng luật"], ["TUNG BÓNG ĐÚNG LUẬT"]),
+         ("Miết mỏng", ["Chạm bóng thấp, sát mặt bàn.", "Chạm mỏng mới tạo xoáy."],
+          ["thấp", "Chạm mỏng"], ["CHẠM MỎNG"]),
+         ("Bóng thứ ba", ["Về tư thế trung lập thật nhanh.", "Bóng trả về đến rất nhanh."],
+          ["trung lập", "rất nhanh"], ["SẴN SÀNG BÓNG THỨ BA"])],
+        "Tung thẳng, miết mỏng, sẵn sàng bóng thứ ba.",
+        "Giao 20 quả vào một điểm, chỉ đổi loại xoáy."),
+    "block": _t(
+        "Vợt êm. Mượn tốc độ đối thủ.",
+        "Chắc nhưng không gồng; mặt vợt úp khi gặp bóng xoáy lên.",
+        "Gần như không vung: vợt chạm bóng sớm và đẩy nhẹ ra trước.",
+        "Ngắn và gọn; đưa vợt về lại phía trước.",
+        [("Đọc bóng", ["Nhìn vợt của đối thủ.", "Góc vợt cho biết loại xoáy."],
+          ["vợt của đối thủ", "xoáy"], ["ĐỌC CÚ GIẬT"]),
+         ("Chạm sớm", ["Chạm ngay sau khi bóng nảy.", "Dùng tốc độ của họ, không phải của bạn."],
+          ["sau khi bóng nảy", "tốc độ của họ"], ["VỢT PHÍA TRƯỚC"]),
+         ("Giữ êm", ["Vung theo thật nhỏ.", "Vung lớn sẽ làm bóng đi dài."],
+          ["thật nhỏ", "đi dài"], ["GIỮ PHA BÓNG"])],
+        "Đọc bóng, chạm sớm, giữ êm.",
+        "Nhờ bạn giật; chặn 30 quả vào một góc."),
+    "footwork": _t(
+        "Bước nhỏ. Luôn thăng bằng.",
+        "Cầm ngang trung lập để sẵn sàng cả hai bên.",
+        "Di chuyển trước, vung sau: người đến trước vợt.",
+        "Đẩy về giữa sau mỗi cú đánh.",
+        [("Nhún bật", ["Nhún trên mũi bàn chân.", "Bạn bắt đầu di chuyển sớm hơn."],
+          ["mũi bàn chân", "sớm hơn"], ["TƯ THẾ SẴN SÀNG"]),
+         ("Chân trước", ["Bước ngang đến bóng.", "Đến nơi rồi mới vung."],
+          ["Bước ngang", "Đến nơi"], ["DI CHUYỂN RỒI ĐÁNH"]),
+         ("Về giữa", ["Đẩy bằng chân phía ngoài.", "Về giữa sau mỗi cú."],
+          ["Đẩy", "giữa"], ["VỀ GIỮA"])],
+        "Nhún bật, chân trước, về giữa.",
+        "Bài tập bộ chân hai điểm: thuận tay, trái tay, 2 phút."),
+}
+_TEMPLATES_VI.update(forehand=_TEMPLATES_VI["forehand_topspin"], backhand=_TEMPLATES_VI["backhand_topspin"],
+                     flick=_TEMPLATES_VI["backhand_flick"])
+TEMPLATES = {"en": _TEMPLATES, "vi": _TEMPLATES_VI}
+
+# The offline analyzer's measured sentences.
+_MEASURED = {
+    "en": dict(no_legs="Legs out of frame, so the stance isn't measured.",
+               deep="deep knee bend", moderate="moderate knee bend", upright="fairly upright legs",
+               wide="wide base", shoulder="shoulder-width base", narrow="narrow base",
+               stance="{wide} with {bend} (knees ~{knee} deg).",
+               front="in front of the body", shoulder_h="around shoulder height",
+               waist="between waist and chest", low="low, near hip height",
+               contact="Ball met {height}, in front of the body", elbow=", elbow open to ~{elbow} deg.",
+               text_stance="Athletic ready stance: feet a bit wider than shoulders, knees bent, weight forward.",
+               text_contact="In front of the body at the top of the bounce."),
+    "vi": dict(no_legs="Chân ra ngoài khung hình nên chưa đo được tư thế đứng.",
+               deep="khuỵu gối sâu", moderate="khuỵu gối vừa phải", upright="chân khá thẳng",
+               wide="Chân đứng rộng", shoulder="Chân rộng bằng vai", narrow="Chân đứng hẹp",
+               stance="{wide}, {bend} (gối ~{knee}°).",
+               front="phía trước người", shoulder_h="ngang vai", waist="giữa eo và ngực",
+               low="thấp, gần ngang hông",
+               contact="Chạm bóng {height}, phía trước người", elbow=", khuỷu tay mở ~{elbow}°.",
+               text_stance="Tư thế sẵn sàng: chân rộng hơn vai một chút, khuỵu gối, trọng tâm dồn ra trước.",
+               text_contact="Phía trước người, ở đỉnh nảy của bóng."),
+}
+
+
 class OfflineAnalyzer:
     name = "offline"
 
     @staticmethod
-    def _template(stroke: str, stroke_type: Optional[str]) -> dict:
-        return _TEMPLATES.get(stroke_type or "") or _TEMPLATES.get(stroke) or _TEMPLATES["forehand"]
+    def _template(stroke: str, stroke_type: Optional[str], lang: str = "en") -> dict:
+        tpls = TEMPLATES[i18n.norm(lang)]
+        return tpls.get(stroke_type or "") or tpls.get(stroke) or tpls["forehand"]
 
     def _base(self, stroke: str, player: Optional[str], handed: str,
-              stroke_type: Optional[str] = None) -> dict:
-        tpl = self._template(stroke, stroke_type)
+              stroke_type: Optional[str] = None, lang: str = "en") -> dict:
+        tpl = self._template(stroke, stroke_type, lang)
         return dict(player=player or "Player", stroke=stroke, stroke_type=stroke_type,
                     handedness=handed, headline=tpl["headline"], grip=tpl["grip"],
                     swing_path=tpl["swing_path"], follow_through=tpl["follow_through"],
                     recap=tpl["recap"], drill=tpl["drill"])
 
     def _steps(self, stroke: str, key_times: list[Optional[float]],
-               stroke_type: Optional[str] = None) -> list[Step]:
-        tpl = self._template(stroke, stroke_type)
+               stroke_type: Optional[str] = None, lang: str = "en") -> list[Step]:
+        tpl = self._template(stroke, stroke_type, lang)
         return [Step(title=t, lines=l, highlight_words=h, callouts=c, key_time_s=k)
                 for (t, l, h, c), k in zip(tpl["steps"], key_times)]
 
     def from_video(self, video: str, stroke: str, frame_times: list[float], pose_summary: dict,
                    key_times: list[float], player: Optional[str] = None,
                    contact_metrics: Optional[dict] = None, stroke_type: Optional[str] = None,
-                   detected: bool = False) -> StrokeBreakdown:
+                   detected: bool = False, lang: str = "en") -> StrokeBreakdown:
         # MediaPipe left/right labels are unreliable when the player faces away from the
         # camera, so the offline analyzer does not claim a handedness.
-        b = self._base(stroke, player, "unknown", stroke_type)
+        b = self._base(stroke, player, "unknown", stroke_type, lang)
+        w = _MEASURED[i18n.norm(lang)]
         m = contact_metrics or {}
         knee = m.get("knee_angle_deg")
         width = m.get("stance_width_x_shoulders")
         elbow = m.get("elbow_angle_deg")
         wh = m.get("wrist_height_hip0_shoulder1")
         if knee is None or width is None:
-            b["stance"] = "Legs out of frame, so the stance isn't measured."
+            b["stance"] = w["no_legs"]
         else:
-            bend = ("deep knee bend" if knee < 140 else
-                    "moderate knee bend" if knee < 160 else "fairly upright legs")
-            wide = ("wide base" if width > 1.6 else
-                    "shoulder-width base" if width > 0.9 else "narrow base")
-            b["stance"] = f"{wide.capitalize()} with {bend} (knees ~{knee} deg)."
+            bend = w["deep"] if knee < 140 else w["moderate"] if knee < 160 else w["upright"]
+            wide = w["wide"] if width > 1.6 else w["shoulder"] if width > 0.9 else w["narrow"]
+            b["stance"] = w["stance"].format(wide=wide[0].upper() + wide[1:], bend=bend, knee=knee)
         if wh is None:
-            height = "in front of the body"
+            height = w["front"]
         elif wh > 0.8:
-            height = "around shoulder height"
+            height = w["shoulder_h"]
         elif wh > 0.3:
-            height = "between waist and chest"
+            height = w["waist"]
         else:
-            height = "low, near hip height"
-        b["contact_point"] = (f"Ball met {height}, in front of the body"
-                              + (f", elbow open to ~{elbow} deg." if elbow else "."))
-        b["steps"] = self._steps(stroke, key_times, stroke_type)
+            height = w["low"]
+        b["contact_point"] = (w["contact"].format(height=height)
+                              + (w["elbow"].format(elbow=elbow) if elbow else "."))
+        b["steps"] = self._steps(stroke, key_times, stroke_type, lang)
         b["source"] = "offline-pose-template"
         return StrokeBreakdown.model_validate(b)
 
     def from_text(self, text: str, stroke: str, player: Optional[str] = None,
-                  stroke_type: Optional[str] = None, detected: bool = False) -> StrokeBreakdown:
-        b = self._base(stroke, player, "unknown", stroke_type)
-        b["stance"] = "Athletic ready stance: feet a bit wider than shoulders, knees bent, weight forward."
-        b["contact_point"] = "In front of the body at the top of the bounce."
-        b["steps"] = self._steps(stroke, [None, None, None], stroke_type)
+                  stroke_type: Optional[str] = None, detected: bool = False, lang: str = "en") -> StrokeBreakdown:
+        w = _MEASURED[i18n.norm(lang)]
+        b = self._base(stroke, player, "unknown", stroke_type, lang)
+        b["stance"] = w["text_stance"]
+        b["contact_point"] = w["text_contact"]
+        b["steps"] = self._steps(stroke, [None, None, None], stroke_type, lang)
         b["source"] = "offline-text-template"
         return StrokeBreakdown.model_validate(b)
 

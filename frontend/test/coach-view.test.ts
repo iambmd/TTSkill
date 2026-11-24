@@ -11,6 +11,7 @@ import { coachingOf } from "@/lib/coaching";
 import type { Job } from "@/lib/submit";
 import { Markdown, parseBlocks } from "@/app/markdown";
 import { CoachView } from "@/app/jobs/[id]/coach-view";
+import { renderIntl } from "./intl";
 
 // AnalysedPlayer (inside the view) asks for the app router, which only exists inside Next.
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push() {} }) }));
@@ -45,7 +46,7 @@ function job(over: Partial<Job> = {}): Job {
     ...over,
   };
 }
-const render = (j: Job, debug = false) => renderToStaticMarkup(createElement(CoachView, { job: j, debug }));
+const render = (j: Job, debug = false) => renderIntl(createElement(CoachView, { job: j, debug }));
 
 describe("coaching notes", () => {
   it("are the main section, rendered as Markdown", () => {

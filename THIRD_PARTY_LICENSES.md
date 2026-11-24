@@ -39,7 +39,8 @@ selling the app.
 | **sharp / libvips** (npm `@img/sharp-libvips-*`, optional for Next.js) | LGPL-3.0-or-later (sharp itself Apache-2.0) | Unmodified and dynamically linked, so no action is needed. The app doesn't use `next/image`, so it is installed but unused. |
 | **MediaPipe Pose Landmarker** (`pose_landmarker_full.task`, BlazePose GHUM 3D), downloaded at run time by `technique/pose.py` | Apache-2.0 (model card: "LICENSED UNDER Apache License, Version 2.0") | Commercial use is allowed; keep the notice. The card lists multiple people in an image, people too far away, and any surveillance or identity recognition as out-of-scope uses. These are not license terms, but the app asks for up to 3 poses per frame and follows players by clothing colour, so don't market the tracking as identity recognition. |
 | **Claude** (Anthropic API, `anthropic`, `langchain-anthropic`) | A service under Anthropic's Commercial Terms and Usage Policy, not a license we redistribute | Commercial use is allowed under those terms. The app sends frames of users' videos to Anthropic, so the product's privacy policy must say so. |
-| **Barlow, Barlow Condensed** fonts (`backend/technique/fonts/`, plus `next/font/google` in the frontend) | SIL Open Font License 1.1 (`backend/technique/fonts/OFL.txt`) | You may bundle them and use them commercially. Keep `OFL.txt`, and don't sell the fonts on their own. |
+| **Barlow, Barlow Condensed** fonts (`backend/technique/fonts/`; Barlow Condensed also through `next/font/google` in the frontend) | SIL Open Font License 1.1 (`backend/technique/fonts/OFL.txt`) | You may bundle them and use them commercially. Keep `OFL.txt`, and don't sell the fonts on their own. |
+| **Be Vietnam Pro** font (the site's body text, `next/font/google`, latin and vietnamese subsets; added 2026-11-23) | SIL Open Font License 1.1 | Same terms as Barlow: free to bundle and use commercially, not to sell on its own. |
 | **ESLint** and **eslint-config-next** (frontend development dependencies, added 2026-11-20) | MIT for both | Used for lint checks. The frontend lockfile records licenses for their transitive dependencies. |
 | **Playwright for Python** (optional purchase link checker) | Apache-2.0 | Used by `scripts/check_buy_links.py --browser`. The default checker uses the standard library. |
 | **Playwright Test**, **playwright** and **playwright-core** (frontend development dependencies) | Apache-2.0 | Run the browser tests in `frontend/e2e/`. The frontend lockfile records their transitive dependencies. |
@@ -102,6 +103,7 @@ No AGPL and no non-commercial licenses.
 | Package | Version | License |
 | --- | --- | --- |
 | next | 15.5.28 | MIT |
+| next-intl | 4.16.0 | MIT |
 | react, react-dom | 19.1.1 | MIT |
 | server-only | 0.0.1 | MIT |
 | tailwindcss, @tailwindcss/postcss (dev) | 4.1.x | MIT |
@@ -123,6 +125,8 @@ Development only (tests, CSS build; not shipped):
 - **MPL-2.0 (11):** lightningcss and its platform binaries
 - **BlueOak-1.0.0 (5, permissive):** chownr, graceful-fs, minipass, tar, yallist
 - **ISC:** @isaacs/fs-minipass, siginfo. **Apache-2.0:** typescript, expect-type.
+
+Added with next-intl (2026-11-23, English/Vietnamese UI). Runtime: next-intl, use-intl, intl-messageformat (BSD-3-Clause), @formatjs/* (4), icu-minify, @schummar/icu-type-parser, negotiator (all MIT except as noted). Its message extractor, which the app doesn't use, pulls in build-time tools: @eloqnt/* (5), po-parser, content-type, node-addon-api, next-intl-swc-plugin-extractor, @parcel/watcher and its platform binaries (13; all MIT) and @swc/core with its platform binaries (14; Apache-2.0, some "Apache-2.0 AND MIT").
 
 No GPL, AGPL or non-commercial licenses.
 

@@ -6,6 +6,18 @@ Read this first, then `PROGRESS.md` for the change history and `AGENTS.md` for p
 
 From `frontend/`, run `npx playwright install chromium` once, then `npm run test:e2e`. The runner starts a local Next.js server on port 3110 with an unreachable analysis backend and covers both themes at 1440 px and 375 px. Stop any existing `next dev` process in the checkout before running the suite or building.
 
+This WSL install lacks Chromium's `libnss3`/`libnspr4`, and installing them needs sudo (`sudo apt install libnss3`). Without sudo, run `apt-get download libnss3 libnspr4`, unpack both with `dpkg -x <deb> <dir>`, and run the suite with `LD_LIBRARY_PATH=<dir>/usr/lib/x86_64-linux-gnu`.
+
+## English and Vietnamese (2026-11-23)
+
+- **How it works:** the site is bilingual through next-intl, with no locale in the URL. The `NEXT_LOCALE` cookie wins, then Accept-Language, then English. The EN / VI toggle sits beside the theme toggle on every page. All UI text is in `frontend/messages/en.json` and `vi.json`, which must keep the same keys; `test/i18n.test.ts` checks this.
+- **Fonts:** Be Vietnam Pro for body text and Barlow Condensed 600/700 for headings and numbers, both with the `vietnamese` subset.
+- **AI text:** Breakdown and Coach send `lang` (`en`/`vi`). The backend (`backend/i18n.py`) asks Claude to write in it, uses Vietnamese offline templates without a key, and burns Vietnamese labels into the video. The rule follows the cached system prompt, so caching still works.
+- **Cached demos:** their AI text stays English and is labelled "English only" in Vietnamese.
+- **Glossary:** a Vietnamese coach should review `docs/glossary_vi.md`. Terms change in `vi.json`, `backend/i18n.py` and `_TEMPLATES_VI` in `technique/analyze.py`.
+- **Still English in Vietnamese mode:** backend progress messages while a job runs (Coach's plan is translated), server-only validation messages from FastAPI, Pro match differences and warnings, and the old Coach fallback's step labels.
+- **Not verified:** a live Claude call in Vietnamese (no API key here). Details and test counts are in [PROGRESS.md](PROGRESS.md#bilingual-site-english-and-vietnamese-2026-11-23).
+
 ## Home discovery page (2026-11-22)
 
 - Home serves its gear cards, mini quiz, and demo links independently of the analysis server. A failed `/api/health` replaces the upload target with the offline card. **Retry** rechecks health and focuses the upload target when the service is back.

@@ -137,14 +137,17 @@ def run_agent(s: Session, request: str, model=None) -> None:
              f"The user's video link: {s.url} (call download_url first).")
     state: dict = {}
     callbacks = [timing.callback()] if timing.current() else []
-    for state in agent.stream({"messages": [{"role": "user", "content": f"{request}\n\n{where}"}]},
+    import i18n
+
+    rule = i18n.instruction(s.lang)   # the deep agent writes its reply and cards in the job's language too
+    for state in agent.stream({"messages": [{"role": "user", "content": f"{request}\n\n{where}{rule}"}]},
                               stream_mode="values", config={"recursion_limit": 120, "callbacks": callbacks}):
         todos = _todos(state.get("todos"))
         s.update(status="running", todos=todos, agentFiles=_files(state.get("files") or {}),
                  progress=_progress(todos))
     final = next((_text(m) for m in reversed(state.get("messages", [])) if m.type == "ai" and _text(m)), "")
     drill = ((jobs.load(s.job_id) or {}).get("breakdown") or {}).get("drill") or ""
-    s.update(status="done", progress=1.0, summary=final, message="Done.", coaching=notes.build(final, drill=drill),
+    s.update(status="done", progress=1.0, summary=final, message=i18n.t(s.lang, "msg.done"), coaching=notes.build(final, drill=drill, lang=s.lang),
              todos=[{**t, "status": "completed"} for t in _todos(state.get("todos"))])
 
 
@@ -232,7 +235,7 @@ def run_fallback(s: Session, request: str, why: str) -> None:
     rb = results.get("render_breakdown") or {}
     errs = {k: v for k, v in results.items() if isinstance(v, dict) and "error" in v}
     coaching = (notes.build(_summary({k: v for k, v in results.items() if k not in errs}, stroke),
-                            fix=rb["recap"] or "", drill=rb["drill"] or "") if "steps" in rb else None)
+                            fix=rb["recap"] or "", drill=rb["drill"] or "", lang=s.lang) if "steps" in rb else None)
     s.update(status="done", progress=1.0, summary=summary, message="Done.", todos=todos, agentFiles=_files(files),
              coaching=coaching, warning=("Some steps failed: " + "; ".join(f"{k}: {v['error']}" for k, v in errs.items()))
              if errs else None)
@@ -281,13 +284,16 @@ def _summary(r: dict, stroke: str) -> str:
 # ------------------------------------------------------------------ entry point
 
 def run_coach(job_id: str, video: Optional[Path], url: Optional[str], request: str,
-              selection: Optional[tuple] = None, only_me: bool = False) -> None:
-    """Background job: the deep agent when a key is set, the fixed plan otherwise or on failure."""
+              selection: Optional[tuple] = None, only_me: bool = False, lang: str = "en") -> None:
+    """Background job: the deep agent when a key is set, the fixed plan otherwise or on failure.
+    lang: the language of the coaching, the cards, the plan and the video labels."""
+    import i18n
+
     s = Session(job_id, video=video, url=url, hand=hand_from_request(request), selection=selection,
-                only_me=only_me)
+                only_me=only_me, lang=i18n.norm(lang))
     # `coaching` is always in a Coach job's record (null until written): the page tells these jobs
     # from older ones, whose notes were only in `summary`.
-    s.update(status="running", progress=0.02, message="Planning...", todos=[], outputs=[], coaching=None,
+    s.update(status="running", progress=0.02, message=i18n.t(s.lang, "msg.planning"), todos=[], outputs=[], coaching=None,
              warning=None)
     timer = timing.start()   # every stage and Claude call, saved as job["timings"]
     try:

@@ -14,6 +14,7 @@ from typing import Callable, Optional
 
 from pydantic import BaseModel, Field
 
+import i18n
 import timing
 from app import download as dl
 from app import jobs
@@ -42,6 +43,7 @@ class Session:
     identity: object = None
     selection: Optional[tuple] = None   # (time, box) of the player tapped in "Which one is you?"
     only_me: bool = False               # "Only me in the video": follow whoever plays the most
+    lang: str = "en"                    # the language the coaching, cards and video labels are written in
 
     def seed(self, video: Path) -> object:
         """The tracker seed, once per job: the tapped player; with "Only me", whoever plays
@@ -119,13 +121,14 @@ def cut_highlights(s: Session, mode: str = "highlights", top_n: int = 5) -> dict
     if not s.rallies:
         raise ToolError("No rallies found, so there is nothing to cut.")
     rallies, segments = pick_segments(s.rallies, video, mode, top_n)
-    s.update(message=f"Cutting {len(segments)} rallies...")
+    s.update(message=i18n.t(s.lang, "msg.cutting", n=len(segments)))
     with timing.stage("cut + join (ffmpeg)"):
         cut_and_concat(video, segments, s.dir / "cut", s.dir / "highlights.mp4")
     length = sum(e - b for b, e in segments)
-    title = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
+    top = mode == "highlights"
+    title = i18n.t(s.lang, "out.top" if top else "out.all", n=len(rallies))
     s.add_output("highlights", title, "highlights.mp4",
-                 f"{length:.0f} s, most shots first" if mode == "highlights" else f"{length:.0f} s, dead time cut")
+                 i18n.t(s.lang, "out.top_summary" if top else "out.all_summary", s=f"{length:.0f}"))
     return {"video": "highlights.mp4", "rallies": [r.to_dict() for r in rallies], "length_s": round(length, 1)}
 
 
@@ -201,7 +204,7 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
     res = run_video(str(video), str(out), stroke or "", player or None, progress=lambda m: s.update(message=m),
                     stroke_type=stroke_type or (s.pose or {}).get("stroke_type"),
                     hand=known or s.hand, trust_hand=bool(known), assume_hand="right",
-                    chosen=s.window, identity=s.seed(video), picked=s.selection is not None)
+                    chosen=s.window, identity=s.seed(video), picked=s.selection is not None, lang=s.lang)
     b = StrokeBreakdown.model_validate_json((out / "breakdown.json").read_text())
     if cards:
         for step, card in zip(b.steps, cards):
@@ -216,10 +219,9 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
         s.update(message="Rendering the coach's cards...")
         with timing.stage("render (coach's cards)"):
             render(res["outputs"]["clip"], pose.load_track(res["outputs"]["pose_track"]), b,
-                   str(out / "breakdown.mp4"), res["bat_hand"]["side"])
+                   str(out / "breakdown.mp4"), res["bat_hand"]["side"], lang=s.lang)
     shutil.copyfile(out / "breakdown.mp4", s.dir / "breakdown.mp4")
-    s.add_output("breakdown", f"{b.stroke_type or b.stroke} breakdown".replace("_", " ").capitalize(),
-                 "breakdown.mp4", b.headline)
+    s.add_output("breakdown", breakdown_title(b.stroke_type or b.stroke, s.lang), "breakdown.mp4", b.headline)
     s.update(breakdown=json.loads(b.model_dump_json()))
     return {"video": "breakdown.mp4", "headline": b.headline, "steps": [st.title for st in b.steps],
             "recap": b.recap, "drill": b.drill, "analyzer": b.source}
@@ -233,11 +235,18 @@ def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[floa
                       chosen=s.window, identity=s.seed(video), picked=s.selection is not None)
     if res["video"]:
         top = res["matches"][0]
-        s.add_output("match", f"You play like {top['name']}", "pro_matches.mp4",
+        s.add_output("match", i18n.t(s.lang, "out.match", name=top["name"]), "pro_matches.mp4",
                      ", ".join(f"{m['name']} {m['score']}%" for m in res["matches"]))
     s.update(matches=res["matches"], you=res["you"])
     keys = ("name", "score", "form_score", "differences", "height_cm", "bat_hand", "grip", "warnings")
     return {"matches": [{k: m.get(k) for k in keys} for m in res["matches"]], "you": res["you"]}
+
+
+def breakdown_title(stroke: str, lang: str) -> str:
+    """"Forehand topspin breakdown" (English: the key spelt out, as before) or "Phân tích giật thuận tay"."""
+    if i18n.norm(lang) == "en":
+        return f"{stroke} breakdown".replace("_", " ").capitalize()
+    return i18n.t(lang, "out.breakdown", stroke=i18n.stroke_label(stroke, lang))
 
 
 TOOLS: dict[str, Callable] = {f.__name__: f for f in

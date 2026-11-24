@@ -17,6 +17,7 @@ from typing import Literal, Optional
 import numpy as np
 from pydantic import BaseModel, Field
 
+import i18n
 import timing
 
 MODEL = os.environ.get("COACH_MODEL", "claude-sonnet-5-5")
@@ -122,14 +123,16 @@ def _jpeg(frame: np.ndarray, width: int = 640) -> str:
     return base64.standard_b64encode(cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 80])[1].tobytes()).decode()
 
 
-def write(request: str, facts: dict, frames: list[tuple[str, np.ndarray]], client=None) -> tuple[CoachReport, str]:
+def write(request: str, facts: dict, frames: list[tuple[str, np.ndarray]], client=None,
+          lang: str = "en") -> tuple[CoachReport, str]:
     """The coaching for one job. frames: (label, BGR image) of the coached stroke.
+    lang: the language to write in; its rule follows the cached system prompt, in the user turn.
     Returns the report and the model that wrote it."""
     import anthropic
 
     client = client or anthropic.Anthropic()
     content: list = [{"type": "text", "text": f"The user's request: {request}\n\nWhat the app measured:\n"
-                                              f"{json.dumps(facts, indent=1, default=str)}"}]
+                                              f"{json.dumps(facts, indent=1, default=str)}{i18n.instruction(lang)}"}]
     for label, frame in frames:
         content.append({"type": "text", "text": label})
         content.append({"type": "image", "source": {"type": "base64", "media_type": "image/jpeg", "data": _jpeg(frame)}})

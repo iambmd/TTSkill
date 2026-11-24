@@ -1,3 +1,5 @@
+import { useTranslations } from "next-intl";
+
 export const inputClass =
   "field-input w-full border px-4 py-3 text-base focus:ring-2 focus:ring-accent/30";
 export const labelTextClass = "text-xs font-bold uppercase tracking-[0.14em] text-muted";
@@ -41,7 +43,7 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
               : { defaultChecked: o.value === defaultValue })}
           />
           <span className="flex h-full min-h-12 flex-col justify-center rounded-xl border border-line bg-panel px-4 py-2.5 transition peer-checked:border-accent peer-checked:bg-accent/10 peer-focus-visible:ring-2 peer-focus-visible:ring-accent">
-            <span className="font-semibold capitalize">{o.label}</span>
+            <span className="font-semibold">{o.label}</span>
             {o.sub && <span className="text-xs text-muted">{o.sub}</span>}
           </span>
         </label>
@@ -51,7 +53,7 @@ export function RadioTiles<T extends string>({ name, options, value, defaultValu
 }
 
 /** Submit button that sticks to the bottom of the screen on long forms and fills up as the upload goes. */
-export function SubmitBar({ label, progress, error, startingLabel = "Starting...", blocked = false, blockedHint }: {
+export function SubmitBar({ label, progress, error, startingLabel, blocked = false, blockedHint }: {
   label: string;
   progress: number | null;
   error: string | null;
@@ -61,10 +63,11 @@ export function SubmitBar({ label, progress, error, startingLabel = "Starting...
   blocked?: boolean;
   blockedHint?: string;
 }) {
+  const t = useTranslations("common");
   const busy = progress !== null;
   const waitingForInput = blocked && !busy;
   const pct = Math.round((progress ?? 0) * 100);
-  const text = !busy ? label : pct === 0 ? "Uploading..." : pct < 100 ? `Uploading ${pct}%` : startingLabel;
+  const text = !busy ? label : pct === 0 ? t("uploading") : pct < 100 ? t("uploadingPct", { pct }) : startingLabel ?? t("starting");
   return (
     <div className="sticky bottom-0 z-10 -mx-4 bg-linear-to-t from-ink from-60% to-transparent px-4 pt-8 pb-[max(1rem,env(safe-area-inset-bottom))]">
       {error && (
@@ -134,6 +137,12 @@ export const ChevronIcon = ({ className = "size-5" }: IconProps) => (
 export const WarningIcon = ({ className = "size-5" }: IconProps) => (
   <svg {...stroke} className={className}><path d="M12 4 2.5 20h19L12 4zM12 10v4.5M12 17.5v.01" /></svg>
 );
+
+/** A stroke key's name in the page's language (t = useTranslations()), else the backend's label. */
+export function strokeName(t: { (key: string): string; has: (key: string) => boolean }, key?: string | null, fallback = "") {
+  const k = key?.trim().toLowerCase();
+  return k && t.has(`strokes.${k}`) ? t(`strokes.${k}`) : fallback || key || "";
+}
 
 /** The stroke family used to style the existing result labels. */
 export function strokeFamily(stroke?: string | null) {

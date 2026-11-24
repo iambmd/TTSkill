@@ -64,7 +64,9 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue
 | `backend/technique/` | Breakdown pipeline (`pipeline.py`, `pose.py`, `analyze.py`, `render.py`, `schema.py`). Has its own CLI (`python -m technique`) and its own [README](backend/technique/README.md). |
 | `backend/technique/strokes.py` | Stroke types (forehand topspin, drive, loop vs backspin, backhand topspin/flick/push, backhand/forehand block, chop, serve): swing direction for key moments, coaching focus for the Claude prompt, and auto-detection from pose features or text. |
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
-| `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) so videos match the app's type. |
+| `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) for the videos' burned-in text; all four cover Vietnamese. |
+| `frontend/messages/en.json`, `vi.json` | Every UI string, English and Vietnamese (next-intl, no locale in the URL: `NEXT_LOCALE` cookie, then Accept-Language, then English; `frontend/i18n/request.ts`, `lib/locale.ts`). Server code and lib functions take a translator (`lib/messages.ts` `translator`, `routeMessages(req)`); client code uses `useTranslations`. |
+| `backend/i18n.py` | A job's `lang` (`en`/`vi`): the language rule added to each Claude call, and the fixed text around the AI's words (video labels, Coach's plan, offline summary). Terms: `docs/glossary_vi.md`. |
 | `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, the user's grip first, weighted distance on height and proportions for the top 3, warnings for anti-spin and penhold backhands, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
 | `backend/data/players/` | `players.json` (20 pros: `height_cm` + `height_source`, `bat_hand`, `grip`, optional `bat_hand_source`, `equipment_notes` and `aliases`, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. A height whose sources disagree says "(approximate)" in `height_source`. `aliases` replaces the builder's title-matching guesses when a family name alone is ambiguous (Lebrun, Winter). |
 | `shared/limits.json` | Every input limit: height, upload type/size/length/resolution, link length per page, text lengths, Auto-Cut settings, the allowed choices, and the pose visibility floor. Read by `frontend/lib/validate.ts` and `backend/limits.py`. |
@@ -82,8 +84,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue
 | Method | Path | Body |
 | --- | --- | --- |
 | POST | `/jobs/autocut` | multipart: `video` or `url` (YouTube link), `mode` (`highlights`/`full`), `top_n`, `threshold`, `gap`, `min_hits` |
-| POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video`, `staged` or `url`, `player`, `hand` (`auto`/`left`/`right`), `player_time` + `player_box` (tapped player), `only_me` (`1`); legacy `stroke` still accepted |
-| POST | `/jobs/coach` | multipart: `request`, `video`, `staged` or `url`, `player_time` + `player_box`, `only_me` (`1`) |
+| POST | `/jobs/breakdown` | multipart: `stroke_type` (optional, blank = auto-detect), `text` and/or `video`, `staged` or `url`, `player`, `hand` (`auto`/`left`/`right`), `player_time` + `player_box` (tapped player), `only_me` (`1`), `lang` (`en`/`vi`, default `en`: the cards, drill, video prompt and video labels); legacy `stroke` still accepted |
+| POST | `/jobs/coach` | multipart: `request`, `video`, `staged` or `url`, `player_time` + `player_box`, `only_me` (`1`), `lang` (`en`/`vi`, default `en`: the coaching, cards, plan and video labels) |
 | POST | `/players/detect` | "Which one is you?": `frames` (JPEG/PNG, max 16) + `times`, or `video` (the browser couldn't read it: ffmpeg frames, answer carries a `staged` token for the job), or `url`, or `job` (Change player). Answers `candidates`, `others` (background: `still`/`far`/`small`), `frame`, `frames` (people per frame) and `timing` |
 | POST | `/jobs/{id}/rerun` | `player_time` + `player_box`: the same job following another player |
 | GET | `/jobs/{id}/files/{name}` | Videos the coach made (`highlights.mp4`, `breakdown.mp4`, `pro_matches.mp4`) |
@@ -242,9 +244,10 @@ The app is mobile-first and dark-only, with a sporty look: ball orange on near-b
 Tokens (`frontend/app/globals.css`, Tailwind v4 `@theme`):
 - Colors: `ink` #07090d (page background), `panel` #0e1218 (cards and inputs), `line` (white 9%, borders), `fg` #eef0f5, `muted` #8f97aa, `accent` #ff6b2c (ball orange), `accent-hot` #ff8547 (hover).
 - Use token classes (`bg-panel`, `border-line`, `text-muted`, `bg-accent`). Don't use raw hex values.
-- Fonts: Barlow for body text and Barlow Condensed for display, both loaded with `next/font` in `layout.tsx`.
+- Fonts: Be Vietnam Pro (400–700) for body text and Barlow Condensed (600/700, normal and italic) for headings and stat numbers, both loaded with `next/font` in `layout.tsx` with the `vietnamese` subset.
 - Utilities:
-  - `headline`: condensed 800 italic uppercase. Use it for headings, primary buttons and big numbers.
+  - `headline`: condensed 700 italic uppercase. Use it for headings and primary buttons.
+  - `stat`: condensed 700 with tabular figures, for big numbers (progress, scores, ranks, prices).
   - `eyebrow`: small, tracked, uppercase orange label above a title.
   - `hatch`: static diagonal hatch on the upload button.
   - `stripes`: animated stripes on video placeholders while a job runs. Turned off under `prefers-reduced-motion`.
@@ -269,6 +272,11 @@ Video:
 
 Accessibility:
 - Keep the orange `:focus-visible` outline. Use `aria-live` for upload and job status, `role="progressbar"` on progress bars, and `role="alert"` on errors.
+
+Languages:
+- English (default) and Vietnamese. Never hard-code UI text: add the key to both `frontend/messages/en.json` and `vi.json` (`frontend/test/i18n.test.ts` fails if their keys or placeholders differ). Prices stay in USD; format numbers with `useFormatter` / `lib/format.ts`.
+- Vietnamese uses the terms in `docs/glossary_vi.md`; product, brand and player names stay in English. Don't use CSS `capitalize` on translated text (Vietnamese doesn't capitalise every word).
+- Cached demo results are English (they come from `scripts/refresh_demos.py`); on other languages their AI text carries an "English only" badge (`app/english-only.tsx`).
 
 Copy:
 - Short and direct, in second person, and plain about what happens: "Cut the dead time.", "Keep the sound on, that's how we find the rallies."

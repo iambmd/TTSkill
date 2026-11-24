@@ -1,4 +1,6 @@
 import { AnalysisOfflineError, unavailableStatus } from "./analysis-status";
+import { english } from "./english";
+import type { Tr } from "./messages";
 
 export type RallyClip = {
   id: number;
@@ -108,7 +110,9 @@ export function withoutStagedFile(form: FormData): FormData {
  * Posts a form for a new job and returns the created job.
  * Uses XHR rather than fetch because only XHR reports upload progress, which matters for big phone videos.
  */
-export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fraction: number) => void): Promise<Job> {
+/** `t`: the page's useTranslations("errors"), for the upload errors it shows. */
+export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fraction: number) => void,
+  t: Tr = english("errors")): Promise<Job> {
   form = withoutStagedFile(form);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -119,16 +123,16 @@ export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fract
       const data = xhr.response ?? {};
       if (xhr.status >= 200 && xhr.status < 300 && typeof data.id === "string") return resolve(data as Job);
       if (unavailableStatus(xhr.status)) return reject(new AnalysisOfflineError());
-      if (xhr.status === 413) return reject(new Error("That video is too big to upload here. Try a shorter clip."));
+      if (xhr.status === 413) return reject(new Error(t("uploadTooBig")));
       // Our routes answer {error}; FastAPI, reached directly, answers {detail}.
       const detail = typeof data.detail === "string" ? data.detail : undefined;
       const problem = typeof data.error === "string" ? data.error : detail;
       reject(new Error(xhr.status >= 400 && xhr.status < 500 && problem
-        ? problem : "The upload didn't finish. Choose the video again or retry the upload."));
+        ? problem : t("uploadUnfinished")));
     };
     xhr.onerror = () => reject(PUBLIC_API_URL
       ? new AnalysisOfflineError()
-      : new Error("The upload didn't finish. Check your connection and try again."));
+      : new Error(t("uploadConnection")));
     xhr.send(form);
   });
 }

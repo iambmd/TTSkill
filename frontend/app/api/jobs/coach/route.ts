@@ -1,16 +1,19 @@
 import { createJob } from "@/lib/jobs";
-import { invalid, onlyMeProblem, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
+import { routeMessages } from "@/lib/messages";
+import { invalid, langProblem, onlyMeProblem, playerSelectionProblem, textProblem, videoInputProblem } from "@/lib/validate";
 
 export async function POST(req: Request) {
+  const { v, e, offline } = routeMessages(req);
   const form = await req.formData();
   const request = String(form.get("request") ?? "").trim();
-  if (!request) return invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.");
+  if (!request) return invalid(v("coachRequest"));
   const problem =
-    playerSelectionProblem(form) ??
-    onlyMeProblem(form) ??
-    textProblem(request, "coach_request", "Your request") ??
-    videoInputProblem(form, "Add a video: upload a clip or paste a YouTube link.", true);
+    playerSelectionProblem(form, v) ??
+    onlyMeProblem(form, v) ??
+    langProblem(form, v) ??
+    textProblem(request, "coach_request", v("labels.request"), v) ??
+    videoInputProblem(form, v("coachVideo"), true, v);
   if (problem) return invalid(problem);
   form.set("request", request);
-  return createJob("coach", form);
+  return createJob("coach", form, e, offline);
 }

@@ -1,0 +1,684 @@
+{
+  "metadata": {
+    "title": "TTSkill",
+    "description": "Phân tích kỹ thuật bằng AI và tự động cắt pha bóng hay cho bóng bàn."
+  },
+  "layout": {
+    "skip": "Chuyển đến nội dung chính"
+  },
+  "header": {
+    "siteNav": "Điều hướng trang"
+  },
+  "nav": {
+    "home": "Trang chủ",
+    "coach": "HLV",
+    "breakdown": "Phân tích",
+    "match": "So với VĐV",
+    "autocut": "Auto-Cut",
+    "gear": "Dụng cụ"
+  },
+  "theme": {
+    "toDark": "Chuyển sang giao diện tối",
+    "toLight": "Chuyển sang giao diện sáng"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "en": "Tiếng Anh",
+    "vi": "Tiếng Việt",
+    "englishOnly": "Chỉ có tiếng Anh",
+    "englishOnlyHint": "Ví dụ đã lưu này được tạo bằng tiếng Anh."
+  },
+  "common": {
+    "optional": "không bắt buộc",
+    "before": "Trước",
+    "after": "Sau",
+    "retry": "Thử lại",
+    "checking": "Đang kiểm tra…",
+    "starting": "Đang bắt đầu...",
+    "checkingLink": "Đang kiểm tra đường link...",
+    "uploading": "Đang tải lên...",
+    "uploadingPct": "Đang tải lên {pct}%",
+    "download": "Tải xuống",
+    "save": "Lưu",
+    "cm": "{value} cm",
+    "mb": "{value} MB",
+    "gb": "{value} GB",
+    "minutes": "{n, plural, other {# phút}}",
+    "seconds": "{n, plural, other {# giây}}",
+    "minShort": "{n} phút",
+    "range": "{start} – {end}"
+  },
+  "hands": {
+    "auto": "Tự động",
+    "right": "Phải",
+    "left": "Trái",
+    "rightHanded": "tay phải",
+    "leftHanded": "tay trái"
+  },
+  "grips": {
+    "shakehand": "Cầm ngang",
+    "penhold": "Cầm dọc",
+    "shakehandSub": "Kiểu bắt tay, phổ biến nhất",
+    "penholdSub": "Cầm như cầm bút"
+  },
+  "strokes": {
+    "forehand": "Thuận tay",
+    "backhand": "Trái tay",
+    "serve": "Giao bóng",
+    "flick": "Vẩy",
+    "block": "Chặn bóng",
+    "footwork": "Bộ chân",
+    "chop": "Cắt bóng",
+    "forehand_topspin": "Giật thuận tay",
+    "forehand_drive": "Tấn công thuận tay",
+    "forehand_loop_backspin": "Giật thuận tay bóng xoáy xuống",
+    "backhand_topspin": "Giật trái tay",
+    "backhand_flick": "Vẩy trái tay",
+    "backhand_push": "Gò trái tay",
+    "backhand_block": "Chặn trái tay",
+    "forehand_block": "Chặn thuận tay"
+  },
+  "offline": {
+    "analysis": "Máy chủ phân tích đang tạm ngừng, vui lòng thử lại sau vài phút",
+    "analysisSentence": "Máy chủ phân tích đang tạm ngừng, vui lòng thử lại sau vài phút.",
+    "home": "Phân tích trực tiếp đang tạm ngừng. Hãy xem các bản demo bên dưới."
+  },
+  "errors": {
+    "uploadTooBig": "Video quá lớn để tải lên ở đây. Hãy thử một đoạn ngắn hơn.",
+    "uploadUnfinished": "Chưa tải lên xong. Hãy chọn lại video hoặc thử tải lên lại.",
+    "uploadConnection": "Chưa tải lên xong. Hãy kiểm tra kết nối mạng rồi thử lại.",
+    "unreachable": "Không kết nối được tới backend TTSkill. Hãy kiểm tra nó đang chạy (make dev) rồi thử lại.",
+    "rejected": "Backend đã từ chối yêu cầu",
+    "stubJob": "Chế độ stub: chưa cấu hình backend nên không có gì được xử lý.",
+    "rerunNeedsBackend": "Cần backend TTSkill để đổi người chơi.",
+    "jobNotFound": "Không tìm thấy tác vụ",
+    "noStubResult": "Chế độ stub không có kết quả",
+    "noRallyClips": "Trận này không có đoạn pha bóng nào để chỉnh sửa.",
+    "exportFailed": "Không tạo được bản tải xuống. Hãy thử lại.",
+    "pickRally": "Hãy chọn ít nhất một pha bóng có sẵn, mỗi pha một lần.",
+    "pickStyle": "Hãy chọn xoáy hoặc tốc độ.",
+    "pickType": "Hãy chọn loại mặt vợt.",
+    "pickLevel": "Hãy chọn trình độ của bạn.",
+    "budget": "Hãy nhập ngân sách từ {min} đến {max}."
+  },
+  "validation": {
+    "or": "{list} hoặc {last}",
+    "uploadType": "Hãy tải lên một tệp video: {types}.",
+    "uploadSize": "Tệp này nặng {mb} MB. Hãy tải lên tệp dưới {max} MB, hoặc cắt ngắn trước.",
+    "tooShort": "Đoạn video này chỉ dài {seconds} giây. Hãy tải lên ít nhất {min} giây thi đấu.",
+    "tooLong": "Video này dài {length}. Video tải lên tối đa {max}: hãy cắt ngắn rồi thử lại.",
+    "tooSmall": "Video này chỉ có {width}x{height}, quá nhỏ để thấy cú đánh. Hãy quay lại ở 480p trở lên (chế độ quay bình thường của điện thoại là được).",
+    "heightNumber": "Hãy nhập chiều cao bằng số, tính theo cm, từ {min} đến {max}.",
+    "heightRange": "Chiều cao phải từ {min} đến {max} cm. Để trống thì chúng tôi sẽ ước tính từ mặt bàn.",
+    "feetInches": "Hãy nhập số feet và inch nguyên, ví dụ 5 ft 10 in.",
+    "inchesRange": "Số inch từ 0 đến 11.",
+    "heightFeetRange": "Chiều cao phải từ {range}. Để trống thì chúng tôi sẽ ước tính từ mặt bàn.",
+    "ftIn": "{ft} ft {inch} in",
+    "and": "{a} đến {b}",
+    "textLength": "{label} tối đa {max} ký tự (hiện có {n}). Hãy rút ngắn rồi thử lại.",
+    "choice": "{label} phải là {options}.",
+    "wholeNumber": "{label} phải là số nguyên.",
+    "number": "{label} phải là một số.",
+    "between": "{label} phải từ {min} đến {max}.",
+    "openMatch": "Hãy mở lại kết quả trận đấu hoặc tải video lên lại.",
+    "chooseRally": "Hãy mở lại kết quả trận đấu và chọn lại pha bóng.",
+    "chooseVideoAgain": "Hãy chọn lại video.",
+    "unknownJob": "Không rõ tác vụ.",
+    "sendFrames": "Hãy gửi ít nhất một khung hình của video, hoặc một link YouTube.",
+    "maxFrames": "Gửi tối đa {max} khung hình.",
+    "frameTimes": "Mỗi khung hình cần có thời điểm trong video, tính bằng giây.",
+    "frameSize": "Mỗi khung hình phải nhỏ hơn {max} KB.",
+    "frameType": "Khung hình phải là ảnh JPEG hoặc PNG.",
+    "onlyMe": "Ô “Chỉ có tôi trong video” chỉ được đánh dấu hoặc bỏ trống.",
+    "pickAgain": "Chưa nhận được người chơi bạn chọn. Hãy chọn lại người chơi.",
+    "linkHint": "Hãy dán link youtube.com/watch, youtu.be hoặc Shorts.",
+    "playlist": "Đây là danh sách phát. Hãy mở một video trong đó và dán link của video đó.",
+    "channel": "Đây là link kênh. Hãy mở một video của kênh và dán link của video đó.",
+    "notYoutube": "Ở đây chỉ dùng được link YouTube. {hint} Hoặc tải tệp lên.",
+    "badYoutube": "Đây không phải link video YouTube mà chúng tôi dùng được. {hint}",
+    "unknownStroke": "Không rõ cú đánh: {stroke}. Để trống để tự nhận diện.",
+    "unknownStrokeType": "Không rõ loại cú đánh: {stroke}. Hãy chọn trong danh sách, hoặc để trống để tự nhận diện.",
+    "breakdownInput": "Hãy tải đoạn video lên, dán link YouTube, hoặc mô tả cách tập luyện.",
+    "coachRequest": "Hãy cho HLV biết bạn muốn gì, ví dụ “cho xem pha bóng hay nhất và sửa cú thuận tay”.",
+    "coachVideo": "Hãy thêm video: tải đoạn video lên hoặc dán link YouTube.",
+    "matchVideo": "Hãy tải lên video của bạn hoặc dán link YouTube.",
+    "autocutVideo": "Hãy tải video trận đấu lên hoặc dán link YouTube.",
+    "labels": {
+      "request": "Yêu cầu của bạn",
+      "description": "Phần mô tả",
+      "trainingDescription": "Phần mô tả cách tập",
+      "playerName": "Tên người chơi",
+      "hand": "Tay cầm vợt",
+      "stroke": "Cú đánh",
+      "grip": "Kiểu cầm vợt",
+      "mode": "Chế độ",
+      "language": "Ngôn ngữ",
+      "topN": "Số pha bóng trong video",
+      "threshold": "Ngưỡng tiếng chạm bóng",
+      "gap": "Khoảng nghỉ tối đa",
+      "minHits": "Số lần chạm bóng tối thiểu"
+    }
+  },
+  "home": {
+    "title": "Pha bóng hay và huấn luyện",
+    "intro": "Biến video trận đấu của bạn thành những pha bóng hay và lời khuyên luyện tập cụ thể.",
+    "footer": "Chân trang",
+    "footerLinks": {
+      "home": "Trang chủ",
+      "coach": "Huấn luyện",
+      "breakdown": "Phân tích",
+      "match": "So với VĐV",
+      "autocut": "Auto-Cut",
+      "rubbers": "Tìm mặt vợt",
+      "pros": "Dụng cụ của VĐV"
+    },
+    "upload": {
+      "chooseType": "Hãy chọn video MP4 hoặc MOV.",
+      "empty": "Tệp này trống. Hãy chọn bản ghi khác.",
+      "label": "Tải trận đấu lên",
+      "startingReel": "Đang bắt đầu dựng video…",
+      "hint": "MP4 hoặc MOV · Tối đa {mb} MB",
+      "progress": "Tiến độ tải lên",
+      "retry": "Tải lên lại"
+    },
+    "gear": {
+      "title": "Dụng cụ gợi ý",
+      "finder": "Tìm mặt vợt",
+      "featured": "Mặt vợt nổi bật",
+      "playStyle": "Lối chơi",
+      "tags": {
+        "spin": "Xoáy",
+        "speed": "Tốc độ",
+        "control": "Kiểm soát"
+      }
+    },
+    "quiz": {
+      "title": "Tìm mặt vợt cho bạn",
+      "playStyle": "Lối chơi",
+      "level": "Trình độ",
+      "budget": "Ngân sách mỗi mặt",
+      "yourPick": "Gợi ý cho bạn",
+      "finding": "Đang tìm mặt vợt…",
+      "failed": "Không tải được gợi ý. Hãy thử trang Tìm mặt vợt.",
+      "nothing": "Chưa có mặt vợt dưới {budget}. Hãy thử ngân sách cao hơn.",
+      "open": "Mở trang Tìm mặt vợt"
+    },
+    "features": {
+      "title": "Khám phá TTSkill",
+      "autocut": {
+        "title": "Auto-Cut",
+        "description": "Cắt trận đấu chỉ còn các pha bóng."
+      },
+      "coach": {
+        "title": "Huấn luyện",
+        "description": "Nhận nhận xét về trận đấu của bạn."
+      },
+      "breakdown": {
+        "title": "Phân tích kỹ thuật",
+        "description": "Xem điều gì làm nên một cú đánh hay."
+      },
+      "equipment": {
+        "title": "Dụng cụ",
+        "description": "Tìm mặt vợt hợp lối chơi."
+      },
+      "match": {
+        "title": "Lối đánh VĐV",
+        "description": "So cú vung vợt của bạn với VĐV chuyên nghiệp."
+      },
+      "spinPick": "Gợi ý xoáy",
+      "speedPick": "Gợi ý tốc độ",
+      "preview": "Xem trước {title}",
+      "tryIt": "Thử ngay",
+      "tryItLabel": "Thử ngay: {title}"
+    },
+    "demos": {
+      "title": "Xem thực tế",
+      "version": "Phiên bản demo",
+      "autocut": {
+        "title": "Pha bóng hay trong trận",
+        "before": "Video quay bằng điện thoại cảnh hai người chơi trong các pha bóng và khoảng nghỉ giữa chúng."
+      },
+      "breakdown": {
+        "title": "Phân tích cú đánh",
+        "before": "Ma Long tập giật thuận tay ở tốc độ tối đa."
+      },
+      "play": "Phát {title} ({mode})",
+      "video": "{title}, {mode}",
+      "modes": {
+        "before": "trước",
+        "after": "sau"
+      }
+    }
+  },
+  "demoDescriptions": {
+    "autocut": "Bốn pha bóng bàn phát liền nhau, thời gian chờ giữa các điểm đã được cắt bỏ.",
+    "breakdown": "Ma Long hạ thấp tư thế, rồi miết bóng lên trong cú giật thuận tay bóng xoáy xuống. Quay chậm và dừng hình đánh dấu các tư thế quan trọng.",
+    "match": "Các đoạn video của Fan Zhendong, Ma Long và Tomokazu Harimoto cho thấy từng người thực hiện cú thuận tay, kèm gợi ý ở các tư thế quan trọng.",
+    "coachHighlights": "Hai người chơi đôi công qua năm pha bóng, phát lần lượt, pha dài hơn được xếp trước.",
+    "coachBreakdown": "Người chơi áo xanh ngọc ở gần máy quay giật thuận tay. Video chậm lại và dừng hình để chỉ cách hạ thấp người, đẩy vợt qua bóng và kết thúc cao."
+  },
+  "examples": {
+    "eyebrow": "Ví dụ",
+    "title": "Xem trên một video thật.",
+    "howItWorks": "Cách hoạt động",
+    "defaultSteps": "Video của bạn được xử lý thế nào.",
+    "videoLabel": "Video ví dụ: {label}",
+    "comingSoon": "Video ví dụ sắp có"
+  },
+  "matchSource": {
+    "rally": "Dùng pha bóng bạn đã chọn",
+    "match": "Dùng trận đấu bạn đã tải lên",
+    "clip": "Pha bóng {id} · {start} – {end} trong trận",
+    "change": "Chọn video khác"
+  },
+  "submit": {
+    "blockedHint": "Hãy thêm video hoặc link để bắt đầu"
+  },
+  "coach": {
+    "eyebrow": "TT Coach",
+    "title": "Hỏi HLV của bạn.",
+    "body": "Một yêu cầu, một video. HLV tìm các pha bóng và những cú đánh tốt nhất của bạn, so sánh bạn với các VĐV chuyên nghiệp, và hiện từng kết quả ngay khi xong.",
+    "examples": {
+      "one": "Đây là trận của tôi: cho xem pha bóng hay nhất và sửa cú thuận tay",
+      "two": "Tôi đánh giống VĐV nào? So sánh cú trái tay của tôi",
+      "three": "Cắt bỏ thời gian chết và cho biết tôi cần tập gì"
+    },
+    "rallyRequest": "Hãy sửa cú đánh của tôi trong pha bóng này.",
+    "ask": "Bạn muốn gì?",
+    "placeholder": "Ví dụ: Cho xem pha bóng hay nhất và sửa cú thuận tay",
+    "videoTitle": "Thêm video của bạn",
+    "videoHint": "Một trận đấu hoặc một buổi tập, nhớ bật âm thanh.",
+    "submit": "Hỏi HLV",
+    "example": {
+      "localPlan": "Kế hoạch, lời khuyên và video tạo trên máy",
+      "coachPlan": "Kế hoạch, lời khuyên và video của HLV",
+      "comingSoon": "Kết quả ví dụ sắp có",
+      "coachSays": "HLV nói",
+      "caption": "Điện thoại quay một trận đấu, người chơi áo xanh ngọc ở gần máy quay và đối thủ ở bên kia bàn.",
+      "message": "Đây là trận của tôi, cho xem pha bóng hay nhất và sửa cú thuận tay",
+      "stepsTitle": "HLV làm gì.",
+      "steps": {
+        "one": "Một agent LangChain deepagents chạy Claude đọc yêu cầu và video bạn gửi.",
+        "two": "Nó lập danh sách việc cần làm, và bạn xem từng việc được đánh dấu xong ngay lúc đó.",
+        "three": "Nó gọi các công cụ: Auto-Cut tìm pha bóng hay nhất qua âm thanh, và Phân tích kỹ thuật theo dõi tư thế để kiểm tra cú thuận tay của bạn.",
+        "four": "Nó chỉ nhận xét cú đánh thật: nằm trong một pha bóng, khớp với tiếng chạm bóng, từ tư thế thi đấu. Các cú vung sau khi hết điểm không tính.",
+        "five": "Các agent phụ chia việc: một người phân tích video, một người tìm VĐV giống bạn và một người viết lời khuyên, mỗi người có ghi chú riêng.",
+        "six": "Claude viết câu trả lời: điểm làm tốt, lỗi cần sửa và một bài tập, kèm các video đã tạo."
+      }
+    }
+  },
+  "breakdown": {
+    "eyebrow": "Phân tích kỹ thuật",
+    "title": "Vung vợt như VĐV.",
+    "body": "Thả vào một đoạn video của người chơi bạn ngưỡng mộ và nhận video hướng dẫn từng bước cho cú đánh của họ.",
+    "needInput": "Hãy tải đoạn video lên, dán link YouTube, hoặc mô tả cách người chơi tập luyện.",
+    "videoTitle": "Tải đoạn video lên",
+    "videoHint": "Vài giây có cú đánh. Quay ngang, thấy toàn thân là tốt nhất.",
+    "describe": "Không có video? Hãy mô tả cách tập",
+    "trainingLabel": "Mô tả cách tập",
+    "trainingPlaceholder": "Dán ghi chú, lời thoại, hoặc mô tả cách người chơi tập cú đánh này.",
+    "characters": "{n}/{max} ký tự",
+    "player": "Người chơi",
+    "playerPlaceholder": "Ví dụ: Fan Zhendong",
+    "stroke": "Cú đánh",
+    "autoDetect": "Tự nhận diện từ cú vung",
+    "strokeHint": "Chọn một cú để nhận các bước hướng dẫn cho cú đó, hoặc để trống và chúng tôi đọc từ video.",
+    "hand": "Tay cầm vợt",
+    "handHint": "Tự động sẽ tìm vợt trong video. Hãy chọn tay nếu đường vẽ bám sai cánh tay.",
+    "submit": "Phân tích ngay",
+    "beforeCaption": "Ma Long lặp lại cú giật thuận tay khi tập, bước vào mỗi cú vung rồi trở về tư thế chuẩn bị.",
+    "steps": {
+      "one": "Chúng tôi tìm vài giây có cú vung và theo dõi cơ thể người chơi bằng nhận diện tư thế, từng khung hình.",
+      "two": "Chúng tôi xác định tay nào cầm vợt và đó là cú đánh gì, trừ khi bạn đã chọn.",
+      "three": "Chúng tôi chọn các khoảnh khắc quan trọng của cú vung: lăng vợt, tiếp xúc bóng và vung theo.",
+      "four": "AI biến các khoảnh khắc đó thành ba gợi ý ngắn, như “Xoay hông” hay “Miết lên”, kèm một bài tập.",
+      "five": "Chúng tôi dựng video hướng dẫn dạng dọc: quay chậm vào từng gợi ý, dừng hình, và vệt màu theo tay cầm vợt."
+    }
+  },
+  "autocut": {
+    "eyebrow": "Auto-Cut trận đấu",
+    "title": "Cắt bỏ thời gian chết.",
+    "body": "Biến video trận đấu thành một đoạn ngắn hoặc giữ lại mọi pha bóng.",
+    "videoTitle": "Tải trận đấu lên",
+    "videoHint": "Video quay bằng điện thoại là được.",
+    "modes": {
+      "highlights": "Pha bóng hay",
+      "highlightsSub": "Đoạn ngắn gồm những pha bóng hay nhất",
+      "full": "Cả trận",
+      "fullSub": "Mọi pha bóng, bỏ thời gian chết"
+    },
+    "whatToMake": "Muốn tạo gì",
+    "topN": "Số pha bóng trong video",
+    "submit": "Cắt trận của tôi",
+    "beforeCaption": "Điện thoại quay cả hai người chơi khi giao bóng, đánh qua lại và chuẩn bị cho điểm tiếp theo.",
+    "steps": {
+      "one": "Tải trận đấu lên hoặc dán link video.",
+      "two": "Chọn đoạn pha bóng hay hoặc bản cắt giữ mọi pha bóng.",
+      "three": "Xem kết quả và tải xuống để chia sẻ."
+    }
+  },
+  "match": {
+    "eyebrow": "Tìm VĐV giống tôi",
+    "title": "Bạn đánh giống ai?",
+    "body": "Quay lại vài cú đánh của bạn. Chúng tôi so chiều cao, vóc dáng và cú vung của bạn với các VĐV gần nhất và cho bạn xem phần phân tích của họ.",
+    "videoTitle": "Tải cú vung của bạn lên",
+    "videoHint": "Thấy toàn thân, vài cú thuận tay hoặc trái tay. Quay ngang và thấy bàn là tốt nhất.",
+    "stroke": "Cú đánh để so sánh",
+    "grip": "Kiểu cầm vợt của bạn",
+    "gripHint": "VĐV cùng kiểu cầm vợt với bạn được xếp trước.",
+    "height": "Chiều cao của bạn",
+    "heightUnit": "Đơn vị chiều cao",
+    "units": {
+      "cm": "cm",
+      "ft": "ft / in",
+      "feet": "ft",
+      "inches": "in"
+    },
+    "cmPlaceholder": "Ví dụ: 170",
+    "feet": "Feet",
+    "inches": "Inch",
+    "heightHint": "{min}–{max} cm. Để trống thì chúng tôi ước tính từ mặt bàn trong khung hình (cao 76 cm, dài 274 cm).",
+    "hand": "Tay cầm vợt",
+    "submit": "Tìm VĐV giống tôi",
+    "beforeCaption": "Một người chơi quay cú thuận tay của mình, khuỵu gối và xoay người theo cú đánh.",
+    "steps": {
+      "one": "Chúng tôi theo dõi cơ thể bạn bằng nhận diện tư thế và đo vóc dáng: chiều dài tay chân so với chiều cao, và độ rộng chân khi đứng.",
+      "two": "Nếu bạn không nhập chiều cao, chúng tôi ước tính từ mặt bàn trong khung hình, luôn cao 76 cm và dài 274 cm.",
+      "three": "Chúng tôi chỉ so bạn với VĐV cùng tay cầm vợt, và VĐV cùng kiểu cầm vợt được xếp trước.",
+      "four": "3 VĐV gần nhất với chiều cao và vóc dáng của bạn là kết quả. Sau đó chúng tôi đặt cú vung của bạn cạnh từng người để chỉ ra chỗ khác nhau.",
+      "five": "Bạn nhận điểm số và ghi chú cho từng VĐV, kèm một video phân tích kỹ thuật của họ để học theo."
+    }
+  },
+  "video": {
+    "preview": "Xem trước video bạn chọn",
+    "cantPreview": "Trình duyệt này không xem trước được tệp, nhưng vẫn tải lên được.",
+    "swap": "Đổi",
+    "swapSr": " video",
+    "remove": "Xoá video",
+    "youtube": "Video YouTube",
+    "youtubeHint": "Chúng tôi tải video ở tối đa 720p khi bạn gửi.",
+    "uploadInstead": "Tải tệp lên",
+    "drop": " Hoặc thả tệp vào đây.",
+    "onlyMe": "Chỉ có tôi trong video",
+    "onlyMeHint": "Bỏ qua bước chọn người chơi: chúng tôi theo người đánh nhiều nhất ở bàn.",
+    "link": "Hoặc dán link video",
+    "clearLink": "Xoá link",
+    "linkHint": "Video YouTube và Shorts, tối đa {minutes}."
+  },
+  "picker": {
+    "pick": "Chạm vào người chơi cần phân tích.",
+    "finding": "Đang tìm người chơi trong video...",
+    "fetching": "Đang tải video từ YouTube để tìm người chơi...",
+    "tooLong": "Tìm người chơi mất quá nhiều thời gian.",
+    "cantRead": "Trình duyệt không đọc được khung hình của video này (thường là tệp HEVC từ iPhone).",
+    "sending": "Trình duyệt không đọc được video này, nên chúng tôi đang gửi nó đi để tìm người chơi... {pct}%",
+    "sendingLabel": "Đang gửi video",
+    "couldntLook": "Không tìm được người chơi.",
+    "uploadFailed": "Tải lên thất bại. Hãy kiểm tra kết nối mạng rồi thử lại.",
+    "anyway": "Vẫn phân tích (tự chọn)",
+    "autoPick": "Chúng tôi sẽ tự chọn người chơi.",
+    "pickPlayer": "Chọn người chơi",
+    "failedHint": "{failed} Bạn vẫn có thể phân tích (chúng tôi chọn người gần máy quay nhất), hoặc thử lại.",
+    "tryAgain": "Thử lại",
+    "nobody": "Chúng tôi không thấy người chơi nào trong video.",
+    "nobodyHint": "Hãy quay thấy toàn thân, hoặc vẫn phân tích và chúng tôi sẽ tìm trong cả video.",
+    "showEveryone": "Hiện tất cả người đã thấy ({n})",
+    "showMore": "Không có bạn? Hiện tất cả người đã thấy (thêm {n})",
+    "analysing": "Đang phân tích người chơi này",
+    "change": "Đổi người chơi",
+    "whichBreakdown": "Phân tích người chơi nào?",
+    "whichYou": "Bạn là ai trong video?",
+    "seePlayers": "Chúng tôi thấy {n} người chơi. ",
+    "tapBreakdown": "Chạm vào người cần phân tích.",
+    "tapYou": "Chạm vào chính bạn để chúng tôi phân tích đúng người.",
+    "frame": "Một khung hình trong video của bạn",
+    "player": "Người chơi {n}",
+    "playerWhy": "Người chơi {n}, {why}",
+    "why": {
+      "still": "gần như đứng yên",
+      "far": "xa bàn",
+      "small": "ở xa",
+      "more": "cũng xuất hiện",
+      "background": "người ở phía sau"
+    }
+  },
+  "job": {
+    "video": {
+      "autocut": "Video pha bóng hay",
+      "match": "Video so sánh với VĐV",
+      "breakdown": "Video phân tích kỹ thuật"
+    },
+    "status": {
+      "queued": "Đang chờ",
+      "running": "Đang xử lý",
+      "done": "Xong",
+      "failed": "Thất bại"
+    },
+    "failed": "Thất bại",
+    "noVideo": "Không có video",
+    "progress": "Tiến độ tác vụ",
+    "titles": {
+      "failed": "Đã có lỗi xảy ra",
+      "playLike": "Bạn đánh giống {name}",
+      "buildingBreakdown": "Đang dựng phần phân tích",
+      "findingMatch": "Đang tìm VĐV giống bạn",
+      "cutting": "Đang cắt trận đấu",
+      "noRallies": "Không tìm thấy pha bóng",
+      "allRallies": "Cả {n} pha bóng",
+      "topRallies": "{n} pha bóng hay nhất",
+      "allDone": "Đã xong"
+    },
+    "autoDetected": " (tự nhận diện)",
+    "techniqueBreakdown": "Phân tích kỹ thuật",
+    "fromTable": " (ước tính từ bàn)",
+    "findMatch": "Tìm VĐV giống tôi",
+    "autocut": "Auto-Cut trận đấu · {mode}",
+    "fullMatch": "Cả trận",
+    "highlights": "Pha bóng hay",
+    "everyRally": "Mọi pha bóng",
+    "rally": "Pha bóng {n}",
+    "goDeeper": "Tìm hiểu sâu hơn",
+    "deeper": {
+      "coachTitle": "Nhận xét trận này",
+      "coachBody": "Hỏi xem cần tập gì từ trận bạn đã tải lên.",
+      "breakdownTitle": "Phân tích một cú đánh",
+      "breakdownBody": "Xem từng bước một cú đánh trong video này."
+    },
+    "failure": "Chúng tôi chưa hoàn tất được phần phân tích này. Hãy thử lại hoặc tải lên một đoạn ngắn hơn.",
+    "tryAnother": "Thử video khác",
+    "noRalliesHint": "Hãy quay gần bàn hơn, ở chỗ yên tĩnh hơn, và thấy cả hai người chơi.",
+    "notFoundOpen": "Hãy mở lại kết quả trận đấu hoặc tải lên video mới.",
+    "notReachable": "Không truy cập được tác vụ.",
+    "notAJob": "Máy chủ không gửi về tác vụ nào.",
+    "notFound": "Không tìm thấy tác vụ",
+    "backHome": "Về trang chủ",
+    "loading": "Đang tải kết quả…",
+    "noRalliesSr": "Không tìm thấy pha bóng.",
+    "ready": "Kết quả của bạn đã sẵn sàng.",
+    "newBreakdown": "Phân tích mới",
+    "matchAgain": "So sánh lại",
+    "cutAnother": "Cắt trận khác",
+    "runDetails": "Chi tiết lần chạy"
+  },
+  "autocutWaiting": {
+    "title": "Tiến độ dựng video",
+    "stages": {
+      "preparing": "Đang chuẩn bị video",
+      "extracting_audio": "Đang xử lý bản ghi",
+      "finding_rallies": "Đang tìm pha bóng",
+      "ranking": "Đang chọn pha bóng hay",
+      "rendering": "Đang dựng video"
+    },
+    "waiting": "Đang chờ bắt đầu",
+    "count": " ({done}/{total})",
+    "slow": "Lâu hơn dự kiến một chút…",
+    "left": "Còn khoảng {time}",
+    "preview": "Xem trước đoạn đầu tiên"
+  },
+  "rallies": {
+    "title": "Các pha bóng của bạn",
+    "hint": "Di chuyển hoặc bỏ pha bóng để chọn nội dung tải xuống.",
+    "moved": "Đã chuyển pha bóng {id} đến vị trí {position}.",
+    "removed": "Đã bỏ pha bóng {id}.",
+    "exportFailed": "Không tạo được bản tải xuống. Hãy kiểm tra lựa chọn rồi thử lại.",
+    "ready": "Video pha bóng hay đã sẵn sàng để tải xuống.",
+    "rally": "Pha bóng {id}",
+    "rank": "Hạng {id} · {length}",
+    "inMatch": "{start} – {end} trong trận",
+    "up": "Lên",
+    "down": "Xuống",
+    "remove": "Bỏ",
+    "moveUp": "Chuyển pha bóng {id} lên",
+    "moveDown": "Chuyển pha bóng {id} xuống",
+    "removeLabel": "Bỏ pha bóng {id}",
+    "downloadLabel": "Tải pha bóng {id}",
+    "coachLabel": "Nhận xét cú đánh trong pha bóng {id}",
+    "coach": "Nhận xét cú đánh này",
+    "none": "Chưa chọn pha bóng nào. Đặt lại lựa chọn để lấy lại.",
+    "preparing": "Đang chuẩn bị bản tải xuống…",
+    "retry": "Thử tải lại",
+    "downloadAll": "Tải pha bóng hay",
+    "restored": "Đã khôi phục lựa chọn pha bóng ban đầu.",
+    "reset": "Đặt lại lựa chọn",
+    "again": "Tải lại lần nữa"
+  },
+  "coachView": {
+    "done": " (xong)",
+    "inProgress": " (đang làm)",
+    "stoppedHere": " (dừng ở đây)",
+    "planning": "HLV đang lập kế hoạch...",
+    "noPlan": "Không có kế hoạch nào được ghi lại.",
+    "allDone": "Đã xong mọi bước",
+    "someDone": "Xong {done}/{total} bước",
+    "steps": "{n} bước",
+    "plan": "Kế hoạch",
+    "stopped": "Đã dừng",
+    "progressText": "{done}/{total} · {pct}%",
+    "progress": "Tiến độ của HLV",
+    "stoppedEarly": "Tác vụ đã dừng trước khi HLV viết nhận xét.",
+    "noStroke": "HLV không tìm thấy cú đánh nào của bạn để nhận xét. Hãy thử video bạn đứng gần máy quay hơn.",
+    "yourCoaching": "Nhận xét cho bạn",
+    "noNotes": "Không có nhận xét cho video này.",
+    "notesSoon": "Nhận xét sẽ hiện ở đây khi HLV viết xong.",
+    "debug": "Debug: các tệp làm việc của HLV ({n})",
+    "devOnly": "chỉ khi dev",
+    "deepAgent": " · deep agent",
+    "yourRequest": "Yêu cầu của bạn",
+    "backupPlan": "Đã hoàn tất phần phân tích bằng kế hoạch dự phòng.",
+    "saveLabel": "Lưu {title}",
+    "askAgain": "Hỏi lại"
+  },
+  "steps": {
+    "grip": "Cầm vợt",
+    "stance": "Tư thế đứng",
+    "swingPath": "Quỹ đạo vung vợt",
+    "contactPoint": "Điểm tiếp xúc",
+    "followThrough": "Vung theo",
+    "stepByStep": "Từng bước",
+    "tryThis": "Thử bài tập này",
+    "details": "Chi tiết"
+  },
+  "matches": {
+    "title": "Các VĐV giống bạn nhất",
+    "bodyMatch": "giống vóc dáng",
+    "swingMatch": "Giống cú vung",
+    "noClip": "Chưa có video {stroke} của {name}, nên chưa so được cú vung.",
+    "noMatchingClip": "Chưa có video phù hợp của {name}, nên chưa so được cú vung."
+  },
+  "analysedPlayer": {
+    "rerunFailed": "Không chạy lại được với người chơi đó.",
+    "thumb": "Người chơi chúng tôi đã phân tích",
+    "picked": "Đã phân tích người chơi bạn chọn.",
+    "this": "Đã phân tích người chơi này.",
+    "pickToRetry": "Chọn người chơi để thử lại.",
+    "change": "Đổi người chơi",
+    "starting": "Đang chạy lại với người chơi đó..."
+  },
+  "gear": {
+    "rubbers": "Tìm mặt vợt",
+    "pros": "Dụng cụ của VĐV",
+    "tabs": "Các trang dụng cụ"
+  },
+  "rubbers": {
+    "eyebrow": "Tìm mặt vợt",
+    "title": "Chọn mặt vợt",
+    "body": "Cho chúng tôi biết lối chơi và số tiền bạn muốn chi. Mặt vợt đắt hơn thường tốt hơn, nên chúng tôi bắt đầu gần ngân sách của bạn và xếp theo đánh giá của người đã dùng.",
+    "style": "Lối chơi",
+    "styles": {
+      "spin": "Xoáy",
+      "spinSub": "Giật và topspin nặng",
+      "speed": "Tốc độ",
+      "speedSub": "Tấn công và đánh nhanh"
+    },
+    "type": "Loại mặt vợt",
+    "types": {
+      "inverted": "Mặt trơn",
+      "short_pips": "Gai ngắn",
+      "long_pips": "Gai dài",
+      "anti_spin": "Chống xoáy (anti)"
+    },
+    "level": "Trình độ",
+    "levels": {
+      "beginner": "Mới chơi",
+      "intermediate": "Trung bình",
+      "advanced": "Nâng cao"
+    },
+    "budget": "Ngân sách mỗi mặt",
+    "budgetHint": "Không vượt ngân sách. Chúng tôi xếp theo từng nấc {step} từ ngân sách trở xuống, mặt được đánh giá cao nhất đứng đầu mỗi nấc.",
+    "loadFailed": "Không tải được mặt vợt. Hãy thử lại.",
+    "thickness": "Độ dày mút",
+    "thicknesses": {
+      "maxOr": "{mm} hoặc max",
+      "range": "{from}-{to} mm",
+      "ox": "OX (không mút) đến {to} mm"
+    },
+    "pipsNote": "PingSense chưa có dữ liệu mặt gai, nên chưa có gì để xếp hạng. Chúng tôi sẽ bổ sung.",
+    "nothing": "Chưa có mặt vợt phù hợp. Hãy thử trình độ khác.",
+    "ratings": "Tốc độ {speed} · Xoáy {spin} · Kiểm soát {control}",
+    "score": "điểm {score}",
+    "tbd": "Chưa có",
+    "source": "Đánh giá và giá: nhận xét của người dùng revspin.net, qua PingSense. Điểm trên thang 10."
+  },
+  "pros": {
+    "eyebrow": "Dụng cụ của VĐV",
+    "title": "VĐV dùng gì",
+    "body": "Cốt vợt và mặt vợt của {n} VĐV hàng đầu. Tìm VĐV bạn yêu thích.",
+    "player": "VĐV",
+    "placeholder": "Ví dụ: Ma Long",
+    "unconfirmed": "Chưa xác nhận",
+    "blade": "Cốt vợt",
+    "forehand": "Thuận tay",
+    "backhand": "Trái tay",
+    "source": "Nguồn:",
+    "notHere": "Chưa có",
+    "notHereHint": "Hiện có {n} VĐV. Sẽ có thêm.",
+    "wikipedia": "Wikipedia",
+    "gripLeft": "{grip} (tay trái)",
+    "sourceGeneral": "Bộ dụng cụ được nhắc đến rộng rãi, chưa được xác nhận trên trang hiện tại",
+    "notes": {
+      "Ma Long": "Hồ sơ cập nhật tháng 6/2024. Trước đây anh dùng Tenergy 05 cho mặt trái tay.",
+      "Timo Boll": "Đã giải nghệ năm 2025; đây là bộ dụng cụ anh dùng lâu năm.",
+      "Wang Manyu": "Cốt vợt lấy từ trang VĐV của cô; mặt vợt từ một danh sách cũ không rõ ngày.",
+      "Chen Meng": "Cốt vợt từ tháng 6/2026 (cô vô địch Tokyo với cốt Viscaria). Mặt vợt từ một danh sách không rõ ngày.",
+      "Ding Ning": "Đã giải nghệ; chỉ có một danh sách không rõ ngày.",
+      "Xu Xin": "Đã rời đội tuyển quốc gia; bộ dụng cụ được nhắc đến gần nhất.",
+      "Ma Lin": "Đã giải nghệ; bộ dụng cụ thời còn thi đấu.",
+      "Kuai Man": "Chỉ có một danh sách không rõ ngày.",
+      "Sabine Winter": "Trang VĐV của cô ghi mặt trái tay là Rasanter R53 mặt trơn, không phải chống xoáy. Chúng tôi chưa tìm thấy nguồn nào cho mặt trái tay chống xoáy."
+    }
+  },
+  "buy": {
+    "amazonOther": "Amazon (người bán khác)",
+    "official": "Cửa hàng chính hãng",
+    "unverified": "(chưa xác minh)",
+    "disclosure": "Là đơn vị liên kết, TTSkill có thể nhận hoa hồng từ các đơn hàng đủ điều kiện.",
+    "amazonDisclosure": " Là Amazon Associate, tôi nhận hoa hồng từ các đơn hàng đủ điều kiện.",
+    "notSold": "Chưa bán tại Mỹ",
+    "check": "Xem nơi bán tại Mỹ",
+    "buy": "Mua tại Mỹ",
+    "stores": "Cửa hàng tại Mỹ bán {product}",
+    "linkLabel": "{action}: {product} tại {store}{unverified}",
+    "unverifiedSuffix": " (chưa xác minh)",
+    "alsoAt": "Cũng có tại"
+  }
+}

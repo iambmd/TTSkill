@@ -1,32 +1,41 @@
 "use client";
 
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
-import type { Level, Recommendation, RubberType, Style } from "@/lib/rubbers";
+import { rating, usd, usdSymbol } from "@/lib/format";
+import { THICKNESS, type Level, type Recommendation, type RubberType, type Style } from "@/lib/rubbers";
 import { GearTabs } from "../gear-tabs";
 import { RubberBuyMenu } from "../rubber-buy-menu";
 import { PageIntro, RadioTiles, inputClass, labelClass } from "../ui";
 
-const STYLE_OPTIONS = [
-  { value: "spin", label: "Spin", sub: "Loops and heavy topspin" },
-  { value: "speed", label: "Speed", sub: "Drives and fast hits" },
-] as const;
-const TYPE_OPTIONS = [
-  { value: "inverted", label: "Inverted" },
-  { value: "short_pips", label: "Short pips" },
-  { value: "long_pips", label: "Long pips" },
-  { value: "anti_spin", label: "Anti-spin" },
-] as const;
-const LEVEL_OPTIONS = [
-  { value: "beginner", label: "Beginner" },
-  { value: "intermediate", label: "Intermediate" },
-  { value: "advanced", label: "Advanced" },
-] as const;
+const STYLES = ["spin", "speed"] as const;
+const TYPES = ["inverted", "short_pips", "long_pips", "anti_spin"] as const;
+const LEVELS = ["beginner", "intermediate", "advanced"] as const;
+const PIPS_NOTE = "PingSense has no pips rubbers yet, so there is nothing to rank. They're on the list.";
 
-const fmt = (v: number | null) => (v === null ? "TBD" : v.toFixed(1));
+type T = ReturnType<typeof useTranslations>;
+type F = ReturnType<typeof useFormatter>;
+
+/** The recommender's sponge thickness ("1.8-2.0 mm", "2.1 mm or max") in the page's language.
+ * Only the known English phrases are rewritten; anything else is shown as sent. */
+export function thicknessText(raw: string, t: T, format: F) {
+  const n = (s: string) => format.number(Number(s), { maximumFractionDigits: 1, minimumFractionDigits: s.includes(".") ? 1 : 0 });
+  let m;
+  if ((m = /^([\d.]+) mm or max$/.exec(raw))) return t("thicknesses.maxOr", { mm: `${n(m[1])} mm` });
+  if ((m = /^([\d.]+)-([\d.]+) mm$/.exec(raw))) return t("thicknesses.range", { from: n(m[1]), to: n(m[2]) });
+  if ((m = /^OX \(no sponge\) to ([\d.]+) mm$/.exec(raw))) return t("thicknesses.ox", { to: n(m[1]) });
+  return raw;
+}
 
 export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }: {
   initialStyle: Style; initialLevel: Level; initialBudget: number; demo: boolean;
 }) {
+  const t = useTranslations("rubbers");
+  const tAll = useTranslations();
+  const format = useFormatter();
+  const locale = useLocale();
+  const symbol = usdSymbol(locale);
+  const fmt = (v: number | null) => (v === null ? t("tbd") : rating(format, v));
   const [style, setStyle] = useState<Style>(initialStyle);
   const [type, setType] = useState<RubberType>("inverted");
   const [level, setLevel] = useState<Level>(initialLevel);
@@ -38,7 +47,7 @@ export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }
     let live = true;
     const n = Number(budget);
     if (!(n > 0 && n <= 500)) {
-      setError("Enter a budget between $1 and $500.");
+      setError(tAll("errors.budget", { min: usd(format, 1, true), max: usd(format, 500, true) }));
       return;
     }
     const params = new URLSearchParams({ style, rubber_type: type, level, budget: String(n) });
@@ -46,46 +55,46 @@ export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }
     fetch(`/api/rubbers?${params}`)
       .then(async (r) => {
         const body = await r.json();
-        if (!r.ok) throw new Error(body.error ?? "Couldn't load rubbers. Try again.");
+        if (!r.ok) throw new Error(body.error ?? t("loadFailed"));
         if (live) { setRec(body); setError(null); }
       })
       .catch((e: Error) => live && setError(e.message));
     return () => { live = false; };
-  }, [style, type, level, budget, demo]);
+  }, [style, type, level, budget, demo]);   // eslint-disable-line react-hooks/exhaustive-deps -- t, format only label errors
 
   return (
     <div className="space-y-7">
       <GearTabs active="rubbers" />
       <PageIntro
-        eyebrow="Rubber finder"
-        title="Pick your rubber"
-        body="Tell us how you play and what you can spend. Pricier rubbers are usually better, so we start near your budget and rank by what players who use them think."
+        eyebrow={t("eyebrow")}
+        title={t("title")}
+        body={t("body")}
       />
       <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-8">
         <div className="min-w-0 space-y-6">
           <fieldset>
-            <legend className={labelClass}>Style</legend>
-            <RadioTiles name="style" options={STYLE_OPTIONS} value={style} onChange={setStyle} className="grid-cols-2" />
+            <legend className={labelClass}>{t("style")}</legend>
+            <RadioTiles name="style" options={STYLES.map((value) => ({ value, label: t(`styles.${value}`), sub: t(`styles.${value}Sub`) }))} value={style} onChange={setStyle} className="grid-cols-2" />
           </fieldset>
           <fieldset>
-            <legend className={labelClass}>Rubber type</legend>
-            <RadioTiles name="type" options={TYPE_OPTIONS} value={type} onChange={setType} className="grid-cols-2" />
+            <legend className={labelClass}>{t("type")}</legend>
+            <RadioTiles name="type" options={TYPES.map((value) => ({ value, label: t(`types.${value}`) }))} value={type} onChange={setType} className="grid-cols-2" />
           </fieldset>
           <fieldset>
-            <legend className={labelClass}>Level</legend>
-            <RadioTiles name="level" options={LEVEL_OPTIONS} value={level} onChange={setLevel} className="grid-cols-3" />
+            <legend className={labelClass}>{t("level")}</legend>
+            <RadioTiles name="level" options={LEVELS.map((value) => ({ value, label: t(`levels.${value}`) }))} value={level} onChange={setLevel} className="grid-cols-3" />
           </fieldset>
 
           <div>
-            <label className={labelClass} htmlFor="budget">Budget per sheet</label>
+            <label className={labelClass} htmlFor="budget">{t("budget")}</label>
             <div className="relative">
-              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm font-semibold text-muted">$</span>
+              <span className="pointer-events-none absolute top-1/2 left-4 -translate-y-1/2 text-sm font-semibold text-muted">{symbol}</span>
               <input
                 id="budget" type="number" inputMode="numeric" min={1} max={500} step={1} value={budget}
-                onChange={(e) => setBudget(e.target.value)} className={`${inputClass} h-12 pl-8`}
+                onChange={(e) => setBudget(e.target.value)} className={`${inputClass} h-12 ${symbol.length > 1 ? "pl-14" : "pl-8"}`}
               />
             </div>
-            <p className="mt-2 text-xs text-muted">Nothing over budget. We rank in $10 steps down from it, best rated first in each step.</p>
+            <p className="mt-2 text-xs text-muted">{t("budgetHint", { step: usd(format, 10, true) })}</p>
           </div>
         </div>
         <section aria-live="polite" className="min-w-0 space-y-3">
@@ -93,27 +102,27 @@ export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }
           {rec && !error && (
             <>
               <div className="surface-card flex flex-wrap items-baseline justify-between gap-2 border-s-[4px] border-s-accent p-4">
-                <span className="text-sm font-semibold text-muted">Sponge thickness</span>
-                <span className="text-xl font-bold text-accent">{rec.thickness}</span>
+                <span className="text-sm font-semibold text-muted">{t("thickness")}</span>
+                <span className="stat text-xl text-accent">{rec.thickness === THICKNESS[type][level] ? thicknessText(rec.thickness, t, format) : rec.thickness}</span>
               </div>
-              {rec.note && <p className="surface-card p-4 text-sm text-muted">{rec.note}</p>}
+              {rec.note && <p className="surface-card p-4 text-sm text-muted">{rec.note === PIPS_NOTE ? t("pipsNote") : rec.note}</p>}
               {!rec.note && rec.results.length === 0 && (
-                <p className="surface-card p-4 text-sm text-muted">Nothing matches yet. Try another level.</p>
+                <p className="surface-card p-4 text-sm text-muted">{t("nothing")}</p>
               )}
               <ol className="space-y-2">
                 {rec.results.map((r, i) => (
                   <li key={r.name} className="surface-card space-y-3 p-4">
                     <div className="flex items-center gap-4">
-                      <span className="w-6 shrink-0 text-xl font-bold tabular-nums text-accent">{i + 1}</span>
+                      <span className="stat w-6 shrink-0 text-xl text-accent">{i + 1}</span>
                       <div className="min-w-0 flex-1">
                         <p className="break-words font-bold">{r.name}</p>
                         <p className="text-xs text-muted">
-                          Speed {fmt(r.speed)} · Spin {fmt(r.spin)} · Control {fmt(r.control)}
+                          {t("ratings", { speed: fmt(r.speed), spin: fmt(r.spin), control: fmt(r.control) })}
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-xl font-bold tabular-nums">${r.price?.toFixed(0)}</p>
-                        <p className="text-xs text-muted">score {fmt(r.overall)}</p>
+                        <p className="stat text-xl">{r.price !== null && usd(format, r.price, true)}</p>
+                        <p className="text-xs text-muted">{t("score", { score: fmt(r.overall) })}</p>
                       </div>
                     </div>
                     <RubberBuyMenu product={r.name} buyLinks={r.buyLinks} buyLink={r.buyLink} buyUrl={r.buyUrl} />
@@ -121,7 +130,7 @@ export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }
                 ))}
               </ol>
               <p className="text-xs text-muted">
-                Ratings and prices: revspin.net user reviews, via PingSense. Scores are out of 10.
+                {t("source")}
               </p>
             </>
           )}
