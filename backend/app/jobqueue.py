@@ -18,6 +18,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any, Callable
 
+from messages import Msg
 from . import jobs
 
 # Minutes before a job is stopped. Phase 1 Coach jobs take 1.5-2 min, a 60-minute Auto-Cut
@@ -25,7 +26,7 @@ from . import jobs
 TIMEOUT_MIN = {"autocut": 30, "breakdown": 15, "match": 15, "coach": 15, "prepare": 10}
 HEARTBEAT_S = 2.0
 STALE_S = 15.0       # a worker silent this long is gone
-WAITING = "Waiting for the worker. Start it with `make dev` (or `make worker`)."
+WAITING = str(Msg("progress.waiting"))
 
 
 def db_path() -> Path:
@@ -102,9 +103,8 @@ def finish(con: sqlite3.Connection, task_id: int, status: str, error: str | None
     con.execute("UPDATE tasks SET status=?, finished=?, error=? WHERE id=?", (status, time.time(), error, task_id))
 
 
-def timeout_message(kind: str) -> str:
-    return (f"This took longer than {TIMEOUT_MIN.get(kind, 15)} minutes, so we stopped it. "
-            "Try a shorter clip, or try again.")
+def timeout_message(kind: str) -> Msg:
+    return Msg("progress.timeout", minutes=TIMEOUT_MIN.get(kind, 15))
 
 
 def prepare_link(path: Path) -> Path:

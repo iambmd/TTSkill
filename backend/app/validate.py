@@ -11,17 +11,26 @@ import subprocess
 from pathlib import Path
 
 from limits import LIMITS
+from messages import Keyed, Msg, one_of
 
 
-class Invalid(ValueError):
-    """Bad input. The message is shown to the user as-is."""
+class Invalid(Keyed):
+    """Bad input. The message is shown to the user: in English as written, or translated by the
+    page from its reference when it was built from a Msg (messages.py)."""
+
+
+# The field labels the endpoints pass, as message keys so the page can translate them.
+_LABELS = {"Bat hand": "hand", "Stroke": "stroke", "Grip": "grip", "Mode": "mode", "Language": "language",
+           "Your request": "request", "The player's name": "playerName",
+           "The training description": "trainingDescription", "Rallies in the reel": "topN",
+           "Hit threshold": "threshold", "Max gap": "gap", "Min hits": "minHits", "Height": "height"}
+
+
+def label_(text: str) -> "Msg | str":
+    return Msg(f"validation.labels.{_LABELS[text]}") if text in _LABELS else text
 
 
 _NUMBER = re.compile(r"[0-9]+(\.[0-9]+)?")  # ASCII only, like the form's check
-
-
-def _or(options: list[str]) -> str:
-    return ", ".join(options[:-1]) + f" or {options[-1]}" if len(options) > 1 else options[0]
 
 
 def _num(v: float) -> str:
@@ -36,7 +45,7 @@ def fmt_duration(seconds: float) -> str:
 def choice(value: str, key: str, label: str) -> str:
     """value must be one of LIMITS["choices"][key] (the options the form offers)."""
     if value not in LIMITS["choices"][key]:
-        raise Invalid(f"{label} must be {_or(LIMITS['choices'][key])}.")
+        raise Invalid(Msg("validation.choice", label=label_(label), options=one_of(LIMITS["choices"][key])))
     return value
 
 
@@ -44,7 +53,7 @@ def in_range(value: float, key: str, label: str) -> float:
     """An Auto-Cut setting within LIMITS["autocut"][key]. NaN fails the comparison too."""
     lo, hi = LIMITS["autocut"][key]["min"], LIMITS["autocut"][key]["max"]
     if not lo <= value <= hi:
-        raise Invalid(f"{label} must be between {_num(lo)} and {_num(hi)}.")
+        raise Invalid(Msg("validation.between", label=label_(label), min=_num(lo), max=_num(hi)))
     return value
 
 
@@ -55,10 +64,10 @@ def height_cm(raw: str) -> float | None:
         return None
     lo, hi = LIMITS["height_cm"]["min"], LIMITS["height_cm"]["max"]
     if not _NUMBER.fullmatch(raw):
-        raise Invalid(f"Enter your height as a number in cm, between {lo} and {hi}.")
+        raise Invalid(Msg("validation.heightNumber", min=lo, max=hi))
     height = float(raw)
     if not lo <= height <= hi:
-        raise Invalid(f"Height must be between {lo} and {hi} cm. Leave it empty and we estimate it from the table.")
+        raise Invalid(Msg("validation.heightRange", min=lo, max=hi))
     return height
 
 
@@ -67,7 +76,7 @@ def text(raw: str, key: str, label: str) -> str:
     value = raw.strip()
     most = LIMITS["text_chars"][key]
     if len(value) > most:
-        raise Invalid(f"{label} can be up to {most} characters (it has {len(value)}). Shorten it and try again.")
+        raise Invalid(Msg("validation.textLength", label=label_(label), max=most, n=len(value)))
     return value
 
 
@@ -76,10 +85,10 @@ def upload_name(filename: str | None, size: int | None) -> str:
     up = LIMITS["upload"]
     suffix = Path(filename or "").suffix.lower()
     if suffix.lstrip(".") not in up["extensions"]:
-        names = _or([e.upper() if e != "webm" else "WebM" for e in up["extensions"]])
-        raise Invalid(f"Upload a video file: {names}.")
+        names = one_of([e.upper() if e != "webm" else "WebM" for e in up["extensions"]])
+        raise Invalid(Msg("validation.uploadType", types=names))
     if size is not None and size > up["max_mb"] * 1_000_000:
-        raise Invalid(f"That file is {size / 1e6:.0f} MB. Upload one under {up['max_mb']} MB, or trim it first.")
+        raise Invalid(Msg("validation.uploadSize", mb=f"{size / 1e6:.0f}", max=up["max_mb"]))
     return suffix
 
 
@@ -93,7 +102,7 @@ def probe(path: Path) -> dict:
             check=True, capture_output=True, text=True, timeout=60).stdout
         data = json.loads(out)
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired, json.JSONDecodeError) as e:
-        raise Invalid("We couldn't read that file as a video. Export it again as MP4 or MOV and retry.") from e
+        raise Invalid(Msg("serverErrors.unreadable")) from e
     # An audio file with cover art shows up as a "video" stream flagged attached_pic.
     video = [s for s in data.get("streams", []) if s.get("codec_type") == "video"
              and not (s.get("disposition") or {}).get("attached_pic")]
@@ -111,17 +120,16 @@ def video_file(path: Path) -> dict:
     up = LIMITS["upload"]
     info = probe(path)
     if not info["has_video"]:
-        raise Invalid("That file has no video track, only sound. Upload the video itself.")
+        raise Invalid(Msg("serverErrors.noVideoTrack"))
     if info["duration"] is None:
-        raise Invalid("We couldn't tell how long that video is. Export it again as MP4 and retry.")
+        raise Invalid(Msg("serverErrors.noDuration"))
     if info["duration"] < up["min_seconds"]:
-        raise Invalid(f"That clip is only {info['duration']:.1f} s long. Upload at least {up['min_seconds']} seconds of play.")
+        raise Invalid(Msg("validation.tooShort", seconds=f"{info['duration']:.1f}", min=up["min_seconds"]))
     if info["duration"] > up["max_seconds"]:
-        raise Invalid(f"That video is {fmt_duration(info['duration'])} long. Uploads can be up to "
-                      f"{up['max_seconds'] // 60} minutes: trim it and try again.")
+        raise Invalid(Msg("validation.tooLong", length=fmt_duration(info["duration"]),
+                          max=Msg("common.minutes", n=up["max_seconds"] // 60)))
     if min(info["width"], info["height"]) < up["min_short_side"]:
-        raise Invalid(f"That video is only {info['width']}x{info['height']}, too small to see the stroke. "
-                      "Re-record it at 480p or higher (your phone's normal video setting is fine).")
+        raise Invalid(Msg("validation.tooSmall", width=info["width"], height=info["height"]))
     return info
 
 
@@ -130,18 +138,18 @@ def player_frames(frames: list[tuple[str | None, bytes]], times: str) -> list[tu
     max_frames JPEG/PNG images of at most max_frame_kb, with one time (s) each in `times`."""
     lim = LIMITS["players"]
     if not frames:
-        raise Invalid("Send at least one frame of the video, or a YouTube link.")
+        raise Invalid(Msg("validation.sendFrames"))
     if len(frames) > lim["max_frames"]:
-        raise Invalid(f"Send at most {lim['max_frames']} frames.")
+        raise Invalid(Msg("validation.maxFrames", max=lim["max_frames"]))
     stamps = [t for t in times.split(",") if t.strip()]
     if len(stamps) != len(frames) or not all(_NUMBER.fullmatch(t.strip()) for t in stamps):
-        raise Invalid("Each frame needs its time in the video, in seconds.")
+        raise Invalid(Msg("validation.frameTimes"))
     out = []
     for (name, data), stamp in zip(frames, stamps):
         if len(data) > lim["max_frame_kb"] * 1024:
-            raise Invalid(f"Each frame must be under {lim['max_frame_kb']} KB.")
+            raise Invalid(Msg("validation.frameSize", max=lim["max_frame_kb"]))
         if not (data[:3] == b"\xff\xd8\xff" or data[:8] == b"\x89PNG\r\n\x1a\n"):
-            raise Invalid("Frames must be JPEG or PNG images.")
+            raise Invalid(Msg("validation.frameType"))
         out.append((float(stamp), data))
     return out
 
@@ -149,11 +157,11 @@ def player_frames(frames: list[tuple[str | None, bytes]], times: str) -> list[tu
 def only_me(value: str) -> bool:
     """The "Only me in the video" box: "1" when ticked, "" when not."""
     if value not in LIMITS["choices"]["only_me"]:
-        raise Invalid("“Only me in the video” must be ticked or not.")
+        raise Invalid(Msg("validation.onlyMe"))
     return value == "1"
 
 
-PICK_AGAIN = "The player you picked didn't come through. Pick the player again."
+PICK_AGAIN = Msg("validation.pickAgain")
 
 
 def player_selection(time_raw: str, box_raw: str) -> tuple[float, tuple[float, float, float, float]] | None:

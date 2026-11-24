@@ -10,6 +10,7 @@ from typing import Callable
 
 import timing
 from limits import LIMITS
+from messages import Msg, say
 
 from . import jobs
 from .cut import cut_and_concat, cut_segment, duration, padded_segments, thumbnail
@@ -26,11 +27,11 @@ def fetch_then(job_id: str, url: str, run: Callable[..., None], *args, **kwargs)
         pct = int(f * 100)
         if pct >= seen["pct"] + 5:  # yt-dlp reports many times a second
             seen["pct"] = pct
-            jobs.update(job_id, progress=round(0.05 * f, 3), message=f"Downloading the video... {pct}%")
+            jobs.update(job_id, progress=round(0.05 * f, 3), **say("progress.downloadingPct", pct=pct))
 
     try:
         stage = {"autocutStage": {"key": "preparing"}} if run is run_autocut else {}
-        jobs.update(job_id, status="running", progress=0.0, message="Downloading the video...", **stage)
+        jobs.update(job_id, status="running", progress=0.0, **say("progress.downloading"), **stage)
         path = download(url, jobs.job_dir(job_id), progress=report)
     except Exception as exc:  # LinkError messages are written for the user
         traceback.print_exc()
@@ -52,13 +53,17 @@ def pick_segments(found: list, video: Path, mode: str, top_n: int, total: float 
                                     bounds=[r.clip_bounds or (0.0, total) for r in rallies])
 
 
-def few_rallies_warning(count: int) -> str | None:
+def few_rallies_msg(count: int) -> Msg | None:
     """Advice when the sound gave fewer rallies than a useful cut needs (shared/limits.json)."""
     if count >= LIMITS["autocut"]["min_rallies"]:
         return None
-    heard = ("We didn't hear any rallies" if count == 0 else
-             f"We only heard {count} rall{'y' if count == 1 else 'ies'}")
-    return f"{heard}. Try filming closer to the table or somewhere with less background noise."
+    return (Msg("progress.autocut.heardNone") if count == 0 else Msg("progress.autocut.heardOne") if count == 1
+            else Msg("progress.autocut.heardFew", n=count))
+
+
+def few_rallies_warning(count: int) -> str | None:
+    m = few_rallies_msg(count)
+    return str(m) if m else None
 
 
 def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: float, gap: float, min_hits: int) -> None:
@@ -92,10 +97,11 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
             found, bounces = drop_non_play(video, found, min_hits=min_hits, progress=reviewed)
             if bounces:
                 print(f"dropped {len(bounces)} non-play spans: {[r.to_dict() for r in bounces]}")
-        warning = few_rallies_warning(len(found))  # counted after non-play spans are dropped
+        few = few_rallies_msg(len(found))  # counted after non-play spans are dropped
+        warning = few.fields("warning") if few else {"warning": None}
         if not found:
-            jobs.update(job_id, status="done", progress=1.0, rallies=[], warning=warning,
-                        autocutStage={"key": "done"}, message="No rallies found.")
+            jobs.update(job_id, status="done", progress=1.0, rallies=[], **warning,
+                        autocutStage={"key": "done"}, **say("progress.autocut.none"))
             return
         report("ranking", 0.68)
         rallies, segments = pick_segments(found, video, mode, top_n, total=video_seconds)
@@ -138,29 +144,34 @@ def run_autocut(job_id: str, video: Path, mode: str, top_n: int, threshold: floa
 
         cut_and_concat(video, segments, workdir, workdir / "result.mp4", clip_ready=rendered)
         length = sum(e - s for s, e in segments)
-        label = f"Top {len(rallies)} rallies" if mode == "highlights" else f"All {len(rallies)} rallies"
-        jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", warning=warning,
-                    autocutStage={"key": "done"}, rallyClips=clips, message=f"{label}, {length:.0f} seconds.")
+        done = "progress.autocut.doneTop" if mode == "highlights" else "progress.autocut.doneAll"
+        jobs.update(job_id, status="done", progress=1.0, resultUrl=f"/jobs/{job_id}/result", **warning,
+                    autocutStage={"key": "done"}, rallyClips=clips, **say(done, n=len(rallies), seconds=f"{length:.0f}"))
     except Exception as exc:
         traceback.print_exc()
-        jobs.fail(job_id, exc, "We couldn't make a reel. Try a shorter MP4 or MOV recording with sound.")
+        jobs.fail(job_id, exc, Msg("progress.autocut.failed"))
 
 
-# Rough progress for each pipeline log line, so the job page bar moves.
-_STAGES = [("input", 0.1), ("longest rally", 0.2), ("no rallies", 0.2), ("window", 0.25),
-           ("running MediaPipe", 0.35), ("bat hand", 0.5), ("stroke type", 0.55), ("analysing", 0.6),
-           ("rendering", 0.8), ("done", 0.95)]
+# Each technique pipeline log line: how far along it is, and what the page says meanwhile. The
+# log lines are for developers ("window 54.0-60.2s (rally)"); the page shows the stage.
+_STAGES = [("starting", 0.05, "start"), ("only me", 0.05, "onlyMe"), ("input", 0.1, "reading"),
+           ("longest rally", 0.2, "finding"), ("no rallies", 0.2, "finding"), ("player", 0.2, "finding"),
+           ("rally", 0.2, "finding"), ("window", 0.25, "finding"), ("running MediaPipe", 0.35, "pose"),
+           ("bat hand", 0.5, "hand"), ("stroke type", 0.55, "strokeType"), ("analysing", 0.6, "analysing"),
+           ("rendering", 0.8, "rendering"), ("done", 0.95, "finishing")]
 
 
 def _progress(job_id: str):
     state = {"p": 0.05}
 
     def report(msg: str) -> None:
-        for prefix, p in _STAGES:
+        print(f"[{job_id[:8]}] {msg}", flush=True)
+        for prefix, p, stage in _STAGES:
             if msg.startswith(prefix):
                 state["p"] = max(state["p"], p)
-                break
-        jobs.update(job_id, status="running", progress=state["p"], message=msg)
+                jobs.update(job_id, status="running", progress=state["p"], **say(f"progress.breakdown.{stage}"))
+                return
+        jobs.update(job_id, status="running", progress=state["p"])   # a detail line: keep the stage text
     return report
 
 
@@ -198,7 +209,8 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
         prompt_path = out / "video_prompt.json"
         video_prompt = json.loads(prompt_path.read_text()) if prompt_path.exists() else None
         jobs.update(job_id, status="done", progress=1.0,
-                    message=f"{breakdown.get('headline') or 'Breakdown ready'} ({res['analyzer']} analyzer)",
+                    **say("progress.breakdown.done", headline=breakdown.get("headline") or Msg("progress.breakdown.ready"),
+                          analyzer=res["analyzer"]),
                     resultUrl=f"/jobs/{job_id}/result", breakdown=breakdown,
                     videoPrompt=video_prompt, analyzer=res["analyzer"],
                     batHand=res.get("bat_hand"), window=res.get("window"),
@@ -212,13 +224,14 @@ def run_breakdown(job_id: str, video: Path | None, text: str, stroke: str, playe
 
 
 def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: float | None = None,
-                hand: str = "auto", report: Callable[[float, str], None] = lambda p, m: None,
+                hand: str = "auto", report: Callable[[float, Msg], None] = lambda p, m: None,
                 grip: str | None = None, chosen: dict | None = None, identity=None,
-                picked: bool = False) -> dict:
+                picked: bool = False, lang: str = "en") -> dict:
     """Find my pro match core, shared by the /jobs/match pipeline and the coach agent:
     pose on the user's clip, body profile, height (entered or from the table), top 3 pros
     with the same bat hand (and grip first, when given), form differences, and one
-    compiled video at `dest`."""
+    compiled video at `dest`. report(progress, Msg). lang: the language of the differences,
+    warnings and the video's title cards."""
     from players.body import angle_curves, body_ratios
     from players.compile import compile_matches
     from players.match import match
@@ -227,7 +240,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     from technique.pipeline import choose_window, key_moments
 
     out.mkdir(parents=True, exist_ok=True)
-    report(0.1, "Finding your best swings...")
+    report(0.1, Msg("progress.match.swings"))
     info = media.probe(video)
     # Same video-wide player seed as Breakdown and Coach, then fixed appearance tracking.
     # Coach passes the window and seed its pose step already chose (`chosen`, `identity`).
@@ -239,7 +252,7 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
                                       identity=identity)
     with timing.stage("proxy 720p"):
         clip = media.make_proxy(video, out / "clip.mp4", height=720, fps=30, start=win["start"], end=win["end"])
-    report(0.3, "Reading your body and swing with MediaPipe...")
+    report(0.3, Msg("progress.match.reading"))
     with timing.stage("pose (MediaPipe, full rate)"):
         track = pose.extract_pose(clip, identity=identity)
     pose.require_player(track, picked=picked)
@@ -252,18 +265,18 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
     if height_cm:
         height = {"height_cm": round(height_cm), "method": "entered"}
     else:
-        report(0.55, "Estimating your height from the table...")
+        report(0.55, Msg("progress.match.height"))
         with timing.stage("height from the table"):
             height = estimate_height_cm(str(clip), track)
     user = {**body, "height_cm": height["height_cm"] if height else None}
-    report(0.65, "Comparing you with the pros...")
+    report(0.65, Msg("progress.match.pros"))
     with timing.stage("match (distance + DTW)"):
-        matches = match(user, curves, stroke, side, grip=grip)
+        matches = match(user, curves, stroke, side, grip=grip, lang=lang)
     if not matches:
         raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
-    report(0.75, "Putting their breakdowns together...")
+    report(0.75, Msg("progress.match.compile"))
     with timing.stage("compile pros' video"):
-        result = compile_matches(matches, stroke, out / "parts", dest)
+        result = compile_matches(matches, stroke, out / "parts", dest, lang=lang)
     return {"matches": [{k: v for k, v in m.items() if k != "form"} for m in matches],
             "you": {"bat_hand": side, "bat_hand_how": how, "height": height,
                     "body": {k: v for k, v in body.items() if k not in ("height_units", "units")}},
@@ -272,19 +285,21 @@ def match_video(video: Path, stroke: str, out: Path, dest: Path, height_cm: floa
 
 
 def run_match(job_id: str, video: Path, stroke: str, height_cm: float | None = None,
-              hand: str = "auto", grip: str | None = None, selection: tuple | None = None) -> None:
+              hand: str = "auto", grip: str | None = None, selection: tuple | None = None,
+              lang: str = "en") -> None:
+    """lang: the language of the pros' differences, warnings and the video's title cards."""
     try:
-        jobs.update(job_id, status="running", progress=0.05, message="Starting...")
+        jobs.update(job_id, status="running", progress=0.05, **say("progress.starting"))
         seed = None
         if selection:
             from technique import pose
             seed = pose.identity_from_box(video, *selection)
         res = match_video(video, stroke, jobs.job_dir(job_id) / "match", jobs.job_dir(job_id) / "result.mp4",
-                          height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, message=m),
-                          grip=grip, identity=seed, picked=bool(selection))
+                          height_cm, hand, report=lambda p, m: jobs.update(job_id, progress=p, **m.fields()),
+                          grip=grip, identity=seed, picked=bool(selection), lang=lang)
         top = res["matches"][0]
         jobs.update(job_id, status="done", progress=1.0,
-                    message=f"You play most like {top['name']} ({top['score']}% body match).",
+                    **say("progress.match.done", name=top["name"], score=top["score"]),
                     resultUrl=f"/jobs/{job_id}/result" if res["video"] else None,
                     matches=res["matches"], you=res["you"],
                     player={"thumb": res.get("player_thumb"), "picked": bool(selection)})

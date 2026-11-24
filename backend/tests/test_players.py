@@ -133,7 +133,7 @@ def test_compiled_video_opens_on_the_top_match_even_without_its_clip(tmp_path, m
               {**pro, "name": "Tomokazu Harimoto", "breakdown": "p/breakdown.mp4"}]
     cards = []
     original = comp._card
-    monkeypatch.setattr(comp, "_card", lambda rank, m, stroke, has_clip=True: cards.append(
+    monkeypatch.setattr(comp, "_card", lambda rank, m, stroke, has_clip=True, lang="en": cards.append(
         (rank, m["name"], has_clip)) or original(rank, m, stroke, has_clip))
     out = comp.compile_matches(ranked, "forehand", tmp_path / "w", tmp_path / "out.mp4")
     assert cards == [(1, "Dimitrij Ovtcharov", False), (2, "Tomokazu Harimoto", True)]

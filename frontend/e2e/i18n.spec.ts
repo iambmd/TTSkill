@@ -49,6 +49,8 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 
         await expect(page.locator("main h1")).toHaveText(heading);
         await expect(page.getByRole("group", { name: "Ngôn ngữ" }).getByRole("button", { name: "Tiếng Việt" })).toHaveAttribute("aria-pressed", "true");
         if (path === "/rubbers") await expect(page.locator("main ol li").first()).toBeVisible();
+        // The forms whose results the backend writes ask for them in Vietnamese.
+        if (["/breakdown", "/coach", "/match"].includes(path)) await expect(page.locator('input[name="lang"]')).toHaveValue("vi");
         if (path.startsWith("/jobs/")) await expect(page.locator("main")).not.toContainText("Loading your result");
         const text = await page.locator("body").innerText();
         expect(text).not.toMatch(RAW_KEY);

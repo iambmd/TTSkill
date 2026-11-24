@@ -231,8 +231,8 @@ def render_breakdown(s: Session, stroke: str = "forehand", stroke_type: str = ""
 def match_players(s: Session, stroke: str = "forehand", height_cm: Optional[float] = None) -> dict:
     video = s.need_video()
     res = match_video(video, stroke, s.dir / "match", s.dir / "pro_matches.mp4", height_cm,
-                      hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(message=m),
-                      chosen=s.window, identity=s.seed(video), picked=s.selection is not None)
+                      hand=(s.pose or {}).get("bat_hand") or s.hand, report=lambda p, m: s.update(**m.fields()),
+                      chosen=s.window, identity=s.seed(video), picked=s.selection is not None, lang=s.lang)
     if res["video"]:
         top = res["matches"][0]
         s.add_output("match", i18n.t(s.lang, "out.match", name=top["name"]), "pro_matches.mp4",

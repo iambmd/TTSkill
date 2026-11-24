@@ -13,13 +13,85 @@ def norm(lang: str | None) -> str:
     return lang if lang in LANGS else "en"
 
 
-# The terms Vietnamese players use; the same list is in docs/glossary_vi.md for review.
-_VI_TERMS = ("forehand = thuận tay, backhand = trái tay, rubber = mặt vợt, blade = cốt vợt, "
-             "topspin = giật (or topspin), loop vs backspin = giật bóng xoáy xuống, drive = tấn công, "
-             "push = gò, block = chặn, chop = cắt, flick = vẩy, serve = giao bóng, rally = pha bóng, "
-             "footwork = bộ chân, backswing = lăng vợt, follow-through = vung theo, "
-             "contact point = điểm tiếp xúc, ready position = tư thế chuẩn bị, stance = tư thế đứng, "
-             "spin = xoáy, backspin = xoáy xuống, drill = bài tập, coach = HLV")
+# The table tennis terms Vietnamese players use: every row of docs/glossary_vi.md (EN, VI), in
+# order. Claude gets all of them for lang="vi"; tests/test_i18n.py fails if the two differ.
+GLOSSARY: list[tuple[str, str]] = [
+    ('forehand', 'thuận tay'),
+    ('backhand', 'trái tay'),
+    ('stroke', 'cú đánh'),
+    ('topspin / loop', 'giật (topspin)'),
+    ('forehand topspin', 'giật thuận tay'),
+    ('backhand topspin', 'giật trái tay'),
+    ('loop against backspin', 'giật bóng xoáy xuống'),
+    ('forehand loop vs backspin', 'giật bóng xoáy xuống thuận tay'),
+    ('drive', 'đôi công'),
+    ('forehand drive', 'đôi công thuận tay'),
+    ('push', 'gò'),
+    ('flick', 'vẩy'),
+    ('block', 'chặn bóng / chặn'),
+    ('chop', 'cắt bóng / cắt'),
+    ('serve', 'giao bóng'),
+    ('third ball', 'bóng thứ ba'),
+    ('counter-hit', 'phản công'),
+    ('footwork', 'bộ chân'),
+    ('split step', 'nhún bật'),
+    ('rally', 'pha bóng'),
+    ('highlights', 'pha bóng hay (nhất)'),
+    ('full match', 'cả trận'),
+    ('dead time', 'thời gian chết'),
+    ('point', 'điểm'),
+    ('ball contact (sound)', 'tiếng chạm bóng'),
+    ('bounce', 'nảy / đỉnh nảy'),
+    ('net', 'lưới'),
+    ('table', 'bàn'),
+    ('opponent', 'đối thủ'),
+    ('drill', 'bài tập'),
+    ('coach', 'HLV (huấn luyện viên)'),
+    ('pro (player)', 'VĐV (vận động viên) chuyên nghiệp'),
+    ('grip', 'cầm vợt / kiểu cầm vợt'),
+    ('shakehand', 'cầm ngang'),
+    ('penhold', 'cầm dọc'),
+    ('bat hand', 'tay cầm vợt'),
+    ('right-handed / left-handed', 'tay phải / tay trái'),
+    ('stance', 'tư thế đứng'),
+    ('ready position', 'tư thế chuẩn bị'),
+    ('backswing', 'lăng vợt'),
+    ('swing path', 'quỹ đạo vung vợt'),
+    ('contact point', 'điểm tiếp xúc'),
+    ('follow-through', 'vung theo'),
+    ('recovery', 'về tư thế'),
+    ('brush', 'miết'),
+    ('closed / open bat angle', 'mặt vợt úp / mở'),
+    ('knee bend', 'khuỵu gối'),
+    ('elbow', 'khuỷu tay'),
+    ('forearm', 'cẳng tay'),
+    ('wrist', 'cổ tay'),
+    ('toss (serve)', 'tung bóng'),
+    ('cue', 'điểm cần học / gợi ý'),
+    ('spin', 'xoáy'),
+    ('topspin', 'xoáy lên'),
+    ('backspin', 'xoáy xuống'),
+    ('sidespin', 'xoáy ngang'),
+    ('speed', 'tốc độ'),
+    ('control', 'kiểm soát'),
+    ('rubber', 'mặt vợt'),
+    ('blade', 'cốt vợt'),
+    ('sponge', 'mút'),
+    ('sponge thickness', 'độ dày mút'),
+    ('inverted', 'mặt trơn'),
+    ('short pips', 'gai ngắn'),
+    ('long pips', 'gai dài'),
+    ('anti-spin', 'chống xoáy (anti)'),
+    ('hardness', 'độ cứng'),
+    ('official store', 'cửa hàng chính hãng'),
+    ('beginner', 'mới chơi'),
+    ('intermediate', 'trung bình'),
+    ('advanced', 'nâng cao'),
+]
+
+
+def _terms() -> str:
+    return "; ".join(f"{en} = {vi}" for en, vi in GLOSSARY)
 
 
 def instruction(lang: str | None) -> str:
@@ -30,7 +102,9 @@ def instruction(lang: str | None) -> str:
     return ("\n\nLanguage: write every text the user reads (summary, headline, grip, stance, swing_path, "
             "contact_point, follow_through, card and step titles, lines, highlight_words, callouts, recap, "
             "drill) in natural Vietnamese, the way a Vietnamese club coach talks. Use the terms Vietnamese "
-            f"players use: {_VI_TERMS}. Keep player, product and brand names as they are. Keep JSON keys "
+            f"players use, exactly as listed (English = Vietnamese): {_terms()}. Use \"tấn công\" only for "
+            "attack in general, never for the drive stroke (đôi công). Keep player, product and brand names as "
+            "they are. Keep JSON keys "
             "and the fixed values (moment, stroke, stroke_type, handedness) in English. highlight_words "
             "must be words copied from the Vietnamese lines. Titles stay two or three words and lines "
             "stay short (at most ~50 characters).")
@@ -51,6 +125,10 @@ _TEXT: dict[str, dict[str, str]] = {
         "todo.pros": "Find the pros closest to you",
         "todo.coach": "Write the coaching",
         "todo.render": "Render your {noun}",
+        "plan.measure": "Measure your {noun} with MediaPipe",
+        "plan.match": "Find the pros closest to your {noun}",
+        "plan.cards": "Write the coaching cards and render your {noun}",
+        "plan.summary": "Sum up what to work on",
         "noun.forehand": "forehand",
         "noun.backhand": "backhand",
         "noun.stroke": "stroke",
@@ -93,6 +171,10 @@ _TEXT: dict[str, dict[str, str]] = {
         "todo.pros": "Tìm VĐV giống bạn nhất",
         "todo.coach": "Viết nhận xét",
         "todo.render": "Dựng video cú {noun}",
+        "plan.measure": "Đo cú {noun} của bạn bằng MediaPipe",
+        "plan.match": "Tìm VĐV giống cú {noun} của bạn nhất",
+        "plan.cards": "Viết thẻ nhận xét và dựng video cú {noun}",
+        "plan.summary": "Tóm tắt những điều cần tập",
         "noun.forehand": "thuận tay",
         "noun.backhand": "trái tay",
         "noun.stroke": "đánh",
@@ -123,12 +205,47 @@ _TEXT: dict[str, dict[str, str]] = {
     },
 }
 
+# Pro match: the form notes, the penhold warning, the title cards. English is the existing wording.
+MATCH = {
+    "en": dict(
+        note="Your {what} {verb} {deg} {direction} at {phase} than {pro}'s.",
+        what={"elbow": "elbow", "shoulder": "bat arm", "knee": "legs", "trunk_turn": "shoulders"},
+        more={"elbow": "straighter", "shoulder": "higher", "knee": "straighter (less knee bend)",
+              "trunk_turn": "more turned"},
+        less={"elbow": "more bent", "shoulder": "lower", "knee": "more bent", "trunk_turn": "less turned"},
+        phase={"the backswing": "the backswing", "contact": "contact", "the finish": "the finish"},
+        penhold=("{name} plays penhold, so the backhand technique differs from shakehand. "
+                 "Use {name}'s forehand as reference, and be careful copying the backhand."),
+        card_rank="#{rank} MATCH · {stroke}", card_body="body match", card_hand="{hand}-handed",
+        card_no_clip="No {stroke} clip of {name} yet.",
+        grips={"shakehand": "shakehand", "penhold": "penhold"}),
+    "vi": dict(
+        note="{what} của bạn {direction} {deg} so với {pro} {phase}.",
+        what={"elbow": "Khuỷu tay", "shoulder": "Tay cầm vợt", "knee": "Chân", "trunk_turn": "Vai"},
+        more={"elbow": "thẳng hơn", "shoulder": "cao hơn", "knee": "thẳng hơn (khuỵu gối ít hơn)",
+              "trunk_turn": "xoay nhiều hơn"},
+        less={"elbow": "gập hơn", "shoulder": "thấp hơn", "knee": "gập hơn", "trunk_turn": "xoay ít hơn"},
+        phase={"the backswing": "lúc lăng vợt", "contact": "lúc tiếp xúc bóng", "the finish": "lúc kết thúc"},
+        penhold=("{name} cầm dọc, nên kỹ thuật trái tay khác với cầm ngang. Hãy lấy cú thuận tay của "
+                 "{name} làm mẫu, và cẩn thận khi bắt chước cú trái tay."),
+        card_rank="#{rank} GIỐNG BẠN · {stroke}", card_body="giống vóc dáng", card_hand="tay {hand}",
+        card_no_clip="Chưa có video {stroke} của {name}.",
+        grips={"shakehand": "cầm ngang", "penhold": "cầm dọc"}),
+}
+HANDS_VI = {"left": "trái", "right": "phải"}
+# A pro's equipment_notes (data/players/players.json) in Vietnamese, by pro id.
+EQUIPMENT_NOTES_VI = {
+    "sabine-winter": ("Sabine Winter dùng mặt chống xoáy (anti) ở trái tay, nên kỹ thuật trái tay của cô khác "
+                      "với mặt trơn thông thường. Hãy lấy cú thuận tay của cô làm mẫu, và cẩn thận khi bắt "
+                      "chước cú trái tay."),
+}
+
 # Stroke names in Vietnamese (the English ones are technique.strokes labels).
 STROKES_VI = {
     "forehand": "thuận tay", "backhand": "trái tay", "serve": "giao bóng", "flick": "vẩy",
     "block": "chặn bóng", "footwork": "bộ chân", "chop": "cắt bóng",
-    "forehand_topspin": "giật thuận tay", "forehand_drive": "tấn công thuận tay",
-    "forehand_loop_backspin": "giật thuận tay bóng xoáy xuống", "backhand_topspin": "giật trái tay",
+    "forehand_topspin": "giật thuận tay", "forehand_drive": "đôi công thuận tay",
+    "forehand_loop_backspin": "giật bóng xoáy xuống thuận tay", "backhand_topspin": "giật trái tay",
     "backhand_flick": "vẩy trái tay", "backhand_push": "gò trái tay", "backhand_block": "chặn trái tay",
     "forehand_block": "chặn thuận tay",
 }

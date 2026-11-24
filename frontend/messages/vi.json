@@ -70,8 +70,8 @@
     "footwork": "Bộ chân",
     "chop": "Cắt bóng",
     "forehand_topspin": "Giật thuận tay",
-    "forehand_drive": "Tấn công thuận tay",
-    "forehand_loop_backspin": "Giật thuận tay bóng xoáy xuống",
+    "forehand_drive": "Đôi công thuận tay",
+    "forehand_loop_backspin": "Giật bóng xoáy xuống thuận tay",
     "backhand_topspin": "Giật trái tay",
     "backhand_flick": "Vẩy trái tay",
     "backhand_push": "Gò trái tay",
@@ -156,7 +156,8 @@
       "topN": "Số pha bóng trong video",
       "threshold": "Ngưỡng tiếng chạm bóng",
       "gap": "Khoảng nghỉ tối đa",
-      "minHits": "Số lần chạm bóng tối thiểu"
+      "minHits": "Số lần chạm bóng tối thiểu",
+      "height": "Chiều cao"
     }
   },
   "home": {
@@ -165,7 +166,7 @@
     "footer": "Chân trang",
     "footerLinks": {
       "home": "Trang chủ",
-      "coach": "Huấn luyện",
+      "coach": "HLV",
       "breakdown": "Phân tích",
       "match": "So với VĐV",
       "autocut": "Auto-Cut",
@@ -252,7 +253,7 @@
   },
   "demoDescriptions": {
     "autocut": "Bốn pha bóng bàn phát liền nhau, thời gian chờ giữa các điểm đã được cắt bỏ.",
-    "breakdown": "Ma Long hạ thấp tư thế, rồi miết bóng lên trong cú giật thuận tay bóng xoáy xuống. Quay chậm và dừng hình đánh dấu các tư thế quan trọng.",
+    "breakdown": "Ma Long hạ thấp tư thế, rồi miết bóng lên trong cú giật bóng xoáy xuống thuận tay. Quay chậm và dừng hình đánh dấu các tư thế quan trọng.",
     "match": "Các đoạn video của Fan Zhendong, Ma Long và Tomokazu Harimoto cho thấy từng người thực hiện cú thuận tay, kèm gợi ý ở các tư thế quan trọng.",
     "coachHighlights": "Hai người chơi đôi công qua năm pha bóng, phát lần lượt, pha dài hơn được xếp trước.",
     "coachBreakdown": "Người chơi áo xanh ngọc ở gần máy quay giật thuận tay. Video chậm lại và dừng hình để chỉ cách hạ thấp người, đẩy vợt qua bóng và kết thúc cao."
@@ -608,7 +609,7 @@
       "spin": "Xoáy",
       "spinSub": "Giật và topspin nặng",
       "speed": "Tốc độ",
-      "speedSub": "Tấn công và đánh nhanh"
+      "speedSub": "Đôi công và đánh nhanh"
     },
     "type": "Loại mặt vợt",
     "types": {
@@ -680,5 +681,85 @@
     "linkLabel": "{action}: {product} tại {store}{unverified}",
     "unverifiedSuffix": " (chưa xác minh)",
     "alsoAt": "Cũng có tại"
+  },
+  "serverErrors": {
+    "unreadable": "Không đọc được tệp này dưới dạng video. Hãy xuất lại thành MP4 hoặc MOV rồi thử lại.",
+    "noVideoTrack": "Tệp này không có hình, chỉ có âm thanh. Hãy tải lên chính video đó.",
+    "noDuration": "Không xác định được độ dài video. Hãy xuất lại thành MP4 rồi thử lại.",
+    "uploadExpired": "Video bạn tải lên đã hết hạn. Hãy chọn lại video.",
+    "finishedMatch": "Hãy mở một kết quả trận đấu đã xong để dùng video đó.",
+    "rallyGone": "Pha bóng đó không còn nữa. Hãy mở lại kết quả trận đấu và chọn lại.",
+    "videoGone": "Video này không còn nữa. Hãy chọn lại video.",
+    "frameUnreadable": "Có một khung hình không đọc được dưới dạng ảnh.",
+    "kind": "kind phải là breakdown, match hoặc coach.",
+    "jobVideoGone": "Video của tác vụ này không còn nữa. Hãy tải lên lại để chọn người chơi.",
+    "changePlayerKinds": "Chỉ kết quả Phân tích, So với VĐV và HLV mới đổi được người chơi.",
+    "clipsGone": "Một số đoạn pha bóng không còn nữa. Hãy tải trận đấu lên lại.",
+    "missing": "Thiếu {label}.",
+    "notValid": "{label} không hợp lệ.",
+    "link": {
+      "private": "Video này ở chế độ riêng tư. Hãy dùng video công khai hoặc không công khai (unlisted).",
+      "ageRestricted": "Video này bị giới hạn độ tuổi nên chúng tôi không tải được. Hãy thử link khác.",
+      "membersOnly": "Video này chỉ dành cho hội viên của kênh. Hãy thử một video công khai.",
+      "blocked": "YouTube đang chặn tải video từ máy chủ này. Hãy tải tệp lên thay vì dùng link.",
+      "notStarted": "Đây là buổi phát trực tiếp chưa bắt đầu. Không hỗ trợ video trực tiếp: hãy dùng video thường.",
+      "unavailable": "Video này không xem được. Hãy kiểm tra link, có thể video đã bị gỡ.",
+      "couldntOpen": "Không mở được video đó: {detail}",
+      "live": "Đây là buổi phát trực tiếp. Không hỗ trợ video trực tiếp: hãy đợi buổi phát kết thúc, hoặc dùng video thường.",
+      "tooLong": "Video này dài {length}. Hãy dùng video dưới {max}, hoặc cắt ngắn rồi tải tệp lên.",
+      "noFile": "Đã tải xong nhưng không lưu được tệp video nào. Hãy thử lại."
+    },
+    "player": {
+      "lostPick": "Chúng tôi mất dấu người chơi bạn chọn: chỉ thấy họ {seen}. Hãy chọn họ ở khung hình thấy rõ, quay gần hơn, hoặc cắt video còn đoạn họ thi đấu.",
+      "seenPct": "trong {pct}% video",
+      "seenNowhere": "không ở đâu trong đoạn được phân tích",
+      "none": "Chúng tôi không tìm thấy người chơi nào trong đoạn video này. Hãy quay rõ hơn: thấy toàn thân, quay ngang nếu được, đủ ánh sáng.",
+      "onlySeen": "Chúng tôi chỉ thấy người chơi trong {pct}% video. Hãy quay rõ hơn: thấy toàn thân, quay ngang nếu được, đủ ánh sáng.",
+      "cantReadAt": "Không đọc được video ở {when}, chỗ bạn chọn người chơi. Hãy chọn lại.",
+      "notFoundAt": "Không tìm thấy người chơi bạn chọn ở {when}. Hãy chọn lại, hoặc cắt ngắn video.",
+      "hand": "Chúng tôi không xác định được tay cầm vợt của bạn. Hãy chọn trái hoặc phải, hoặc tải lên cú vung rõ hơn."
+    }
+  },
+  "progress": {
+    "waiting": "Đang chờ worker. Hãy chạy nó bằng `make dev` (hoặc `make worker`).",
+    "restarted": "Máy chủ đã khởi động lại trước khi tác vụ này xong. Vui lòng thử lại.",
+    "workerRestarted": "Worker đã khởi động lại trước khi tác vụ này xong. Vui lòng thử lại.",
+    "unfinished": "Tác vụ đã dừng mà chưa xong. Vui lòng thử lại.",
+    "failed": "Chúng tôi chưa hoàn tất được phần phân tích này. Hãy thử lại hoặc tải lên một đoạn ngắn hơn.",
+    "timeout": "Việc này mất hơn {minutes} phút nên chúng tôi đã dừng lại. Hãy thử đoạn ngắn hơn, hoặc thử lại.",
+    "starting": "Đang bắt đầu...",
+    "downloading": "Đang tải video...",
+    "downloadingPct": "Đang tải video... {pct}%",
+    "autocut": {
+      "none": "Không tìm thấy pha bóng nào.",
+      "doneTop": "{n} pha bóng hay nhất, {seconds} giây.",
+      "doneAll": "Cả {n} pha bóng, {seconds} giây.",
+      "failed": "Chúng tôi chưa dựng được video. Hãy thử một bản ghi MP4 hoặc MOV ngắn hơn, có âm thanh.",
+      "heardNone": "Chúng tôi không nghe thấy pha bóng nào. Hãy quay gần bàn hơn hoặc ở chỗ ít tiếng ồn hơn.",
+      "heardOne": "Chúng tôi chỉ nghe thấy 1 pha bóng. Hãy quay gần bàn hơn hoặc ở chỗ ít tiếng ồn hơn.",
+      "heardFew": "Chúng tôi chỉ nghe thấy {n} pha bóng. Hãy quay gần bàn hơn hoặc ở chỗ ít tiếng ồn hơn."
+    },
+    "breakdown": {
+      "start": "Đang bắt đầu phân tích...",
+      "onlyMe": "Đang tìm người đánh nhiều nhất...",
+      "reading": "Đang đọc video...",
+      "finding": "Đang tìm cú đánh...",
+      "pose": "Đang theo dõi cơ thể người chơi...",
+      "hand": "Đang tìm tay cầm vợt...",
+      "strokeType": "Đang xác định cú đánh...",
+      "analysing": "Đang viết các thẻ nhận xét...",
+      "rendering": "Đang dựng video hướng dẫn...",
+      "finishing": "Sắp xong...",
+      "done": "{headline} (bộ phân tích {analyzer})",
+      "ready": "Đã phân tích xong"
+    },
+    "match": {
+      "swings": "Đang tìm những cú vung tốt nhất của bạn...",
+      "reading": "Đang đọc cơ thể và cú vung của bạn bằng MediaPipe...",
+      "height": "Đang ước tính chiều cao của bạn từ mặt bàn...",
+      "pros": "Đang so sánh bạn với các VĐV...",
+      "compile": "Đang ghép phần phân tích của họ...",
+      "done": "Bạn giống {name} nhất ({score}% vóc dáng)."
+    }
   }
 }

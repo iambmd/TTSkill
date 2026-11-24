@@ -16,7 +16,6 @@ const A = LIMITS.autocut;
 export default function AutoCutPage() {
   const t = useTranslations("autocut");
   const tAll = useTranslations();
-  const te = useTranslations("errors");
   const router = useRouter();
   const [mode, setMode] = useState<"highlights" | "full">("highlights");
   const [topN, setTopN] = useState(5);
@@ -45,7 +44,7 @@ export default function AutoCutPage() {
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("autocut", form, setProgress, te);
+      const job = await submitJob("autocut", form, setProgress, tAll);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

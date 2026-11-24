@@ -11,6 +11,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { playersEndpoint } from "@/lib/submit";
+import { serverText } from "@/lib/server-text";
 
 type Box = [number, number, number, number];
 type Candidate = { id: number; time: number; box: Box; thumb: string; seen: number; near?: number; background?: string };
@@ -146,8 +147,9 @@ export function uploadForPlayers(file: File, kind: string, signal: AbortSignal, 
       signal.removeEventListener("abort", stop);
       const data = xhr.response ?? {};
       if (xhr.status >= 200 && xhr.status < 300) return resolve(data as Found);
-      // Our route answers {error}; FastAPI, reached directly, answers {detail}.
-      reject(new Error(data.error ?? (typeof data.detail === "string" ? data.detail : COULDNT_LOOK)));
+      // Our route answers {error}; FastAPI, reached directly, answers {detail} and its detailRef.
+      reject(Object.assign(new Error(data.error ?? (typeof data.detail === "string" ? data.detail : COULDNT_LOOK)),
+        { ref: data.detailRef }));
     };
     xhr.onerror = () => { clearTimeout(timer); reject(new Error(UPLOAD_FAILED)); };
     const body = new FormData();
@@ -224,11 +226,13 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   onChoice?: (choice: { time: number; box: Box }) => void;
 }) {
   const t = useTranslations("picker");
+  const tAll = useTranslations();
   const shown = (message: string) => (KNOWN[message] ? t(KNOWN[message]) : message);
   const why = (background: string) => t(`why.${WHY.has(background) ? background : "background"}`);
   const [found, setFound] = useState<Found | null>(null);
   const [finding, setFinding] = useState(false);
   const [failed, setFailed] = useState<string | null>(null);
+  const [failedRef, setFailedRef] = useState<unknown>(null);   // the backend's key for `failed`, if it sent one
   const [skipped, setSkipped] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const [choice, setChoice] = useState<Choice | null>(null);
@@ -247,6 +251,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
     setOpen(false);
     setEveryone(false);
     setFailed(null);
+    setFailedRef(null);
     setSkipped(false);
     setFinding(false);
     setSending(null);
@@ -317,6 +322,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
           if (stale) return;
           controller.abort();   // a timeout: stop the request so the backend stops too
           setFailed(e.name === "AbortError" ? TOO_LONG : e.message || COULDNT_LOOK);
+          setFailedRef((e as Error & { ref?: unknown }).ref ?? null);
         })
         .finally(() => { if (!stale) { setFinding(false); setSending(null); } });
     }, link ? 600 : 0);   // let a pasted link settle before downloading it
@@ -379,7 +385,7 @@ export function PlayerPicker({ previewUrl, duration, file = null, unreadable = f
   if (failed) {
     return (
       <div role="alert" className="space-y-2 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3">
-        <p className="text-sm text-red-100">{t("failedHint", { failed: shown(failed) })}</p>
+        <p className="text-sm text-red-100">{t("failedHint", { failed: serverText(failedRef, tAll) ?? shown(failed) })}</p>
         <div className="flex gap-5">
           {anyway}
           <button type="button" onClick={() => setAttempt((n) => n + 1)} className="text-sm font-bold text-muted hover:text-white">

@@ -13,7 +13,6 @@ export function MatchUpload() {
   const t = useTranslations("home.upload");
   const tAll = useTranslations();
   const tv = useTranslations("validation");
-  const te = useTranslations("errors");
   const router = useRouter();
   const uploading = useRef(false);
   const [progress, setProgress] = useState<number | null>(null);
@@ -57,7 +56,7 @@ export function MatchUpload() {
     form.set("video", file);
     form.set("mode", "highlights");
     try {
-      const job = await submitJob("autocut", form, setProgress, te);
+      const job = await submitJob("autocut", form, setProgress, tAll);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setRetryFile(file);

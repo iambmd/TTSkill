@@ -2,7 +2,7 @@
 
 import demoAssets from "@/lib/demo-assets.json";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { submitJob } from "@/lib/submit";
 import { feetInches, heightProblem, LIMITS } from "@/lib/validate";
@@ -23,8 +23,8 @@ const unitTag = (u: string) => (
 export default function MatchPage() {
   const t = useTranslations("match");
   const tAll = useTranslations();
+  const locale = useLocale();
   const tv = useTranslations("validation");
-  const te = useTranslations("errors");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
@@ -58,7 +58,7 @@ export default function MatchPage() {
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("match", form, setProgress, te);
+      const job = await submitJob("match", form, setProgress, tAll);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);
@@ -74,6 +74,8 @@ export default function MatchPage() {
         title={t("title")}
         body={t("body")}
       />
+      {/* The pros' differences, warnings and title cards come back in the page's language. */}
+      <input type="hidden" name="lang" value={locale} />
       <VideoPicker findPlayer
         kind="match" onProblem={setVideoProblem}
         title={t("videoTitle")} hint={t("videoHint")}

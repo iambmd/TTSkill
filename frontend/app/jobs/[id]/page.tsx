@@ -7,6 +7,7 @@ import { OfflineNotice } from "../../offline-notice";
 import type { Job } from "@/lib/submit";
 import { DownloadIcon, Warning, buttonBaseClass, secondaryButtonClass, strokeFamily, strokeName } from "../../ui";
 import { EnglishOnly } from "../../english-only";
+import { jobText } from "@/lib/server-text";
 import { AutoCutWaiting } from "./autocut-waiting";
 import { AnalysedPlayer } from "./analysed-player";
 import { CoachView } from "./coach-view";
@@ -154,10 +155,11 @@ function GoDeeper({ id }: { id: string }) {
 
 function JobFailure({ job }: { job: Job }) {
   const t = useTranslations("job");
+  const tAll = useTranslations();
   return (
     <div className="surface-card space-y-3 p-4">
       <p role="alert" className="text-red-200">
-        {job.failureHint ?? t("failure")}
+        {jobText(job.failureHint, job.failureRef, tAll) ?? t("failure")}
       </p>
       <Link href={job.kind === "autocut" ? "/" : `/${job.kind}`} className={secondaryButtonClass}>
         {t("tryAnother")}
@@ -274,10 +276,10 @@ export default function JobPage({ params }: { params: Promise<{ id: string }> })
           {/* A cached demo's headline and cards are English; the badge says so on other languages. */}
           {demo && job.breakdown && <EnglishOnly />}
           <h1 className="headline break-words text-5xl text-accent" lang={demo && job.breakdown && locale !== "en" ? "en" : undefined}>{titleFor(job, t)}</h1>
-          {!failed && (job.kind !== "autocut" || job.status === "queued") && <p role={ended ? undefined : "status"} className="text-muted">{job.message === "Done." ? t("job.status.done") : job.message}</p>}
+          {!failed && (job.kind !== "autocut" || job.status === "queued") && <p role={ended ? undefined : "status"} className="text-muted">{job.message === "Done." && !job.messageRef ? t("job.status.done") : jobText(job.message, job.messageRef, t)}</p>}
           {failed && <JobFailure job={job} />}
           {job.kind === "autocut" && job.status === "done" && !job.resultUrl && <NoRallies />}
-          {job.warning && (job.kind !== "autocut" || job.resultUrl) && <Warning>{job.warning}</Warning>}
+          {job.warning && (job.kind !== "autocut" || job.resultUrl) && <Warning>{jobText(job.warning, job.warningRef, t)}</Warning>}
           {job.status === "done" && (
             <div className="flex flex-wrap gap-2 pt-2">
               {job.resultUrl && !job.rallyClips?.length && (

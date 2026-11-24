@@ -24,6 +24,7 @@ from starlette.concurrency import run_in_threadpool
 from pydantic import StrictInt
 
 from equipment import recommend as rubbers
+from messages import Msg
 from technique.strokes import STROKE_TYPES
 
 from . import download, jobqueue, jobs, validate
@@ -54,7 +55,9 @@ LABELS = {"top_n": "Rallies in the reel", "threshold": "Hit threshold", "gap": "
 @app.exception_handler(validate.Invalid)
 @app.exception_handler(download.LinkError)
 async def invalid_input(request: Request, exc: ValueError) -> JSONResponse:
-    return JSONResponse({"detail": str(exc)}, status_code=422)
+    # detailRef: the message's key and arguments, so the page can show it in the reader's language.
+    ref = getattr(exc, "ref", None)
+    return JSONResponse({"detail": str(exc), **({"detailRef": ref} if ref else {})}, status_code=422)
 
 
 @app.exception_handler(RequestValidationError)
@@ -62,11 +65,11 @@ async def bad_field(request: Request, exc: RequestValidationError) -> JSONRespon
     # Build the message from the field name only: echoing the input back can break the JSON encoding.
     err = exc.errors()[0]
     field = str(err["loc"][-1])
-    label, kind = LABELS.get(field, field), err.get("type", "")
-    msg = (f"{label} must be a whole number." if kind.startswith("int") else
-           f"{label} must be a number." if kind.startswith("float") else
-           f"{label} is missing." if kind == "missing" else f"{label} isn't valid.")
-    return JSONResponse({"detail": msg}, status_code=422)
+    label, kind = validate.label_(LABELS.get(field, field)), err.get("type", "")
+    msg = (Msg("validation.wholeNumber", label=label) if kind.startswith("int") else
+           Msg("validation.number", label=label) if kind.startswith("float") else
+           Msg("serverErrors.missing", label=label) if kind == "missing" else Msg("serverErrors.notValid", label=label))
+    return JSONResponse({"detail": str(msg), "detailRef": msg.ref()}, status_code=422)
 
 
 def save_upload(upload: UploadFile, dest: Path) -> Path:
@@ -113,10 +116,10 @@ def keep_for_job(path: Path, filename: str) -> str:
 def staged_input(token: str) -> tuple[Path, str]:
     """The upload a `staged` token names, and its original file name."""
     if not re.fullmatch(r"[0-9a-f]{32}\.(mp4|mov|webm|mkv)", token):
-        raise validate.Invalid("Choose the video again.")
+        raise validate.Invalid(Msg("validation.chooseVideoAgain"))
     path = jobs.DATA_DIR / ".uploads" / token
     if not path.exists():
-        raise validate.Invalid("Your upload expired. Choose the video again.")
+        raise validate.Invalid(Msg("serverErrors.uploadExpired"))
     name = path.with_name(token + ".name")
     filename = name.read_text() if name.exists() else token
     name.unlink(missing_ok=True)
@@ -137,14 +140,14 @@ def uploaded_match(source_job: str, source_rally: str = "") -> tuple[Path, str]:
     path = job_input(source_job)
     source = jobs.load(source_job)
     if not source or source["kind"] != "autocut" or source["status"] != "done":
-        raise validate.Invalid("Open a finished match result to use that video.")
+        raise validate.Invalid(Msg("serverErrors.finishedMatch"))
     if source_rally:
         ids = {str(rally["id"]) for rally in source.get("rallyClips", [])}
         if source_rally not in ids:
-            raise validate.Invalid("That rally is no longer available. Open the match result and choose again.")
+            raise validate.Invalid(Msg("serverErrors.rallyGone"))
         path = jobs.job_dir(source_job) / f"rally-{source_rally}.mp4"
     if not path or not path.is_file():
-        raise validate.Invalid("This video is no longer available. Choose the video again.")
+        raise validate.Invalid(Msg("serverErrors.videoGone"))
     return path, source["params"].get("video") or path.name
 
 
@@ -206,7 +209,7 @@ def create_autocut(
     staged = stage_upload(video) if has_file(video) else None
     link = None if staged else check_link(url, "autocut")
     if not staged and link is None:
-        raise validate.Invalid("Upload a match video or paste a YouTube link.")
+        raise validate.Invalid(Msg("validation.autocutVideo"))
     params = {"video": video.filename if staged else link["title"], "url": link and link["url"],
               "mode": mode, "top_n": top_n, "threshold": threshold, "gap": gap, "min_hits": min_hits}
     job = jobs.create("autocut", params)
@@ -237,9 +240,9 @@ def create_breakdown(
     lang: str = Form("en"),
 ) -> dict:
     if stroke not in STROKES:
-        raise validate.Invalid(f"Unknown stroke: {stroke}. Leave it blank to auto-detect.")
+        raise validate.Invalid(Msg("validation.unknownStroke", stroke=stroke))
     if stroke_type and stroke_type not in STROKE_TYPES:
-        raise validate.Invalid(f"Unknown stroke type: {stroke_type}. Pick one from the list, or leave it blank to auto-detect.")
+        raise validate.Invalid(Msg("validation.unknownStrokeType", stroke=stroke_type))
     validate.choice(hand, "hand", "Bat hand")
     validate.choice(lang, "lang", "Language")
     selection = validate.player_selection(player_time, player_box)
@@ -249,7 +252,7 @@ def create_breakdown(
     staged, filename = uploaded_match(source_job, source_rally) if source_job else take_video(video, staged)
     link = check_link(url, "breakdown") if staged is None else None
     if staged is None and link is None and not text:
-        raise validate.Invalid("Upload a clip, paste a YouTube link, or describe the training.")
+        raise validate.Invalid(Msg("validation.breakdownInput"))
     params = {"stroke": stroke, "stroke_type": stroke_type or "auto", "player": player, "text": text, "hand": hand,
               "video": filename if staged else (link["title"] if link else None),
               "url": link and link["url"]}
@@ -288,8 +291,10 @@ def create_match(
     player_time: str = Form(""),
     player_box: str = Form(""),
     staged: str = Form(""),
+    lang: str = Form("en"),
 ) -> dict:
     validate.choice(stroke, "match_stroke", "Stroke")
+    validate.choice(lang, "lang", "Language")
     selection = validate.player_selection(player_time, player_box)
     validate.choice(hand, "hand", "Bat hand")
     validate.choice(grip, "grip", "Grip")
@@ -297,17 +302,18 @@ def create_match(
     staged, filename = take_video(video, staged)
     link = None if staged else check_link(url, "match")
     if not staged and link is None:
-        raise validate.Invalid("Upload a clip of yourself or paste a YouTube link.")
+        raise validate.Invalid(Msg("validation.matchVideo"))
     params = {"video": filename if staged else link["title"], "url": link and link["url"],
-              "stroke": stroke, "hand": hand, "grip": grip, "height_cm": height}
+              "stroke": stroke, "hand": hand, "grip": grip, "height_cm": height, "lang": lang}
     if selection:
         params["player_pick"] = {"time": selection[0], "box": list(selection[1])}
     job = jobs.create("match", params)
     args = (stroke, height, hand, grip) + ((selection,) if selection else ())
+    kwargs = {"lang": lang} if lang != "en" else {}   # differences, warnings and title cards
     if link:
-        jobqueue.submit(background, fetch_then, job["id"], link["url"], run_match, *args)
+        jobqueue.submit(background, fetch_then, job["id"], link["url"], run_match, *args, **kwargs)
     else:
-        jobqueue.submit(background, run_match, job["id"], adopt(staged, job["id"]), *args)
+        jobqueue.submit(background, run_match, job["id"], adopt(staged, job["id"]), *args, **kwargs)
     return job
 
 
@@ -334,11 +340,11 @@ def create_coach(
     selection = validate.player_selection(player_time, player_box)
     solo = validate.only_me(only_me) and not selection   # a tapped player wins
     if not request:
-        raise validate.Invalid("Tell the coach what you want, e.g. 'show my best rallies and fix my forehand'.")
+        raise validate.Invalid(Msg("validation.coachRequest"))
     staged, filename = uploaded_match(source_job, source_rally) if source_job else take_video(video, staged)
     link = None if staged else check_link(url, "coach")
     if not staged and link is None:
-        raise validate.Invalid("Add a video: upload a clip or paste a YouTube link.")
+        raise validate.Invalid(Msg("validation.coachVideo"))
     params = {"request": request, "video": filename if staged else link["title"],
               "url": link and link["url"]}
     if selection:
@@ -419,7 +425,7 @@ def _detect_frames(sent: list[tuple[float, bytes]], queued: float, cancel: threa
     for t, data in sent:
         image = cv2.imdecode(np.frombuffer(data, np.uint8), cv2.IMREAD_COLOR)
         if image is None:
-            raise validate.Invalid("A frame couldn't be read as an image.")
+            raise validate.Invalid(Msg("serverErrors.frameUnreadable"))
         images.append((t, image))
     decoded = time.monotonic()
     result = people.detect(images, cancel=cancel)
@@ -486,7 +492,7 @@ async def detect_players(
     from technique.people import Cancelled
 
     if kind not in ("breakdown", "match", "coach"):
-        raise validate.Invalid("kind must be breakdown, match or coach.")
+        raise validate.Invalid(Msg("serverErrors.kind"))
     t0 = time.monotonic()
     extra: dict = {}
     try:
@@ -495,7 +501,7 @@ async def detect_players(
             stored = job_input(job)
             link_url = None if stored else (jobs.load(job) or {}).get("params", {}).get("url")
             if stored is None and not link_url:
-                raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
+                raise validate.Invalid(Msg("serverErrors.jobVideoGone"))
             source = "job video" if stored else "job link"
             result = await run_while_connected(request, _detect_video, stored, link_url, time.monotonic())
         elif has_file(video):
@@ -536,7 +542,7 @@ async def detect_players(
 def job_input(job_id: str) -> Path | None:
     """A job's stored upload (input.<ext>), if it still exists. Links are deleted after the job."""
     if not re.fullmatch(r"[0-9a-f]{32}", job_id):
-        raise validate.Invalid("Unknown job.")
+        raise validate.Invalid(Msg("validation.unknownJob"))
     return next(iter(sorted(jobs.job_dir(job_id).glob("input.*"))), None)
 
 
@@ -552,11 +558,11 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
     stored = job_input(job_id)
     old = jobs.load(job_id)
     if not old or old.get("kind") not in ("breakdown", "match", "coach"):
-        raise validate.Invalid("Only Breakdown, Pro match and Coach results can change player.")
+        raise validate.Invalid(Msg("serverErrors.changePlayerKinds"))
     p = old["params"]
     url = None if stored else p.get("url")
     if stored is None and not url:
-        raise validate.Invalid("This job's video is no longer here. Upload it again to pick a player.")
+        raise validate.Invalid(Msg("serverErrors.jobVideoGone"))
     params = {**p, "player_pick": {"time": selection[0], "box": list(selection[1])}, "rerun_of": job_id}
     job = jobs.create(old["kind"], params)
     path = None
@@ -575,8 +581,6 @@ def rerun_job(job_id: str, background: BackgroundTasks, player_time: str = Form(
     else:
         jobqueue.submit(background, run_coach, job["id"], path, url, p.get("request") or "", selection, **lang)
         return job
-    if old["kind"] != "breakdown":
-        lang = {}   # Pro match text isn't translated yet
     if url:
         jobqueue.submit(background, fetch_then, job["id"], url, fn, *args, **lang)
     else:
@@ -592,12 +596,12 @@ def export_highlights(job_id: str, rallies: list[StrictInt] = Body(embed=True)) 
         raise HTTPException(404, "Open a finished match result to export highlights.")
     available = {rally["id"] for rally in job.get("rallyClips", [])}
     if not rallies or len(set(rallies)) != len(rallies) or not set(rallies) <= available:
-        raise validate.Invalid("Choose at least one available rally, once each.")
+        raise validate.Invalid(Msg("errors.pickRally"))
 
     folder = jobs.job_dir(job_id)
     parts = [folder / f"rally-{rally}.mp4" for rally in rallies]
     if not all(part.is_file() for part in parts):
-        raise validate.Invalid("Some rally clips are no longer available. Upload the match again.")
+        raise validate.Invalid(Msg("serverErrors.clipsGone"))
     tag = hashlib.sha256(",".join(map(str, rallies)).encode()).hexdigest()[:20]
     dest = folder / f"highlights-{tag}.mp4"
     if not dest.exists():

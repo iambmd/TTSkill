@@ -3,7 +3,7 @@ import { routeMessages } from "@/lib/messages";
 import { invalid } from "@/lib/validate";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { e } = routeMessages(req);
+  const { e, t } = routeMessages(req);
   const { id } = await params;
   const body = await req.json().catch(() => null);
   const rallies = body?.rallies;
@@ -11,5 +11,5 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       !rallies.every((rally) => Number.isSafeInteger(rally) && rally > 0) || new Set(rallies).size !== rallies.length) {
     return invalid(e("pickRally"));
   }
-  return exportHighlights(id, rallies, e);
+  return exportHighlights(id, rallies, e, t);
 }

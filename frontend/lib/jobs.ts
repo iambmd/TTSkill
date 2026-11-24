@@ -3,6 +3,7 @@ import { randomUUID } from "crypto";
 import { unavailableStatus } from "./analysis-status";
 import { english } from "./english";
 import type { Tr } from "./messages";
+import { errorText, type Catalog } from "./server-text";
 import { PUBLIC_API_URL, type Job } from "./submit";
 import demoJobs from "./demo-jobs.json";
 
@@ -51,7 +52,7 @@ function describeForm(form: FormData): Record<string, unknown> {
 }
 
 /** `offline`: the "analysis server is offline" sentence in the request's language. */
-export async function createJob(kind: Job["kind"], form: FormData, t: Tr = EN, offline = OFFLINE): Promise<Response> {
+export async function createJob(kind: Job["kind"], form: FormData, t: Tr = EN, offline = OFFLINE, all?: Catalog): Promise<Response> {
   if (DEMO_MODE && DEMO_JOBS[`demo-${kind}`]) return Response.json(DEMO_JOBS[`demo-${kind}`], { status: 201 });
   if (BACKEND_URL) {
     const res = await backend(`/jobs/${kind}`, { method: "POST", body: form }, t);
@@ -59,7 +60,7 @@ export async function createJob(kind: Job["kind"], form: FormData, t: Tr = EN, o
     // FastAPI reports errors as {detail}; the client reads {error}.
     if (!res.ok) {
       if (unavailableStatus(res.status)) return Response.json({ error: offline }, { status: res.status });
-      const detail = typeof data.detail === "string" ? data.detail : data.error ?? t("rejected");
+      const detail = errorText(data, all, t("rejected"));
       return Response.json({ error: detail }, { status: res.status });
     }
     return Response.json(data, { status: res.status });
@@ -79,7 +80,7 @@ export async function createJob(kind: Job["kind"], form: FormData, t: Tr = EN, o
 
 /** "Which one is you?": the players in frames of the chosen video. Without a backend (stub or
  * demo mode) nothing can look, so the answer says so and the picker stays hidden. */
-export async function detectPlayers(form: FormData, signal?: AbortSignal, t: Tr = EN): Promise<Response> {
+export async function detectPlayers(form: FormData, signal?: AbortSignal, t: Tr = EN, all?: Catalog): Promise<Response> {
   if (DEMO_MODE || !BACKEND_URL) return Response.json({ candidates: [], frame: null, available: false });
   const start = Date.now();
   // Pass the browser's abort on, so the backend stops working for a page that left.
@@ -88,8 +89,7 @@ export async function detectPlayers(form: FormData, signal?: AbortSignal, t: Tr 
   const ms = Date.now() - start;
   console.info(detectLog(form, res.status, ms, data));
   if (!res.ok) {
-    const detail = typeof data.detail === "string" ? data.detail : data.error ?? t("rejected");
-    return Response.json({ error: detail }, { status: res.status });
+    return Response.json({ error: errorText(data, all, t("rejected")) }, { status: res.status });
   }
   if (data.timing) data.timing.next_s = Number((ms / 1000).toFixed(2));
   return Response.json(data);
@@ -110,15 +110,14 @@ export function detectLog(form: FormData, status: number, ms: number, data: { ti
 }
 
 /** "Change player": the same job on the same video, following the newly tapped player. */
-export async function rerunJob(id: string, form: FormData, t: Tr = EN): Promise<Response> {
+export async function rerunJob(id: string, form: FormData, t: Tr = EN, all?: Catalog): Promise<Response> {
   if (DEMO_MODE || !BACKEND_URL || DEMO_JOBS[id]) {
     return Response.json({ error: t("rerunNeedsBackend") }, { status: 422 });
   }
   const res = await backend(`/jobs/${id}/rerun`, { method: "POST", body: form }, t);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const detail = typeof data.detail === "string" ? data.detail : data.error ?? t("rejected");
-    return Response.json({ error: detail }, { status: res.status });
+    return Response.json({ error: errorText(data, all, t("rejected")) }, { status: res.status });
   }
   return Response.json(data, { status: res.status });
 }
@@ -169,7 +168,7 @@ export async function getResult(id: string, range?: string | null, file?: string
 }
 
 
-export async function exportHighlights(id: string, rallies: number[], t: Tr = EN): Promise<Response> {
+export async function exportHighlights(id: string, rallies: number[], t: Tr = EN, all?: Catalog): Promise<Response> {
   if (!BACKEND_URL || DEMO_JOBS[id]) return Response.json({ error: t("noRallyClips") }, { status: 404 });
   const res = await backend(`/jobs/${id}/exports`, {
     method: "POST",
@@ -178,7 +177,7 @@ export async function exportHighlights(id: string, rallies: number[], t: Tr = EN
   }, t);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    return Response.json({ error: data.detail ?? data.error ?? t("exportFailed") }, { status: res.status });
+    return Response.json({ error: errorText(data, all, t("exportFailed")) }, { status: res.status });
   }
   return Response.json(data);
 }

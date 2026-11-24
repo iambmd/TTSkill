@@ -156,7 +156,8 @@
       "topN": "Rallies in the reel",
       "threshold": "Hit threshold",
       "gap": "Max gap",
-      "minHits": "Min hits"
+      "minHits": "Min hits",
+      "height": "Height"
     }
   },
   "home": {
@@ -680,5 +681,85 @@
     "linkLabel": "{action}: {product} at {store}{unverified}",
     "unverifiedSuffix": " (unverified)",
     "alsoAt": "Also at"
+  },
+  "serverErrors": {
+    "unreadable": "We couldn't read that file as a video. Export it again as MP4 or MOV and retry.",
+    "noVideoTrack": "That file has no video track, only sound. Upload the video itself.",
+    "noDuration": "We couldn't tell how long that video is. Export it again as MP4 and retry.",
+    "uploadExpired": "Your upload expired. Choose the video again.",
+    "finishedMatch": "Open a finished match result to use that video.",
+    "rallyGone": "That rally is no longer available. Open the match result and choose again.",
+    "videoGone": "This video is no longer available. Choose the video again.",
+    "frameUnreadable": "A frame couldn't be read as an image.",
+    "kind": "kind must be breakdown, match or coach.",
+    "jobVideoGone": "This job's video is no longer here. Upload it again to pick a player.",
+    "changePlayerKinds": "Only Breakdown, Pro match and Coach results can change player.",
+    "clipsGone": "Some rally clips are no longer available. Upload the match again.",
+    "missing": "{label} is missing.",
+    "notValid": "{label} isn't valid.",
+    "link": {
+      "private": "That video is private. Use a public or unlisted video.",
+      "ageRestricted": "That video is age-restricted, so we can't download it. Try another link.",
+      "membersOnly": "That video is for channel members only. Try a public video.",
+      "blocked": "YouTube is blocking downloads from this server right now. Upload the file instead.",
+      "notStarted": "That's a live stream that hasn't started. Live videos aren't supported: use a regular video.",
+      "unavailable": "That video is unavailable. Check the link, or it may have been removed.",
+      "couldntOpen": "Couldn't open that video: {detail}",
+      "live": "That's a live stream. Live videos aren't supported: wait until it ends, or use a regular video.",
+      "tooLong": "That video is {length} long. Use one under {max}, or trim it and upload the file.",
+      "noFile": "The download finished but no video file was saved. Try again."
+    },
+    "player": {
+      "lostPick": "We lost the player you picked: we could see them {seen}. Pick them in a frame where they're clearly in view, film closer, or trim the video to the part where they play.",
+      "seenPct": "only in {pct}% of the clip",
+      "seenNowhere": "anywhere in the analysed part of the clip",
+      "none": "We couldn't find a player in this clip. Film a clearer clip: the whole body in frame, side-on if you can, in good light.",
+      "onlySeen": "We could only see the player in {pct}% of the clip. Film a clearer clip: the whole body in frame, side-on if you can, in good light.",
+      "cantReadAt": "We couldn't read the video at {when}, where you picked the player. Pick again.",
+      "notFoundAt": "We couldn't find the player you picked at {when}. Pick again, or trim the video.",
+      "hand": "We couldn't tell your hitting hand. Choose left or right, or upload a clearer swing."
+    }
+  },
+  "progress": {
+    "waiting": "Waiting for the worker. Start it with `make dev` (or `make worker`).",
+    "restarted": "The server restarted before this job finished. Please try again.",
+    "workerRestarted": "The worker restarted before this job finished. Please try again.",
+    "unfinished": "The job stopped without finishing. Please try again.",
+    "failed": "We couldn't finish this analysis. Try again or upload a shorter clip.",
+    "timeout": "This took longer than {minutes} minutes, so we stopped it. Try a shorter clip, or try again.",
+    "starting": "Starting...",
+    "downloading": "Downloading the video...",
+    "downloadingPct": "Downloading the video... {pct}%",
+    "autocut": {
+      "none": "No rallies found.",
+      "doneTop": "Top {n} rallies, {seconds} seconds.",
+      "doneAll": "All {n} rallies, {seconds} seconds.",
+      "failed": "We couldn't make a reel. Try a shorter MP4 or MOV recording with sound.",
+      "heardNone": "We didn't hear any rallies. Try filming closer to the table or somewhere with less background noise.",
+      "heardOne": "We only heard 1 rally. Try filming closer to the table or somewhere with less background noise.",
+      "heardFew": "We only heard {n} rallies. Try filming closer to the table or somewhere with less background noise."
+    },
+    "breakdown": {
+      "start": "Starting the breakdown...",
+      "onlyMe": "Finding who plays the most...",
+      "reading": "Reading your video...",
+      "finding": "Finding the stroke...",
+      "pose": "Tracking the player's body...",
+      "hand": "Finding the bat hand...",
+      "strokeType": "Working out the stroke...",
+      "analysing": "Writing the coaching cards...",
+      "rendering": "Rendering the coaching video...",
+      "finishing": "Finishing up...",
+      "done": "{headline} ({analyzer} analyzer)",
+      "ready": "Breakdown ready"
+    },
+    "match": {
+      "swings": "Finding your best swings...",
+      "reading": "Reading your body and swing with MediaPipe...",
+      "height": "Estimating your height from the table...",
+      "pros": "Comparing you with the pros...",
+      "compile": "Putting their breakdowns together...",
+      "done": "You play most like {name} ({score}% body match)."
+    }
   }
 }

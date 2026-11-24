@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Callable
 
 from limits import LIMITS
+from messages import Keyed, Msg
 
 MAX_HEIGHT = 720
 # The download's own guard; probe() has already applied the page's (lower) limit.
@@ -32,8 +33,9 @@ _BASE_OPTS = {"quiet": True, "no_warnings": True, "noplaylist": True, "js_runtim
               "socket_timeout": 15, "retries": 2, "extractor_retries": 1}
 
 
-class LinkError(ValueError):
-    """A problem with the link that the user can fix. The message is shown as-is."""
+class LinkError(Keyed):
+    """A problem with the link that the user can fix. The message is shown to the user (and
+    translated by the page from its reference, messages.py)."""
 
 
 class _QuietLogger:
@@ -51,12 +53,12 @@ def video_id(url: str) -> str:
         if m:
             return m.group(1)
     if _PLAYLIST.match(url):
-        raise LinkError("That's a playlist. Open one video from it and paste that video's link.")
+        raise LinkError(Msg("validation.playlist"))
     if _CHANNEL.match(url):
-        raise LinkError("That's a channel link. Open one of its videos and paste that video's link.")
+        raise LinkError(Msg("validation.channel"))
     if not _YOUTUBE.match(url):
-        raise LinkError(f"Only YouTube links work here. {LINK_HINT} Or upload the file.")
-    raise LinkError(f"That isn't a YouTube video link we can use. {LINK_HINT}")
+        raise LinkError(Msg("validation.notYoutube", hint=Msg("validation.linkHint")))
+    raise LinkError(Msg("validation.badYoutube", hint=Msg("validation.linkHint")))
 
 
 def canonical(url: str) -> str:
@@ -67,18 +69,18 @@ def _friendly(err: Exception) -> LinkError:
     msg = str(err)
     low = msg.lower()
     if "private video" in low:
-        return LinkError("That video is private. Use a public or unlisted video.")
+        return LinkError(Msg("serverErrors.link.private"))
     if "confirm your age" in low or "age-restricted" in low:
-        return LinkError("That video is age-restricted, so we can't download it. Try another link.")
+        return LinkError(Msg("serverErrors.link.ageRestricted"))
     if "members-only" in low or "join this channel" in low:
-        return LinkError("That video is for channel members only. Try a public video.")
+        return LinkError(Msg("serverErrors.link.membersOnly"))
     if "not a bot" in low:
-        return LinkError("YouTube is blocking downloads from this server right now. Upload the file instead.")
+        return LinkError(Msg("serverErrors.link.blocked"))
     if "live event will begin" in low or "premieres in" in low:
-        return LinkError("That's a live stream that hasn't started. Live videos aren't supported: use a regular video.")
+        return LinkError(Msg("serverErrors.link.notStarted"))
     if "unavailable" in low or "removed" in low or "does not exist" in low:
-        return LinkError("That video is unavailable. Check the link, or it may have been removed.")
-    return LinkError(f"Couldn't open that video: {msg.removeprefix('ERROR: ').strip()[:160]}")
+        return LinkError(Msg("serverErrors.link.unavailable"))
+    return LinkError(Msg("serverErrors.link.couldntOpen", detail=msg.removeprefix("ERROR: ").strip()[:160]))
 
 
 def max_seconds(kind: str) -> int:
@@ -89,14 +91,13 @@ def max_seconds(kind: str) -> int:
 def check_info(info: dict, kind: str) -> None:
     """LinkError for a video we won't fetch for this page: live, age-restricted, too long."""
     if info.get("is_live") or info.get("live_status") in ("is_live", "is_upcoming"):
-        raise LinkError("That's a live stream. Live videos aren't supported: wait until it ends, or use a regular video.")
+        raise LinkError(Msg("serverErrors.link.live"))
     if (info.get("age_limit") or 0) >= 18:
-        raise LinkError("That video is age-restricted, so we can't download it. Try another link.")
+        raise LinkError(Msg("serverErrors.link.ageRestricted"))
     duration, most = info.get("duration") or 0, max_seconds(kind)
     if duration > most:
         m, s = divmod(int(duration), 60)
-        raise LinkError(f"That video is {m}:{s:02d} long. Use one under {most // 60} minutes, "
-                        "or trim it and upload the file.")
+        raise LinkError(Msg("serverErrors.link.tooLong", length=f"{m}:{s:02d}", max=Msg("common.minutes", n=most // 60)))
 
 
 def probe(url: str, kind: str = "breakdown") -> dict:
@@ -156,6 +157,6 @@ def download(url: str, dest_dir: Path, stem: str = "input",
     if path is None:
         matches = sorted(dest_dir.glob(f"{stem}.*"))
         if not matches:
-            raise LinkError("The download finished but no video file was saved. Try again.")
+            raise LinkError(Msg("serverErrors.link.noFile"))
         path = matches[0]
     return path

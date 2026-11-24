@@ -4,6 +4,7 @@ import { createTranslator } from "next-intl";
 import en from "../messages/en.json";
 import vi from "../messages/vi.json";
 import { requestLocale, type Locale } from "./locale";
+import type { Catalog } from "./server-text";
 
 export const MESSAGES = { en, vi } as const;
 
@@ -21,6 +22,8 @@ export function routeMessages(req: Request) {
     locale,
     v: translator(locale, "validation"),
     e: translator(locale, "errors"),
+    /** The whole catalogue: the backend's own messages arrive as keys (lib/server-text.ts). */
+    t: translator(locale, "") as unknown as Catalog,
     offline: translator(locale, "offline")("analysis"),
   };
 }

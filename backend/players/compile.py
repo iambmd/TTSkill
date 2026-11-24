@@ -15,29 +15,38 @@ from .match import DATA
 CARD_S = 1.6
 
 
-def _card(rank: int, m: dict, stroke: str, has_clip: bool = True) -> np.ndarray:
+def _card(rank: int, m: dict, stroke: str, has_clip: bool = True, lang: str = "en") -> np.ndarray:
+    import i18n
+
+    lang = i18n.norm(lang)
+    w = i18n.MATCH[lang]
+    stroke_name = i18n.stroke_label(stroke, lang).lower() if lang != "en" else stroke
     img = Image.new("RGB", (W, H), BG[::-1])
     d = ImageDraw.Draw(img)
     _brand(d)
-    d.text((60, 640), f"#{rank} MATCH · {stroke.upper()}", font=font("bold", 48), fill=ACCENT)
+    d.text((60, 640), w["card_rank"].format(rank=rank, stroke=stroke_name.upper()), font=font("bold", 48), fill=ACCENT)
     name = m["name"].upper()
     f = font("display", 150)
     while d.textlength(name, font=f) > W - 120 and f.size > 70:
         f = font("display", f.size - 8)
     d.text((56, 710), name, font=f, fill=WHITE)
     y = 710 + int(f.size * 1.05)
-    facts = f"{m['height_cm']} cm · {m['bat_hand']}-handed · {m.get('grip') or 'shakehand'} · {m.get('country') or ''}"
+    hand = i18n.HANDS_VI.get(m["bat_hand"], m["bat_hand"]) if lang == "vi" else m["bat_hand"]
+    grip = m.get("grip") or "shakehand"
+    facts = (f"{m['height_cm']} cm · {w['card_hand'].format(hand=hand)} · {w['grips'].get(grip, grip)} · "
+             f"{m.get('country') or ''}")
     facts = facts.strip(" ·")
     d.text((60, y + 10), facts, font=font("semibold", 46), fill=GREY)
     d.text((60, y + 90), f"{m['score']}%", font=font("display", 120), fill=ACCENT)
     d.text((60 + d.textlength(f"{m['score']}%", font=font("display", 120)) + 24, y + 150),
-           "body match", font=font("semibold", 44), fill=WHITE)
+           w["card_body"], font=font("semibold", 44), fill=WHITE)
     if not has_clip:
-        d.text((60, y + 290), f"No {stroke} clip of {m['name'].split()[-1]} yet.", font=font("semibold", 46), fill=GREY)
+        d.text((60, y + 290), w["card_no_clip"].format(stroke=stroke_name, name=m["name"].split()[-1]),
+               font=font("semibold", 46), fill=GREY)
     return np.array(img)[:, :, ::-1].copy()
 
 
-def compile_matches(matches: list[dict], stroke: str, workdir: Path, dest: Path) -> Path | None:
+def compile_matches(matches: list[dict], stroke: str, workdir: Path, dest: Path, lang: str = "en") -> Path | None:
     """A card per match in rank order, each followed by the pro's cached breakdown when there
     is one. A pro can rank first on body proportions with no usable clip of this stroke
     (Ovtcharov's forehands tracked his sparring partner and were dropped); skipping him made
@@ -49,7 +58,7 @@ def compile_matches(matches: list[dict], stroke: str, workdir: Path, dest: Path)
         video = DATA / m["breakdown"] if m.get("breakdown") else None
         has_clip = bool(video and video.exists())
         card = workdir / f"card{i}.mp4"
-        frame = _card(i, m, stroke, has_clip)
+        frame = _card(i, m, stroke, has_clip, lang)
         # Hold a card with no clip after it a little longer, so the note can be read.
         encode_frames((frame for _ in range(int(CARD_S * (1 if has_clip else 1.5) * 30))), card, W, H, 30)
         parts += [card, video] if has_clip else [card]

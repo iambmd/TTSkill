@@ -163,7 +163,10 @@ def hand_from_request(request: str) -> str:
     return "auto"
 
 
-def plan_from_request(request: str, has_link: bool) -> tuple[list[tuple[str, str]], str]:
+def plan_from_request(request: str, has_link: bool, lang: str = "en") -> tuple[list[tuple[str, str]], str]:
+    """The old fixed plan: (tool, label) steps for the request, labels in `lang`, and the stroke."""
+    import i18n
+
     t = request.lower()
     stroke = "backhand" if "backhand" in t else "forehand" if "forehand" in t else "auto"
     rallies = any(w in t for w in ("rall", "highlight", "best point", "best shot", "dead time", "cut ", "points"))
@@ -172,22 +175,23 @@ def plan_from_request(request: str, has_link: bool) -> tuple[list[tuple[str, str
     pros = any(w in t for w in (" pro", "pros", "who do i", "play like", "similar", "compare"))
     if not (rallies or tech or pros):
         rallies = tech = True
-    noun = "stroke" if stroke == "auto" else stroke  # "auto" is a setting, not something to say
-    steps = [("download_url", "Download the video")] if has_link else []
+    say = lambda key, **kw: i18n.t(lang, key, **kw)   # noqa: E731
+    noun = say(f"noun.{'stroke' if stroke == 'auto' else stroke}")  # "auto" is a setting, not something to say
+    steps = [("download_url", say("todo.download"))] if has_link else []
     if rallies:
-        steps += [("detect_rallies", "Find the rallies"), ("cut_highlights", "Cut the best rallies")]
+        steps += [("detect_rallies", say("todo.rallies")), ("cut_highlights", say("todo.reel"))]
     if tech or pros:
-        steps.append(("extract_pose", f"Measure your {noun} with MediaPipe"))
+        steps.append(("extract_pose", say("plan.measure", noun=noun)))
     if pros:
-        steps.append(("match_players", f"Find the pros closest to your {noun}"))
+        steps.append(("match_players", say("plan.match", noun=noun)))
     if tech:
-        steps.append(("render_breakdown", f"Write the coaching cards and render your {noun}"))
-    steps.append(("summary", "Sum up what to work on"))
+        steps.append(("render_breakdown", say("plan.cards", noun=noun)))
+    steps.append(("summary", say("plan.summary")))
     return steps, stroke
 
 
 def run_fallback(s: Session, request: str, why: str) -> None:
-    steps, stroke = plan_from_request(request, s.video is None and bool(s.url))
+    steps, stroke = plan_from_request(request, s.video is None and bool(s.url), s.lang)
     todos = [{"content": label, "status": "pending"} for _, label in steps]
     files = {"/plan.md": "# Plan\n" + "\n".join(f"{i}. {label}" for i, (_, label) in enumerate(steps, 1))
              + f"\n\nRequest: {request}\nEngine: fixed plan ({why})"}

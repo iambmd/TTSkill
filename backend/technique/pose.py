@@ -12,6 +12,7 @@ from scipy.ndimage import uniform_filter1d
 from scipy.signal import find_peaks
 
 from limits import LIMITS
+from messages import Msg
 from .errors import NoPlayer
 
 MODEL_URL = (
@@ -67,11 +68,8 @@ class PoseTrack:
 
 # Below this share of frames with a player, the cues and overlay would track noise.
 MIN_VISIBLE = LIMITS["pose"]["min_visible_ratio"]
-_CLEARER = "Film a clearer clip: the whole body in frame, side-on if you can, in good light."
 
 
-_LOST_PICK = ("Pick them in a frame where they're clearly in view, film closer, or trim the video "
-              "to the part where they play.")
 
 
 def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE, picked: bool = False) -> float:
@@ -80,13 +78,14 @@ def require_player(track: PoseTrack, min_ratio: float = MIN_VISIBLE, picked: boo
     so say they were lost (the tracker never swaps in someone else)."""
     ratio = float(track.valid.mean()) if len(track.valid) else 0.0
     if picked and ratio < min_ratio:
-        seen = f"only in {int(ratio * 100)}% of the clip" if ratio else "anywhere in the analysed part of the clip"
-        raise NoPlayer(f"We lost the player you picked: we could see them {seen}. {_LOST_PICK}")
+        seen = (Msg("serverErrors.player.seenPct", pct=int(ratio * 100)) if ratio
+                else Msg("serverErrors.player.seenNowhere"))
+        raise NoPlayer(Msg("serverErrors.player.lostPick", seen=seen))
     if ratio == 0:
-        raise NoPlayer(f"We couldn't find a player in this clip. {_CLEARER}")
+        raise NoPlayer(Msg("serverErrors.player.none"))
     if ratio < min_ratio:
         # Rounded down, so 39.6% doesn't read as "40%" next to a 40% minimum.
-        raise NoPlayer(f"We could only see the player in {int(ratio * 100)}% of the clip. {_CLEARER}")
+        raise NoPlayer(Msg("serverErrors.player.onlySeen", pct=int(ratio * 100)))
     return ratio
 
 
@@ -321,7 +320,7 @@ def identity_from_box(video: str | Path, time: float, box: tuple[float, float, f
     cap.release()
     when = f"{int(time // 60)}:{int(time % 60):02d}"
     if not ok:
-        raise NoPlayer(f"We couldn't read the video at {when}, where you picked the player. Pick again.")
+        raise NoPlayer(Msg("serverErrors.player.cantReadAt", when=when))
     h, w = frame.shape[:2]
     if h > 720:   # the working size of detection and tracking
         frame = cv2.resize(frame, (round(w * 720 / h), 720))
@@ -339,7 +338,7 @@ def identity_from_box(video: str | Path, time: float, box: tuple[float, float, f
         scored.append((_overlap(box_of(p), box) + inside, p))
     best = max(scored, key=lambda x: x[0], default=(0.0, None))
     if best[0] < .3:
-        raise NoPlayer(f"We couldn't find the player you picked at {when}. Pick again, or trim the video.")
+        raise NoPlayer(Msg("serverErrors.player.notFoundAt", when=when))
     return signature(frame, best[1])
 
 
@@ -536,7 +535,7 @@ def bat_side(video: str | Path, track: PoseTrack, hand: str = "auto",
     if side == "unknown" and assume in ("left", "right"):
         return assume, f"assumed {assume}-handed: no clear bat-hand cue in this clip"
     if side == "unknown":
-        raise NoPlayer("We couldn't tell your hitting hand. Choose left or right, or upload a clearer swing.")
+        raise NoPlayer(Msg("serverErrors.player.hand"))
     return side, "faster wrist (no decisive contact evidence)"
 
 

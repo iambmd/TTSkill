@@ -16,7 +16,6 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
   const t = useTranslations("coach");
   const tc = useTranslations("common");
   const tv = useTranslations("validation");
-  const te = useTranslations("errors");
   const tAll = useTranslations();
   const locale = useLocale();
   const router = useRouter();
@@ -53,7 +52,7 @@ export default function CoachForm({ sourceJob, rallyId, clip }: { sourceJob?: st
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("coach", form, setProgress, te);
+      const job = await submitJob("coach", form, setProgress, tAll);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

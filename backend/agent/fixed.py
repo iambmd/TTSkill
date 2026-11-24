@@ -338,7 +338,7 @@ def match_pros(s: Session, facts: dict, clip: Path, track, stroke: str) -> dict:
     curves = angle_curves(track, side, s.pose["peak"])
     user = {**facts["body"], "height_cm": height["height_cm"] if height else None}
     with timing.stage("match (distance + DTW)"):
-        matches = match(user, curves, stroke if stroke in ("forehand", "backhand") else "forehand", side)
+        matches = match(user, curves, stroke if stroke in ("forehand", "backhand") else "forehand", side, lang=s.lang)
     if not matches:
         raise RuntimeError("No pro profiles are built yet. Run: python -m players.build")
     clean = [{k: v for k, v in m.items() if k != "form"} for m in matches]
@@ -353,7 +353,8 @@ def compile_pros(s: Session, match: dict) -> None:
     from players.compile import compile_matches
 
     with timing.stage("compile pros' video"):
-        result = compile_matches(match["matches"], match["stroke"], s.dir / "match" / "parts", s.dir / "pro_matches.mp4")
+        result = compile_matches(match["matches"], match["stroke"], s.dir / "match" / "parts", s.dir / "pro_matches.mp4",
+                                 lang=s.lang)
     if result:
         top = match["matches"][0]
         s.add_output("match", i18n.t(s.lang, "out.match", name=top["name"]), "pro_matches.mp4",

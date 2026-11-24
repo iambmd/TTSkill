@@ -1,6 +1,6 @@
 import { AnalysisOfflineError, unavailableStatus } from "./analysis-status";
 import { english } from "./english";
-import type { Tr } from "./messages";
+import { errorText, type Catalog, type ServerRef } from "./server-text";
 
 export type RallyClip = {
   id: number;
@@ -17,6 +17,10 @@ export type Job = {
   progress: number;
   message?: string;
   failureHint?: string;
+  /** The same texts as message keys, for the reader's language (lib/server-text.ts). */
+  messageRef?: ServerRef | null;
+  failureRef?: ServerRef | null;
+  warningRef?: ServerRef | null;
   params: Record<string, unknown>;
   resultUrl?: string | null;
   canReuseVideo?: boolean;
@@ -110,9 +114,9 @@ export function withoutStagedFile(form: FormData): FormData {
  * Posts a form for a new job and returns the created job.
  * Uses XHR rather than fetch because only XHR reports upload progress, which matters for big phone videos.
  */
-/** `t`: the page's useTranslations("errors"), for the upload errors it shows. */
+/** `t`: the page's useTranslations(), for the upload errors it shows and the backend's own. */
 export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fraction: number) => void,
-  t: Tr = english("errors")): Promise<Job> {
+  t: Catalog = english("") as Catalog): Promise<Job> {
   form = withoutStagedFile(form);
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -123,16 +127,14 @@ export function submitJob(kind: Job["kind"], form: FormData, onProgress?: (fract
       const data = xhr.response ?? {};
       if (xhr.status >= 200 && xhr.status < 300 && typeof data.id === "string") return resolve(data as Job);
       if (unavailableStatus(xhr.status)) return reject(new AnalysisOfflineError());
-      if (xhr.status === 413) return reject(new Error(t("uploadTooBig")));
-      // Our routes answer {error}; FastAPI, reached directly, answers {detail}.
-      const detail = typeof data.detail === "string" ? data.detail : undefined;
-      const problem = typeof data.error === "string" ? data.error : detail;
-      reject(new Error(xhr.status >= 400 && xhr.status < 500 && problem
-        ? problem : t("uploadUnfinished")));
+      if (xhr.status === 413) return reject(new Error(t("errors.uploadTooBig")));
+      // Our routes answer {error}; FastAPI, reached directly, answers {detail} and its detailRef.
+      reject(new Error(xhr.status >= 400 && xhr.status < 500
+        ? errorText(data, t, t("errors.uploadUnfinished")) : t("errors.uploadUnfinished")));
     };
     xhr.onerror = () => reject(PUBLIC_API_URL
       ? new AnalysisOfflineError()
-      : new Error(t("uploadConnection")));
+      : new Error(t("errors.uploadConnection")));
     xhr.send(form);
   });
 }

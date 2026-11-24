@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { coachingOf } from "@/lib/coaching";
 import type { CoachNotes, Job } from "@/lib/submit";
 import { EnglishOnly, useEnglishBlock } from "../../english-only";
+import { jobText } from "@/lib/server-text";
 import { Markdown } from "../../markdown";
 import { CheckIcon, DownloadIcon, Warning, secondaryButtonClass } from "../../ui";
 import { AnalysedPlayer } from "./analysed-player";
@@ -111,11 +112,12 @@ export function Plan({ job }: { job: Job }) {
 /** The main section: what to work on, in Markdown (the biggest fix and a drill), or why there's none. */
 export function CoachNotesSection({ job, notes }: { job: Job; notes: CoachNotes | null }) {
   const t = useTranslations("coachView");
+  const tAll = useTranslations();
   const cached = isDemo(job);
   const english = useEnglishBlock(cached);
   let missing: string | null = null;
   if (!notes && !isRunning(job)) {
-    missing = job.status === "failed" ? t("stoppedEarly") : job.warning || t("noStroke");
+    missing = job.status === "failed" ? t("stoppedEarly") : jobText(job.warning, job.warningRef, tAll) || t("noStroke");
   }
   return (
     <section aria-labelledby="coach-notes" className="coach-notes min-w-0">
@@ -178,7 +180,7 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
             <p role="status" className="text-muted [overflow-wrap:anywhere]">
               {running && job.message && <span aria-hidden className="mr-2 inline-block size-2 animate-pulse rounded-full bg-accent" />}
               {/* Progress text comes from the backend; its final "Done." is the one we can name here. */}
-              {job.message === "Done." ? t("job.status.done") : job.message}
+              {job.message === "Done." && !job.messageRef ? t("job.status.done") : jobText(job.message, job.messageRef, t)}
             </p>
           )}
         </div>
@@ -189,7 +191,7 @@ export function CoachView({ job, debug = DEV }: { job: Job; debug?: boolean }) {
       </div>
       <div className="coach-result-content grid min-w-0 grid-cols-[minmax(0,1fr)] gap-8">
         <CoachNotesSection job={job} notes={notes} />
-        {notes && job.warning && <Warning>{job.warning}</Warning>}
+        {notes && job.warning && <Warning>{jobText(job.warning, job.warningRef, t)}</Warning>}
         {(job.outputs ?? []).map((o) => (
           <section key={o.kind} className="coach-output min-w-0 space-y-3">
             <div className="flex items-end justify-between gap-3">

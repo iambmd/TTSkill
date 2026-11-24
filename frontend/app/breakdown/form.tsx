@@ -19,7 +19,6 @@ export default function BreakdownForm({ sourceJob, rallyId, clip }: { sourceJob?
   const t = useTranslations("breakdown");
   const tAll = useTranslations();
   const tv = useTranslations("validation");
-  const te = useTranslations("errors");
   const locale = useLocale();
   const router = useRouter();
   const textRef = useRef<HTMLDetailsElement>(null);
@@ -50,7 +49,7 @@ export default function BreakdownForm({ sourceJob, rallyId, clip }: { sourceJob?
     setProgress(0);
     setError(null);
     try {
-      const job = await submitJob("breakdown", form, setProgress, te);
+      const job = await submitJob("breakdown", form, setProgress, tAll);
       router.push(`/jobs/${job.id}`);
     } catch (err) {
       setError((err as Error).message);

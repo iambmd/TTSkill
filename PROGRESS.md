@@ -507,3 +507,25 @@ Not translated (English in Vietnamese mode):
 - Country codes (CHN, JPN), which read the same in Vietnamese broadcasts.
 
 Not verified: a live Claude call in Vietnamese. `make dev` has no API key here, so the prompts were checked with fake clients and the offline path ran in tests.
+
+## Glossary decisions, backend messages and Pro match in Vietnamese (2026-11-23)
+
+- **Glossary, settled by the product owner:** drive is "đôi công" (forehand drive "đôi công thuận tay"), loop against backspin is "giật bóng xoáy xuống" (forehand "giật bóng xoáy xuống thuận tay"), and coach stays "HLV", in the nav and the footer link. `docs/glossary_vi.md` marks these rows **Đã chốt** and drops the alternatives. The old variants were replaced in `vi.json`, the offline templates (`technique/analyze.py`), the video labels (`i18n.STROKES_VI`) and the Claude rule. "Tấn công" is now only used to mean attack in general, and the Claude rule says so. The Home feature tile still reads "Huấn luyện", the full word.
+- **Glossary in the prompt:** `i18n.GLOSSARY` holds every row of the glossary (71 terms). It goes into the language rule for each Claude call with `lang="vi"` (Breakdown vision, Coach's call, the deep agent). The rule is in the user turn, so the cached system prompt is unchanged. `tests/test_i18n.py` fails if the markdown table and `GLOSSARY` differ.
+- **Backend messages by key:** `backend/messages.py` holds every message the backend shows a user, in English, keyed by its path in `frontend/messages/*.json`. That covers job progress, failures, the Auto-Cut warning, the server-only 422s (ffprobe, link privacy, length, staged uploads, player lost), and the checks both sides run. Jobs carry `messageRef`/`failureRef`/`warningRef` and 422s `detailRef` (`{key, args}`, args can be nested refs) beside the unchanged English text. The page translates them with `lib/server-text.ts`, so Auto-Cut is covered too and the toggle works mid-job. Unknown keys fall back to the English text. `tests/test_messages.py` checks that every key exists in both catalogues with identical English and the same placeholders. That adds 67 keys to each catalogue.
+- **Pro match `lang`:** `/jobs/match` accepts `lang` (checked against `choices.lang`), and Change player keeps it. `players/match.py` writes the form differences, the anti-spin and penhold warnings and the stroke names in Vietnamese. `players/compile.py` writes the title cards in Vietnamese (`i18n.MATCH`, `EQUIPMENT_NOTES_VI`). English output is byte-identical.
+- **`test_coach.py::test_fallback_runs_tools_with_a_live_plan`:** the test was stale and the code was right. Commit 264f5ce deliberately stopped putting exception text in `engineNote`, which reaches the browser. The test now asserts "the pipeline stopped: RuntimeError" and that the exception detail is absent.
+
+Checked:
+- Frontend: vitest 208 passed, `tsc` clean, `next build` OK, lint only the 5 existing `<img>` warnings. Playwright 78 passed. `e2e/i18n.spec.ts` also checks that the Breakdown, Coach and Match forms send `lang=vi`.
+- Backend full suite: 470 passed, 3 skipped, 1 xfailed, 0 failed.
+- Grep for the old variants ("tấn công thuận tay", "bạt", "giật bóng cắt", "thuận tay bóng xoáy xuống") over `backend/`, `frontend/` and `docs/`: none in code, catalogues or prompts. The remaining "tấn công" hits are the prompt rule, the glossary note, the "third ball" note (attack in general) and a test guard.
+
+Still English in Vietnamese mode:
+- The cached pros' breakdown videos inside Pro match, which were rendered once in English.
+- The cached demo results, which carry the "English only" badge.
+- Coach's fallback summary when the pipeline itself fails.
+- The raw yt-dlp detail inside "Couldn't open that video: …".
+- Country codes.
+
+Not verified: a live Claude call in Vietnamese. There is no API key here.

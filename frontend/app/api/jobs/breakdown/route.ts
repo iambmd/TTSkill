@@ -7,7 +7,7 @@ import { choiceProblem, invalid, langProblem, onlyMeProblem, playerSelectionProb
 const STROKES = new Set(["", "auto", "forehand", "backhand", "serve", "flick", "block", "footwork"]);
 
 export async function POST(req: Request) {
-  const { v, e, offline } = routeMessages(req);
+  const { v, e, offline, t } = routeMessages(req);
   const form = await req.formData();
   // A missing field takes the backend's default; a blank one is checked as sent.
   const field = (k: string, missing = "") => String(form.get(k) ?? missing);
@@ -28,5 +28,5 @@ export async function POST(req: Request) {
     choiceProblem(field("hand", "auto"), "hand", v("labels.hand"), v) ??
     textProblem(field("player"), "player", v("labels.playerName"), v) ??
     textProblem(text, "training_text", v("labels.trainingDescription"), v);
-  return problem ? invalid(problem) : createJob("breakdown", form, e, offline);
+  return problem ? invalid(problem) : createJob("breakdown", form, e, offline, t);
 }

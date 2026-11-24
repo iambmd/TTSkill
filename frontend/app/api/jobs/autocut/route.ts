@@ -3,7 +3,7 @@ import { routeMessages } from "@/lib/messages";
 import { choiceProblem, invalid, rangeProblem, videoInputProblem } from "@/lib/validate";
 
 export async function POST(req: Request) {
-  const { v, e, offline } = routeMessages(req);
+  const { v, e, offline, t } = routeMessages(req);
   const form = await req.formData();
   // A missing field takes the backend's default; a blank one is checked as sent.
   const field = (k: string, missing = "") => String(form.get(k) ?? missing);
@@ -14,5 +14,5 @@ export async function POST(req: Request) {
     rangeProblem(field("threshold"), "threshold", v("labels.threshold"), false, v) ??
     rangeProblem(field("gap"), "gap", v("labels.gap"), false, v) ??
     rangeProblem(field("min_hits"), "min_hits", v("labels.minHits"), true, v);
-  return problem ? invalid(problem) : createJob("autocut", form, e, offline);
+  return problem ? invalid(problem) : createJob("autocut", form, e, offline, t);
 }

@@ -8,6 +8,7 @@ import { MESSAGES, translator } from "@/lib/messages";
 import type { Job } from "@/lib/submit";
 import { fileProblem, heightProblem, langProblem, mediaProblem, minutes } from "@/lib/validate";
 import { linkProblem } from "@/lib/youtube";
+import { errorText, jobText, serverText, type Catalog } from "@/lib/server-text";
 import { CoachView } from "@/app/jobs/[id]/coach-view";
 import { Steps } from "@/app/jobs/[id]/steps";
 import { renderIntl } from "./intl";
@@ -169,5 +170,69 @@ describe("numbers", () => {
     expect(thicknessText("1.8-2.0 mm", t, format("vi") as never)).toBe("1,8-2,0 mm");
     expect(thicknessText("2.1 mm or max", t, format("vi") as never)).toBe("2,1 mm hoặc max");
     expect(thicknessText("OX (no sponge) to 0.5 mm", t, format("vi") as never)).toBe("OX (không mút) đến 0,5 mm");
+  });
+});
+
+describe("backend text by key (lib/server-text.ts, backend/messages.py)", () => {
+  const vn = translator("vi", "") as unknown as Catalog;
+  const en = translator("en", "") as unknown as Catalog;
+  const tooLong = { key: "validation.tooLong", args: { length: "12:00", max: { key: "common.minutes", args: { n: 10 } } } };
+
+  it("translates a reference and the references inside it", () => {
+    expect(serverText(tooLong, en)).toBe("That video is 12:00 long. Uploads can be up to 10 minutes: trim it and try again.");
+    expect(serverText(tooLong, vn)).toBe("Video này dài 12:00. Video tải lên tối đa 10 phút: hãy cắt ngắn rồi thử lại.");
+    expect(serverText({ key: "progress.breakdown.pose", args: {} }, vn)).toBe("Đang theo dõi cơ thể người chơi...");
+  });
+
+  it("falls back to the English it got for an unknown key or no reference", () => {
+    expect(serverText({ key: "progress.fromTheFuture" }, vn)).toBeNull();
+    expect(jobText("Rendering...", { key: "progress.fromTheFuture" }, vn)).toBe("Rendering...");
+    expect(jobText("Rendering...", undefined, vn)).toBe("Rendering...");
+    expect(errorText({ detail: "Unknown stroke: lob.", detailRef: { key: "validation.unknownStroke", args: { stroke: "lob" } } }, vn, "x"))
+      .toBe("Không rõ cú đánh: lob. Để trống để tự nhận diện.");
+    expect(errorText({ error: "from our route" }, vn, "x")).toBe("from our route");
+  });
+
+  it("shows a running job's progress in the page's language", () => {
+    const job = { id: "j1", kind: "coach", status: "running", progress: 0.3, params: { request: "sửa cú thuận tay" },
+      resultUrl: null, message: "Downloading the video... 40%", messageRef: { key: "progress.downloadingPct", args: { pct: 40 } },
+      todos: [], outputs: [] } as unknown as Job;
+    const html = renderIntl(createElement(CoachView, { job, debug: false }), "vi");
+    expect(html).toContain("Đang tải video... 40%");
+    expect(html).not.toContain("Downloading the video");
+  });
+
+  it("translates the backend's 422 in the route that proxies it", async () => {
+    vi.resetModules();
+    const saved = process.env.BACKEND_URL;
+    process.env.BACKEND_URL = "http://backend";
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({
+      detail: "That video is private. Use a public or unlisted video.",
+      detailRef: { key: "serverErrors.link.private", args: {} },
+    }, { status: 422 }));
+    try {
+      const { POST } = await import("@/app/api/jobs/match/route");
+      const form = new FormData();
+      form.set("url", "https://youtu.be/g3n9jVP0fMU");
+      form.set("lang", "vi");
+      const res = await POST(new Request("http://test/api", { method: "POST", body: form, headers: { cookie: "NEXT_LOCALE=vi" } }));
+      expect(res.status).toBe(422);
+      expect((await res.json()).error).toBe("Video này ở chế độ riêng tư. Hãy dùng video công khai hoặc không công khai (unlisted).");
+      expect((fetchMock.mock.calls[0][1]!.body as FormData).get("lang")).toBe("vi");
+    } finally {
+      fetchMock.mockRestore();
+      if (saved === undefined) delete process.env.BACKEND_URL; else process.env.BACKEND_URL = saved;
+      vi.resetModules();
+    }
+  });
+
+  it("checks Pro match's lang like Breakdown and Coach", async () => {
+    const { POST } = await import("@/app/api/jobs/match/route");
+    const form = new FormData();
+    form.set("url", "https://youtu.be/g3n9jVP0fMU");
+    form.set("lang", "fr");
+    const res = await POST(new Request("http://test/api", { method: "POST", body: form }));
+    expect(res.status).toBe(422);
+    expect((await res.json()).error).toBe("Language must be en or vi.");
   });
 });

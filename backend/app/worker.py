@@ -16,9 +16,11 @@ import time
 import traceback
 from contextlib import closing
 
+from messages import Msg
+
 from . import jobqueue, jobs
 
-RESTARTED = "The worker restarted before this job finished. Please try again."
+RESTARTED = Msg("progress.workerRestarted")
 
 
 def _child(payload: bytes, lane: str) -> None:
@@ -42,7 +44,7 @@ def recover(con) -> None:
         jobqueue.finish(con, task_id, "failed", "worker restarted")
         job = jobs.load(job_id)
         if lane == "jobs" and job and job.get("status") in ("queued", "running"):
-            jobs.update(job_id, status="failed", message=RESTARTED)
+            jobs.update(job_id, status="failed", **jobs.failure(RESTARTED))
 
 
 def main(slots: int | None = None, once: bool = False) -> None:
@@ -78,7 +80,7 @@ def main(slots: int | None = None, once: bool = False) -> None:
                         proc.join(5)
                         jobqueue.finish(con, task_id, "timeout")
                         if lane == "jobs":
-                            jobs.update(job_id, status="failed", message=jobqueue.timeout_message(kind))
+                            jobs.update(job_id, status="failed", **jobs.failure(jobqueue.timeout_message(kind)))
                         print(f"timeout {kind} {job_id} after {limit // 60} min", flush=True)
                         del running[task_id]
                     elif not proc.is_alive():
@@ -87,7 +89,7 @@ def main(slots: int | None = None, once: bool = False) -> None:
                         jobqueue.finish(con, task_id, "done" if ok else "failed", None if ok else f"exit {proc.exitcode}")
                         job = jobs.load(job_id) if lane == "jobs" else None
                         if job and job.get("status") in ("queued", "running"):   # killed (OOM, signal)
-                            jobs.update(job_id, status="failed", message=jobs.UNFINISHED)
+                            jobs.update(job_id, status="failed", **jobs.failure(Msg("progress.unfinished")))
                         print(f"end {kind} {job_id}: exit {proc.exitcode} in {time.time() - started:.0f} s", flush=True)
                         del running[task_id]
                 if once and not running and not con.execute("SELECT 1 FROM tasks WHERE status='queued'").fetchone():
@@ -102,7 +104,7 @@ def main(slots: int | None = None, once: bool = False) -> None:
                 proc.join(5)
                 jobqueue.finish(con, task_id, "failed", "worker stopped")
                 if lane == "jobs":
-                    jobs.update(job_id, status="failed", message=RESTARTED)
+                    jobs.update(job_id, status="failed", **jobs.failure(RESTARTED))
 
 
 if __name__ == "__main__":

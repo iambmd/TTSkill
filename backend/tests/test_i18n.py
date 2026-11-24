@@ -172,3 +172,72 @@ def test_coach_titles_and_plan_in_vietnamese():
     assert i18n.t("en", "todo.pose", noun="forehand") == "Track you at your forehands"
     assert set(i18n._TEXT["vi"]) == set(i18n._TEXT["en"])
     assert i18n.norm("fr") == "en"
+
+
+# ---------------------------------------------------------------- glossary (owner's decisions, final)
+
+def test_the_claude_glossary_is_the_reviewed_glossary():
+    doc = Path(__file__).resolve().parents[2] / "docs" / "glossary_vi.md"
+    rows = []
+    for line in doc.read_text().splitlines():
+        if line.startswith("| ") and not line.startswith(("| EN ", "| ---")):
+            cells = [c.strip() for c in line.strip().strip("|").split("|")]
+            rows.append((cells[0], cells[1]))
+    assert rows == i18n.GLOSSARY
+    rule = i18n.instruction("vi")
+    assert all(f"{en} = {vi}" in rule for en, vi in rows)
+
+
+def test_the_settled_terms_are_used_everywhere():
+    assert ("drive", "đôi công") in i18n.GLOSSARY and ("loop against backspin", "giật bóng xoáy xuống") in i18n.GLOSSARY
+    assert i18n.STROKES_VI["forehand_drive"] == "đôi công thuận tay"
+    assert i18n.STROKES_VI["forehand_loop_backspin"] == "giật bóng xoáy xuống thuận tay"
+    assert TEMPLATES["vi"]["forehand_loop_backspin"]["headline"] == "Hạ thấp. Giật bóng xoáy xuống."
+    assert TEMPLATES["vi"]["forehand_drive"]["drill"].startswith("Đôi công thuận tay")
+    text = repr(TEMPLATES["vi"]) + repr(i18n.STROKES_VI) + repr(i18n._TEXT["vi"]) + repr(i18n.MATCH["vi"])
+    for old in ("tấn công", "Tấn công", "bạt ", "giật bóng cắt", "thuận tay bóng xoáy xuống"):
+        assert old not in text, old
+
+
+# ---------------------------------------------------------------- Pro match
+
+def test_pro_match_takes_a_language(api, ran, upload):
+    r = api.post("/jobs/match", files=upload(), data={"lang": "vi"})
+    assert r.status_code == 201 and r.json()["params"]["lang"] == "vi" and ran["run_match"][-1][-1] == {"lang": "vi"}
+    again = api.post(f"/jobs/{r.json()['id']}/rerun", data={"player_time": "1", "player_box": "0.1,0.1,0.5,0.9"})
+    assert again.status_code == 201 and ran["run_match"][-1][-1] == {"lang": "vi"}
+    api.post("/jobs/match", files=upload())
+    assert not isinstance(ran["run_match"][-1][-1], dict)
+    assert api.post("/jobs/match", files=upload(), data={"lang": "fr"}).status_code == 422
+
+
+def test_pro_match_notes_and_warnings_in_vietnamese():
+    from players import match as m
+    assert m._note("knee", 44, "contact", "Fan Zhendong") == \
+        "Your legs are 44° straighter (less knee bend) at contact than Fan Zhendong's."
+    assert m._note("knee", 44, "contact", "Fan Zhendong", "vi") == \
+        "Chân của bạn thẳng hơn (khuỵu gối ít hơn) 44° so với Fan Zhendong lúc tiếp xúc bóng."
+    assert m._note("trunk_turn", -17, "the backswing", "Ma Long", "vi") == \
+        "Vai của bạn xoay ít hơn 17° so với Ma Long lúc lăng vợt."
+    winter = {"id": "sabine-winter", "name": "Sabine Winter", "grip": "shakehand", "equipment_notes": "anti"}
+    assert m.warnings(winter, lang="vi")[0].startswith("Sabine Winter dùng mặt chống xoáy (anti)")
+    assert m.warnings(winter) == ["anti"]
+    xu = {"id": "xu-xin", "name": "Xu Xin", "grip": "penhold"}
+    assert m.warnings(xu, "shakehand", "vi") == [
+        "Xu Xin cầm dọc, nên kỹ thuật trái tay khác với cầm ngang. Hãy lấy cú thuận tay của Xu Xin làm mẫu, "
+        "và cẩn thận khi bắt chước cú trái tay."]
+    assert m.warnings(xu, "shakehand")[0].startswith("Xu Xin plays penhold, so the backhand technique differs")
+
+
+def test_every_pro_equipment_note_has_a_vietnamese_version():
+    from players.match import load_pros
+    noted = {p["id"] for p in load_pros() if p.get("equipment_notes")}
+    assert noted <= set(i18n.EQUIPMENT_NOTES_VI)
+
+
+def test_the_fallback_plan_follows_the_language():
+    from agent.coach import plan_from_request
+    steps, _ = plan_from_request("fix my forehand and which pros do I play like", False, "vi")
+    labels = dict(steps)
+    assert labels["extract_pose"] == "Đo cú thuận tay của bạn bằng MediaPipe" and labels["summary"] == "Tóm tắt những điều cần tập"
+    assert dict(plan_from_request("fix my forehand", False)[0])["extract_pose"] == "Measure your forehand with MediaPipe"

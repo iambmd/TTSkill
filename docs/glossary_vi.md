@@ -1,6 +1,8 @@
 # Thuật ngữ bóng bàn: Anh – Việt
 
-Bảng này liệt kê mọi thuật ngữ bóng bàn mà TTSkill dùng trong giao diện tiếng Việt, trong video phân tích và trong lời nhận xét do AI viết. Nhờ HLV xem lại: nếu một từ nghe không tự nhiên với người chơi Việt Nam, hãy ghi cách nói đúng vào cột **Ghi chú**. Chúng tôi sẽ sửa ở `frontend/messages/vi.json` (giao diện), `backend/i18n.py` (nhãn video, kế hoạch của HLV, câu lệnh cho Claude) và `backend/technique/analyze.py` (`_TEMPLATES_VI`, các thẻ khi không có Claude).
+Bảng này liệt kê mọi thuật ngữ bóng bàn mà TTSkill dùng trong giao diện tiếng Việt, trong video phân tích và trong lời nhận xét do AI viết. Các dòng ghi **Đã chốt** là quyết định cuối cùng của chủ sản phẩm (người Việt); những dòng khác vẫn có thể góp ý ở cột **Ghi chú**.
+
+Cách sửa một thuật ngữ: đổi ở đây, trong `backend/i18n.py` (`GLOSSARY`, danh sách gửi cho Claude khi `lang="vi"`; `backend/tests/test_i18n.py` báo lỗi nếu hai nơi khác nhau), rồi ở `frontend/messages/vi.json` (giao diện), `backend/i18n.py` (nhãn video, kế hoạch của HLV) và `backend/technique/analyze.py` (`_TEMPLATES_VI`, các thẻ khi không có Claude).
 
 *For a Vietnamese coach reviewing the app's terms. Product, brand and player names stay in English (TTSkill, TT Coach, Auto-Cut, Butterfly Tenergy 05, Ma Long...).*
 
@@ -14,8 +16,10 @@ Bảng này liệt kê mọi thuật ngữ bóng bàn mà TTSkill dùng trong gi
 | topspin / loop | giật (topspin) | "Giật" là từ chính; "topspin" giữ nguyên khi nói về độ xoáy, ví dụ "Giật và topspin nặng". |
 | forehand topspin | giật thuận tay | |
 | backhand topspin | giật trái tay | |
-| forehand loop vs backspin | giật thuận tay bóng xoáy xuống | Có người nói "giật bóng cắt". Xin HLV chọn cách phổ biến hơn. |
-| forehand drive | tấn công thuận tay | Cú đánh thẳng, ít xoáy. Một số nơi gọi là "bạt". |
+| loop against backspin | giật bóng xoáy xuống | **Đã chốt.** |
+| forehand loop vs backspin | giật bóng xoáy xuống thuận tay | **Đã chốt.** |
+| drive | đôi công | **Đã chốt.** Cú đánh thẳng, ít xoáy. "Tấn công" chỉ dùng với nghĩa tấn công nói chung. |
+| forehand drive | đôi công thuận tay | **Đã chốt.** |
 | push | gò | "Gò trái tay". |
 | flick | vẩy | "Vẩy trái tay". Một số người gọi là "búng". |
 | block | chặn bóng / chặn | "Chặn trái tay", "chặn thuận tay". |
@@ -41,7 +45,7 @@ Bảng này liệt kê mọi thuật ngữ bóng bàn mà TTSkill dùng trong gi
 | table | bàn | |
 | opponent | đối thủ | |
 | drill | bài tập | |
-| coach | HLV (huấn luyện viên) | Trên thanh menu: "Huấn luyện". |
+| coach | HLV (huấn luyện viên) | **Đã chốt.** Trên thanh menu cũng là "HLV". |
 | pro (player) | VĐV (vận động viên) chuyên nghiệp | Viết tắt "VĐV" cho gọn trên điện thoại: "So với VĐV". |
 
 ## Kỹ thuật (technique)

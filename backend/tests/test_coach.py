@@ -75,7 +75,9 @@ def test_fallback_runs_tools_with_a_live_plan(tmp_path, monkeypatch):
     coach.run_coach(job["id"], tmp_path / "v.mp4", None, "show my best rallies and fix my forehand")
     done = jobs.load(job["id"])
     assert calls == ["detect_rallies", "cut_highlights", "extract_pose", "render_breakdown"]
-    assert done["status"] == "done" and done["engine"] == "fallback" and "pipeline broke" in done["engineNote"]
+    assert done["status"] == "done" and done["engine"] == "fallback"
+    # The record reaches the browser, so it names the error type and keeps the details in the server log.
+    assert done["engineNote"] == "the pipeline stopped: RuntimeError" and "pipeline broke" not in done["engineNote"]
     assert "3 rallies" in done["summary"] and "Shadow 20 swings." in done["summary"]
     notes = done["coaching"]
     assert notes["fix"] == "Load low, lift through, end high." and notes["drill"] == "Shadow 20 swings."

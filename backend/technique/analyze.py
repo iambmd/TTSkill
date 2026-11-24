@@ -335,9 +335,9 @@ _TEMPLATES_VI = {
          ("Về nhanh", ["Vợt dừng trước mũi.", "Sẵn sàng cho cú phản công."],
           ["trước mũi", "phản công"], ["GỌN GÀNG"])],
         "Lăng ngắn, đánh xuyên, về nhanh.",
-        "Đánh thuận tay qua lại 2 phút, đều và chắc."),
+        "Đôi công thuận tay 2 phút, đều và chắc."),
     "forehand_loop_backspin": _t(
-        "Hạ thấp. Nâng bóng xoáy xuống.",
+        "Hạ thấp. Giật bóng xoáy xuống.",
         "Cầm ngang, lỏng khi lăng vợt để cổ tay thêm lực miết.",
         "Bắt đầu dưới mép bàn và vung dốc lên, miết lên phía sau bóng.",
         "Kết thúc cao trên đầu; chân đẩy bạn đứng lên lại.",

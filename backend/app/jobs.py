@@ -9,6 +9,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Callable
 
+from messages import Msg, say
+
 # TTSKILL_DATA_DIR moves it (the worker's job processes read it too, so tests can point both
 # the test and the spawned jobs at a temporary folder).
 DATA_DIR = Path(os.environ.get("TTSKILL_DATA_DIR") or Path(__file__).resolve().parents[1] / "data" / "jobs")
@@ -17,9 +19,11 @@ DATA_DIR = Path(os.environ.get("TTSKILL_DATA_DIR") or Path(__file__).resolve().p
 # says queued/running but is neither in here nor queued for the worker (app/jobqueue.py) was
 # orphaned: whatever ran it died, so nothing will ever finish it.
 ACTIVE: set[str] = set()
-RESTARTED = "The server restarted before this job finished. Please try again."
-UNFINISHED = "The job stopped without finishing. Please try again."
-FAILED = "We couldn't finish this analysis. Try again or upload a shorter clip."
+RESTARTED = str(Msg("progress.restarted"))
+UNFINISHED = str(Msg("progress.unfinished"))
+FAILED = str(Msg("progress.failed"))
+# A text field and the reference the page translates it from (messages.py).
+_REFS = (("message", "messageRef"), ("failureHint", "failureRef"), ("warning", "warningRef"))
 _LOCK = threading.RLock()  # serialise read-modify-write of job.json within the process
 
 
@@ -63,6 +67,10 @@ def update(job_id: str, **fields: Any) -> dict[str, Any]:
         with open(d / ".lock", "w") as lock:
             fcntl.flock(lock, fcntl.LOCK_EX)
             job = load(job_id) or {}
+            # New text without a reference: drop the old one, or the page would translate stale text.
+            for text, ref in _REFS:
+                if text in fields and ref not in fields and job.get(ref):
+                    fields[ref] = None
             job.update(fields)
             save(job)
             return job
@@ -84,25 +92,34 @@ def get(job_id: str) -> dict[str, Any] | None:
             return job
         if state == "queued":
             if not jobqueue.worker_alive() and job.get("message") != jobqueue.WAITING:
-                job = update(job_id, message=jobqueue.WAITING)
+                job = update(job_id, **say("progress.waiting"))
         elif state == "running":
             if not jobqueue.worker_alive():
-                job = update(job_id, status="failed", message=RESTARTED, failureHint=RESTARTED)
+                job = update(job_id, status="failed", **failure(Msg("progress.restarted")))
         elif state in ("done", "failed", "timeout"):
-            job = update(job_id, status="failed", message=UNFINISHED, failureHint=UNFINISHED)
+            job = update(job_id, status="failed", **failure(Msg("progress.unfinished")))
         else:
-            job = update(job_id, status="failed", message=RESTARTED, failureHint=RESTARTED)
+            job = update(job_id, status="failed", **failure(Msg("progress.restarted")))
         return job
 
 
-def fail(job_id: str, exc: Exception, fallback: str = FAILED) -> None:
+def failure(msg: Msg, ref: dict | None = None) -> dict[str, Any]:
+    """Job fields for a failure: the text as message and failureHint, with their reference."""
+    if ref is None and isinstance(msg, Msg):
+        ref = msg.ref()
+    return {"message": str(msg), "failureHint": str(msg), "messageRef": ref, "failureRef": ref}
+
+
+def fail(job_id: str, exc: Exception, fallback: Msg = Msg("progress.failed")) -> None:
     """Use friendly, deliberately authored errors and keep unexpected details in server logs."""
     from technique.errors import NoPlayer
     from .download import LinkError
     from .validate import Invalid
 
-    hint = str(exc) if isinstance(exc, (NoPlayer, LinkError, Invalid)) else fallback
-    update(job_id, status="failed", message=hint, failureHint=hint)
+    if isinstance(exc, (NoPlayer, LinkError, Invalid)):
+        update(job_id, status="failed", **failure(str(exc), getattr(exc, "ref", None)))
+    else:
+        update(job_id, status="failed", **failure(fallback))
 
 
 def run(fn: Callable[..., None], job_id: str, *args: Any, **kwargs: Any) -> None:
@@ -118,4 +135,4 @@ def run(fn: Callable[..., None], job_id: str, *args: Any, **kwargs: Any) -> None
         ACTIVE.discard(job_id)
         job = load(job_id)
         if job and job.get("status") in ("queued", "running"):
-            update(job_id, status="failed", message=UNFINISHED, failureHint=UNFINISHED)
+            update(job_id, status="failed", **failure(Msg("progress.unfinished")))

@@ -66,7 +66,8 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue
 | `backend/style/` | Teaching-style profile. `fetch_refs.py` downloads reference videos into git-ignored `backend/data/style_ref/` (never commit or serve them), `analyze_refs.py` measures pacing, freeze frames, slow motion and text layout, `build_style.py` writes `swift_style.json`. `technique/style.py` loads it for the renderer (pacing, phase colours), the offline templates and the Claude prompt. |
 | `backend/technique/fonts/` | Barlow and Barlow Condensed (SIL OFL, see `OFL.txt`) for the videos' burned-in text; all four cover Vietnamese. |
 | `frontend/messages/en.json`, `vi.json` | Every UI string, English and Vietnamese (next-intl, no locale in the URL: `NEXT_LOCALE` cookie, then Accept-Language, then English; `frontend/i18n/request.ts`, `lib/locale.ts`). Server code and lib functions take a translator (`lib/messages.ts` `translator`, `routeMessages(req)`); client code uses `useTranslations`. |
-| `backend/i18n.py` | A job's `lang` (`en`/`vi`): the language rule added to each Claude call, and the fixed text around the AI's words (video labels, Coach's plan, offline summary). Terms: `docs/glossary_vi.md`. |
+| `backend/i18n.py` | A job's `lang` (`en`/`vi`): the language rule added to each Claude call (with every `GLOSSARY` term, the rows of `docs/glossary_vi.md`), and the fixed text around the AI's words (video labels, Coach's plan, offline summary, Pro match notes, warnings and title cards). |
+| `backend/messages.py` | Every other message the backend shows (progress, failures, warnings, 422s), in English, keyed by its path in `frontend/messages/*.json`. Jobs carry `messageRef`/`failureRef`/`warningRef` and 422s `detailRef` beside the English; the page translates them (`frontend/lib/server-text.ts`). Raise `validate.Invalid(Msg(key, ...))` / `jobs.update(..., **say(key, ...))`; `tests/test_messages.py` checks every key is in both catalogues with the same English. |
 | `backend/players/` | Find my pro match. `body.py` (limb ratios, stance width, joint-angle curves from a pose track), `table.py` (height from the table: 76 cm high, 274 cm long), `match.py` (same bat hand, the user's grip first, weighted distance on height and proportions for the top 3, warnings for anti-spin and penhold backhands, DTW on the stroke's angle curves for form differences), `compile.py` (one video of the matched pros' cached breakdowns), `build.py` (searches YouTube, cuts ~8 s clips at 720p, runs the pipeline, caches each breakdown, deletes raw downloads; resumable, `--local` adds a clip from a file). |
 | `backend/data/players/` | `players.json` (20 pros: `height_cm` + `height_source`, `bat_hand`, `grip`, optional `bat_hand_source`, `equipment_notes` and `aliases`, clip references) and `profiles.json` (computed numbers) are committed; clips and rendered videos in the same folder are git-ignored. A height whose sources disagree says "(approximate)" in `height_source`. `aliases` replaces the builder's title-matching guesses when a family name alone is ambiguous (Lebrun, Winter). |
 | `shared/limits.json` | Every input limit: height, upload type/size/length/resolution, link length per page, text lengths, Auto-Cut settings, the allowed choices, and the pose visibility floor. Read by `frontend/lib/validate.ts` and `backend/limits.py`. |
@@ -89,7 +90,7 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue
 | POST | `/players/detect` | "Which one is you?": `frames` (JPEG/PNG, max 16) + `times`, or `video` (the browser couldn't read it: ffmpeg frames, answer carries a `staged` token for the job), or `url`, or `job` (Change player). Answers `candidates`, `others` (background: `still`/`far`/`small`), `frame`, `frames` (people per frame) and `timing` |
 | POST | `/jobs/{id}/rerun` | `player_time` + `player_box`: the same job following another player |
 | GET | `/jobs/{id}/files/{name}` | Videos the coach made (`highlights.mp4`, `breakdown.mp4`, `pro_matches.mp4`) |
-| POST | `/jobs/match` | multipart: `video`, `staged` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`, default shakehand), `height_cm` (optional), `hand`, `player_time` + `player_box` |
+| POST | `/jobs/match` | multipart: `video`, `staged` or `url`, `stroke` (`forehand`/`backhand`), `grip` (`shakehand`/`penhold`, default shakehand), `height_cm` (optional), `hand`, `player_time` + `player_box`, `lang` (`en`/`vi`, default `en`: the differences, warnings and title cards) |
 | GET | `/jobs/{id}` | Job record |
 | GET | `/jobs/{id}/result` | Result MP4 |
 | GET | `/health` | `{"ok": true}` |
@@ -98,12 +99,13 @@ The frontend exposes the same paths under `/api/jobs/...`. FastAPI's interactive
 
 The job record has these fields:
 - Always: `id`, `kind`, `status` (`queued`/`running`/`done`/`failed`), `progress` (0–1), `message`, `params`, `resultUrl`.
+- `messageRef`, `failureRef` and `warningRef`, when the backend wrote `message`, `failureHint` or `warning` from a key: `{key, args}` for the page to translate (`backend/messages.py`).
 - Auto-Cut adds `rallies`, and `warning` when fewer than 2 rallies were heard (the job is still `done`).
 - Breakdown adds `breakdown`, `videoPrompt`, `analyzer`, `batHand` and `window`.
 - Match adds `matches` (each with `grip` and `warnings`) and `you`.
 - Coach adds `todos`, `outputs`, `summary`, `engine`, `timings`, `agentFiles` (internal) and `coaching`: `{markdown, fix, drill}`, null until written or when no stroke was coached. Jobs from before `coaching` existed (the cached demo) only have `summary`; the page falls back to it (`lib/coaching.ts`). `warning` holds what a finished Coach job skipped.
 
-Invalid input is answered with a 422 and a message the user can act on, as `{detail}` from FastAPI and `{error}` from the Next.js routes.
+Invalid input is answered with a 422 and a message the user can act on, as `{detail}` (plus `detailRef`, its key) from FastAPI and `{error}`, already in the caller's language, from the Next.js routes.
 
 The job page polls `GET /jobs/{id}`.
 

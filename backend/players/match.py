@@ -74,21 +74,19 @@ def _phase(i: int, contact: int) -> str:
     return "the backswing" if i < contact - 3 else "contact" if i <= contact + 3 else "the finish"
 
 
-def _note(joint: str, diff: float, phase: str, pro: str) -> str:
-    deg = f"{abs(diff):.0f}°"
-    more, less = {
-        "elbow": ("straighter", "more bent"),
-        "shoulder": ("higher", "lower"),
-        "knee": ("straighter (less knee bend)", "more bent"),
-        "trunk_turn": ("more turned", "less turned"),
-    }[joint]
-    what = {"elbow": "elbow", "shoulder": "bat arm", "knee": "legs", "trunk_turn": "shoulders"}[joint]
+def _note(joint: str, diff: float, phase: str, pro: str, lang: str = "en") -> str:
+    import i18n
+
+    w = i18n.MATCH[i18n.norm(lang)]
+    what = w["what"][joint]
     verb = "are" if what in ("legs", "shoulders") else "is"
-    return f"Your {what} {verb} {deg} {more if diff > 0 else less} at {phase} than {pro}'s."
+    return w["note"].format(what=what, verb=verb, deg=f"{abs(diff):.0f}°", pro=pro, phase=w["phase"][phase],
+                            direction=(w["more"] if diff > 0 else w["less"])[joint])
 
 
-def form_compare(user: dict, pro: dict, pro_name: str) -> dict:
-    """Compare two angle-curve dicts (body.angle_curves). Lower differences = closer form."""
+def form_compare(user: dict, pro: dict, pro_name: str, lang: str = "en") -> dict:
+    """Compare two angle-curve dicts (body.angle_curves). Lower differences = closer form.
+    lang: the language of the notes."""
     joints, notes = {}, []
     uc = int(user.get("contact_index", 20))
     for j in JOINTS:
@@ -103,26 +101,31 @@ def form_compare(user: dict, pro: dict, pro_name: str) -> dict:
                      "signed_diff_deg": round(float(np.mean(diffs)), 1)}
     for j, info in sorted(joints.items(), key=lambda kv: -abs(kv[1]["signed_diff_deg"]))[:2]:
         if abs(info["signed_diff_deg"]) >= 8:
-            notes.append(_note(j, info["signed_diff_deg"], info["worst_phase"], pro_name))
+            notes.append(_note(j, info["signed_diff_deg"], info["worst_phase"], pro_name, lang))
     avg = float(np.mean([v["mean_diff_deg"] for v in joints.values()])) if joints else 90.0
     return {"score": int(round(100 * math.exp(-avg / 25))), "joints": joints, "notes": notes,
             "joint_names": {j: JOINT_NAMES[j] for j in joints}}
 
 
-def warnings(pro: dict, user_grip: Optional[str] = None) -> list[str]:
+def warnings(pro: dict, user_grip: Optional[str] = None, lang: str = "en") -> list[str]:
     """Why copying part of this pro's technique needs care: their equipment_notes (e.g. an
     anti-spin backhand), and penhold, whose backhand differs from shakehand. A penhold user
-    doesn't need the penhold note."""
-    out = [pro["equipment_notes"]] if pro.get("equipment_notes") else []
+    doesn't need the penhold note. lang: their language (equipment notes in i18n.py)."""
+    import i18n
+
+    lang = i18n.norm(lang)
+    out = []
+    if pro.get("equipment_notes"):
+        out.append(i18n.EQUIPMENT_NOTES_VI.get(pro.get("id"), pro["equipment_notes"]) if lang == "vi"
+                   else pro["equipment_notes"])
     if pro.get("grip") == "penhold" and user_grip != "penhold":
-        name = pro["name"]
-        out.append(f"{name} plays penhold, so the backhand technique differs from shakehand. "
-                   f"Use {name}'s forehand as reference, and be careful copying the backhand.")
+        out.append(i18n.MATCH[lang]["penhold"].format(name=pro["name"]))
     return out
 
 
 def match(user_body: dict, user_curves: Optional[dict], stroke: str, bat_hand: str,
-          pros: Optional[list[dict]] = None, top: int = 3, grip: Optional[str] = None) -> list[dict]:
+          pros: Optional[list[dict]] = None, top: int = 3, grip: Optional[str] = None,
+          lang: str = "en") -> list[dict]:
     """user_body: body.body_ratios() plus optional height_cm. grip: the user's grip, when they
     gave it; pros with the same grip rank first, others only fill the list. Returns the top
     pros, best first."""
@@ -134,12 +137,12 @@ def match(user_body: dict, user_curves: Optional[dict], stroke: str, bat_hand: s
     for p in ranked:
         d = body_distance(user_body, p)
         clips = [c for c in p.get("strokes", {}).get(stroke, []) if c.get("curves")]
-        forms = [(form_compare(user_curves, c["curves"], p["name"]), c) for c in clips] if user_curves else []
+        forms = [(form_compare(user_curves, c["curves"], p["name"], lang), c) for c in clips] if user_curves else []
         form, clip = max(forms, key=lambda fc: fc[0]["score"]) if forms else (None, clips[0] if clips else None)
         out.append({
             "id": p["id"], "name": p["name"], "country": p.get("country"), "gender": p.get("gender"),
             "height_cm": p["height_cm"], "bat_hand": p["bat_hand"], "grip": p.get("grip", "shakehand"),
-            "warnings": warnings(p, grip),
+            "warnings": warnings(p, grip, lang),
             "score": similarity(d), "body_distance": round(d, 2),
             "form_score": form["score"] if form else None,
             "differences": form["notes"] if form else [],
