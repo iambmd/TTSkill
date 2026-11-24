@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { usd } from "@/lib/format";
 import type { Level, Recommendation, Rubber, Style } from "@/lib/rubbers";
-import { RubberBuyMenu } from "./rubber-buy-menu";
+import { BuyMenu } from "./buy-menu";
 
 const DEFAULT_BUDGET = 60;
 // 500 is the finder's ceiling, shown as "$100+".
@@ -70,7 +70,7 @@ export function GearQuiz() {
                 : current.error ? t("failed")
                 : t("nothing", { budget: usd(format, budget, true) })}
             </p>
-            {pick && <RubberBuyMenu product={pick.name} buyLinks={pick.buyLinks} buyLink={pick.buyLink} buyUrl={pick.buyUrl} />}
+            {pick && <BuyMenu product={pick.name} buyLinks={pick.buyLinks} buyLink={pick.buyLink} buyUrl={pick.buyUrl} />}
           </div>
           <Link href={`/rubbers?${query}`} prefetch={false} className="home-text-link">{t("open")}</Link>
         </div>

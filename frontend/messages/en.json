@@ -99,7 +99,9 @@
     "pickStyle": "Pick spin or speed.",
     "pickType": "Pick a rubber type.",
     "pickLevel": "Pick your level.",
-    "budget": "Enter a budget between {min} and {max}."
+    "budget": "Enter a budget between {min} and {max}.",
+    "pickHandle": "Pick a handle from the list.",
+    "pickFeel": "Pick the feel you want."
   },
   "validation": {
     "or": "{list} or {last}",
@@ -598,7 +600,8 @@
   "gear": {
     "rubbers": "Rubber finder",
     "pros": "Pro setups",
-    "tabs": "Equipment pages"
+    "tabs": "Equipment pages",
+    "blades": "Blade finder"
   },
   "rubbers": {
     "eyebrow": "Rubber finder",
@@ -666,7 +669,8 @@
       "Ma Lin": "Retired; setup from his playing years.",
       "Kuai Man": "Single undated list.",
       "Sabine Winter": "Her player page lists an inverted Rasanter R53 backhand, not anti-spin. We couldn't find a source for an anti-spin backhand."
-    }
+    },
+    "bladeLink": "Ratings and buy links"
   },
   "buy": {
     "amazonOther": "Amazon (other seller)",
@@ -680,7 +684,8 @@
     "stores": "US stores for {product}",
     "linkLabel": "{action}: {product} at {store}{unverified}",
     "unverifiedSuffix": " (unverified)",
-    "alsoAt": "Also at"
+    "alsoAt": "Also at",
+    "noLink": "No verified US store link yet"
   },
   "serverErrors": {
     "unreadable": "We couldn't read that file as a video. Export it again as MP4 or MOV and retry.",
@@ -761,5 +766,96 @@
       "compile": "Putting their breakdowns together...",
       "done": "You play most like {name} ({score}% body match)."
     }
+  },
+  "blades": {
+    "eyebrow": "Blade finder",
+    "title": "Pick your blade",
+    "body": "Tell us how you play and what you can spend. Pricier blades are usually better, so we start near your budget and rank by what players who use them think.",
+    "style": "Style",
+    "styles": {
+      "spin": "Spin",
+      "spinSub": "Flexible: holds the ball longer for loops",
+      "speed": "Speed",
+      "speedSub": "Stiff: drives and fast hits"
+    },
+    "level": "Level",
+    "levels": {
+      "beginner": "Beginner",
+      "intermediate": "Intermediate",
+      "advanced": "Advanced"
+    },
+    "handle": "Handle",
+    "handles": {
+      "any": "Any",
+      "FL": "Flared (FL)",
+      "ST": "Straight (ST)",
+      "AN": "Anatomic (AN)",
+      "CS": "Chinese penhold (CS)",
+      "JP": "Japanese penhold (JP)",
+      "penhold": "Penhold (CS / JP)",
+      "PH": "Penhold"
+    },
+    "handleHint": "We list a handle only where the maker or a US store says the blade comes with it.",
+    "feel": "Feel",
+    "feels": {
+      "any": "Any",
+      "control": "More control",
+      "balanced": "Balanced",
+      "speed": "More speed"
+    },
+    "budget": "Budget for the blade and one rubber",
+    "budgetHint": "The budget covers the blade and one rubber. We plan about {share} of it for the blade (and always leave {reserve} for a rubber), then rank in {step} steps down from there, best rated first in each step.",
+    "loadFailed": "Couldn't load blades. Try again.",
+    "nothing": "Nothing matches yet. Try another level or feel.",
+    "noHandleInfo": "{n, plural, one {# more blade fits but we have no handle information for it.} other {# more blades fit but we have no handle information for them.}}",
+    "ratings": "Speed {speed} · Control {control} · Stiffness {stiffness}",
+    "score": "score {score}",
+    "source": "Source:",
+    "sourceName": "RevSpin",
+    "ratingCount": "{n, plural, one {# rating} other {# ratings}}",
+    "note": "Ratings are RevSpin user averages out of 10. Prices are RevSpin's approximate US prices. Specs come from the makers and US stores; a spec we couldn't confirm is left out.",
+    "plies": "{n} plies",
+    "weight": "{n} g",
+    "handlesList": "Handles: {list}",
+    "specsFrom": "Specs: {site}",
+    "noSpecs": "Specs not confirmed yet.",
+    "layers": {
+      "wood": "All-wood",
+      "inner": "Inner {fiber}",
+      "outer": "Outer {fiber}",
+      "composite": "Fiber layers: {fiber}",
+      "inferred": "Carbon or fiber layers (from the name)"
+    },
+    "fibers": {
+      "carbon": "carbon",
+      "alc": "ALC",
+      "zlc": "ZLC",
+      "cnf": "CNF",
+      "kevlar": "Kevlar",
+      "glass": "glass fiber",
+      "other": "composite fiber"
+    },
+    "paces": {
+      "slow": "slower",
+      "medium": "medium-speed",
+      "fast": "fast",
+      "veryFast": "very fast"
+    },
+    "controls": {
+      "high": "high control",
+      "good": "good control",
+      "fair": "moderate control"
+    },
+    "flexes": {
+      "flexible": "flexible",
+      "medium": "medium-flex",
+      "stiff": "stiff"
+    },
+    "summary": "A {pace} blade with {control} and a {flex} feel.",
+    "comboTitle": "Rubber to pair with it",
+    "comboLeft": "{amount} left for rubbers",
+    "comboHint": "One rubber, same style and level. A bat takes two.",
+    "comboNone": "No rubber fits the {amount} left.",
+    "openFinder": "Open the blade finder"
   }
 }

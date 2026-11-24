@@ -42,6 +42,8 @@ Without `ANTHROPIC_API_KEY` the offline cards are used. `COACH_ENGINE=agent` run
 - `full` mode keeps every rally, merges overlapping spans and drops the dead time.
 - Each segment gets 1.5 s of padding, is re-encoded to 720p/30fps H.264, and the parts are joined with the ffmpeg concat demuxer.
 
+**Blade Finder** (`/blades`, `/blades/[slug]`). Style (spin = flexible, speed = stiff), level, feel (speed vs control), handle (FL, ST, AN, penhold) and a budget for the blade and one rubber. Same ranking as the rubbers in `lib/blades.ts`: drop what is over budget (about 60% of the budget is planned for the blade, at least $20 is kept for a rubber), rank in $20 steps from there, best rated first. Level rules give a speed range and a control floor, and beginners never see fast carbon blades (carbon is what the data says, or what the blade's name says, shown "from the name"). Each result shows RevSpin's ratings with "Source: RevSpin" and a link, our own one-line summary, the specs a maker or US store states (an unstated spec is left out, and a handle nobody lists is not offered as a filter), the shared buy menu, and a matching rubber from the existing recommender for the same style and level and the budget left. Pro Setups link a pro's blade to its entry where the exact blade exists. No backend: the data is bundled (`backend/equipment/blades.json`, built by `python -m equipment.build_blades`, see `backend/equipment/SOURCE.md`).
+
 ## Stack and layout
 
 ```
@@ -77,6 +79,10 @@ Browser ──> Next.js /api/jobs/* ──> FastAPI /jobs/* ──> SQLite queue
 | `backend/technique/hitpose.py` | Pose at the strokes for Coach: rally scan at 1 fps, 3-frame probes at every stroke onset, 30 fps windows around the fastest; the coached-stroke choice. |
 | `backend/app/cache.py`, `backend/timing.py` | The per-video cache (by content hash, `backend/data/cache/`) of rallies, seed and stroke pose; the per-job stage and Claude-cost timings. |
 | `backend/technique/tools.py` | The same steps as plain functions (`TOOLS`), ready for a future deepagents orchestrator. |
+| `frontend/lib/blades.ts`, `blade-types.ts`, `blades.json` | Blade Finder. `blade-types.ts` has the types, constants and tier words with no data (client components import this); `blades.ts` has the dataset, `recommend` (rubber-style ranking), `combo` (the matching rubber) and the filters. `blades.json` is generated: don't edit it. |
+| `frontend/app/blades/`, `app/api/blades/route.ts` | The finder page and card (`blade-card.tsx`, also used on the blade page `[slug]`), and `GET /api/blades?style=&level=&budget=&handle=&feel=`. `app/buy-menu.tsx` is the shared buy menu for rubbers and blades. |
+| `backend/equipment/build_blades.py`, `blade_specs.py`, `revspin.py`, `fetching.py`, `blades.json`, `blades_skipped.csv` | The blade dataset builder: RevSpin ratings from a saved index (revspin.net is **never fetched**: it refused us, see THIRD_PARTY_LICENSES.md #5), specs and store links from makers and US stores. `fetching.py` is the polite fetcher (robots.txt, cache, delay, 403 final). |
+| `shared/blade-buy-links.json` | US store links per blade, by exact name; no Amazon until checked by hand (`docs/amazon_blades_todo.md`). |
 | `scripts/refresh_demos.py` | Re-runs the four demo jobs on the committed Before clips (`frontend/public/examples/*-before.mp4`) and exports `lib/demo-jobs.json`, `coach-example.json`, `demo-assets.json` and the After videos together. Don't hand-edit those; `frontend/test/demo.test.ts` checks they come from one refresh. |
 | `samples/` | Local test videos. Git-ignored. |
 
@@ -176,6 +182,7 @@ cd frontend && npm run build                           # production build (stop 
 
 - `backend/tests/test_api.py` covers every FastAPI endpoint: validation (422s, bad uploads on every endpoint), what each one schedules, job reads, result and file serving, the Auto-Cut warning, and the end-to-end text and video breakdowns. `backend/tests/test_validate.py` covers the checks themselves: height, choices, ranges, text, upload names, ffprobe, link shapes and metadata, the pose visibility check. `backend/tests/conftest.py` makes small real clips with ffmpeg (`media`, `upload` fixtures). `frontend/test/validate.test.ts` and `youtube.test.ts` cover the same checks on the frontend. `frontend/test/api.test.ts` covers every Next.js route in stub, proxy (fetch mocked) and demo modes. It fails if a new `route.ts` isn't added to its table.
 - Jobs go through `jobqueue.submit(...)` and the worker runs them through `jobs.run(...)`, so a job always ends `done` or `failed`: a job process that dies or passes its time limit fails its job with a message; a worker that dies leaves its jobs to be failed on restart (and by `jobs.get` meanwhile).
+- `backend/tests/test_blades.py` covers the blade parsers, spec rules, the fetcher's refusals and the generated files; `frontend/test/blades.test.ts` covers the Blade Finder logic, buy links, pro links and the card in both languages; `python3 -m unittest` in `scripts/` covers the link checker.
 - Run only one `make dev` per checkout. Two `next dev` servers share `frontend/.next` and break each other's routes.
 
 - Tests that need a real match skip unless `samples/IMG_8782.MOV` exists, or `TTSKILL_SAMPLE` is set for the technique test.
@@ -230,6 +237,7 @@ Adding things
   - backend: an endpoint in `main.py` and `run_<kind>` in `pipelines.py`
   - frontend: a route at `frontend/app/api/jobs/<kind>/route.ts`, the kind added to the `Job["kind"]` union, a form page, and handling on `jobs/[id]/page.tsx`
   - a demo entry in `demo-jobs.json` if it should work in `DEMO_MODE`
+- **A refreshed or new blade:** run `python -m equipment.build_blades` from `backend/` (never add revspin.net to the fetcher), then `cd frontend && npm test`. Specs and links are only what a page states; never type one in by hand except an Amazon link (see `docs/amazon_blades_todo.md`).
 - **A new limit:** add it to `shared/limits.json`, check it in `backend/app/validate.py` and `frontend/lib/validate.ts` with the same message, and test both sides.
 - **A new stroke type:** add it to `STROKE_TYPES` in `backend/technique/strokes.py` (label, swing direction, phases, coaching focus), give it an offline template in `technique/analyze.py`, extend `classify()`/`from_text()` if it can be auto-detected, and add it to `frontend/lib/strokes.ts`.
 - **A new pipeline step for agents:** expose it as a plain function in `technique/tools.py` and add it to `TOOLS`.

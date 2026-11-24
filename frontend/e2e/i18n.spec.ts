@@ -10,6 +10,8 @@ const pages = [
   ["/match", "Bạn đánh giống ai?"],
   ["/pros", "VĐV dùng gì"],
   ["/rubbers", "Chọn mặt vợt"],
+  ["/blades", "Chọn cốt vợt"],
+  ["/blades/butterfly-viscaria", "Butterfly Viscaria"],
   ["/jobs/demo-autocut", /pha bóng/i],
   ["/jobs/demo-breakdown", /backspin/i],   // a cached demo's headline stays English, marked as such
   ["/jobs/demo-coach", /fix my forehand/i],
@@ -17,7 +19,7 @@ const pages = [
 ] as const;
 
 // "home.title", "job.titles.allDone": what next-intl prints for a key it can't find.
-const RAW_KEY = /\b(?:metadata|layout|header|nav|theme|language|common|hands|grips|strokes|offline|errors|validation|home|demoDescriptions|examples|matchSource|submit|coach|breakdown|autocut|match|video|picker|job|autocutWaiting|rallies|coachView|steps|matches|analysedPlayer|gear|rubbers|pros|buy)\.[a-z][A-Za-z_]*(?:\.[A-Za-z_]+)*\b/;
+const RAW_KEY = /\b(?:metadata|layout|header|nav|theme|language|common|hands|grips|strokes|offline|errors|validation|home|demoDescriptions|examples|matchSource|submit|coach|breakdown|autocut|match|video|picker|job|autocutWaiting|rallies|coachView|steps|matches|analysedPlayer|gear|rubbers|blades|pros|buy)\.[a-z][A-Za-z_]*(?:\.[A-Za-z_]+)*\b/;
 
 async function inVietnamese(page: Page) {
   await page.context().addCookies([{ name: "NEXT_LOCALE", value: "vi", url: "http://127.0.0.1:3110" }]);
@@ -48,7 +50,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 
         await expect(page.locator("html")).toHaveAttribute("lang", "vi");
         await expect(page.locator("main h1")).toHaveText(heading);
         await expect(page.getByRole("group", { name: "Ngôn ngữ" }).getByRole("button", { name: "Tiếng Việt" })).toHaveAttribute("aria-pressed", "true");
-        if (path === "/rubbers") await expect(page.locator("main ol li").first()).toBeVisible();
+        if (path === "/rubbers" || path === "/blades") await expect(page.locator("main ol li").first()).toBeVisible();
         // The forms whose results the backend writes ask for them in Vietnamese.
         if (["/breakdown", "/coach", "/match"].includes(path)) await expect(page.locator('input[name="lang"]')).toHaveValue("vi");
         if (path.startsWith("/jobs/")) await expect(page.locator("main")).not.toContainText("Loading your result");
@@ -95,6 +97,20 @@ test("prices follow the locale and stay in US dollars", async ({ page }) => {
   const price = page.locator("main ol li").first().locator(".stat").last();
   await expect(price).toHaveText(/^\d+\s?US\$$/);
   await expect(page.getByText("Độ dày mút")).toBeVisible();
+});
+
+test("Blade Finder in Vietnamese: settled terms, RevSpin credited, no English leaks", async ({ page }) => {
+  await inVietnamese(page);
+  await page.goto("/blades?style=spin&level=intermediate&budget=150");
+  const first = page.locator("main ol li").first();
+  await expect(first).toBeVisible();
+  await expect(first).toContainText("Nguồn:");
+  await expect(first.getByRole("link", { name: "RevSpin" })).toHaveAttribute("href", /^https:\/\/revspin\.net\/blade\//);
+  await expect(first).toContainText("Cốt vợt");           // the one-line summary
+  await expect(first).toContainText("Mặt vợt đi kèm");     // the matching rubber
+  await expect(page.getByText("Cán vợt", { exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Các trang dụng cụ" }).getByRole("link", { name: "Tìm cốt vợt" })).toHaveAttribute("aria-current", "page");
+  await expect(first).not.toContainText(/Source:|Rubber to pair|blade with/);
 });
 
 test("the mobile header fits both toggles, the logo and the links", async ({ page }) => {

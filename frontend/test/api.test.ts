@@ -27,6 +27,7 @@ const ROUTES = {
   exports: "@/app/api/jobs/[id]/exports/route",
   files: "@/app/api/jobs/[id]/files/[name]/route",
   rubbers: "@/app/api/rubbers/route",
+  blades: "@/app/api/blades/route",
   health: "@/app/api/health/route",
   players: "@/app/api/players/detect/route",
   rerun: "@/app/api/jobs/[id]/rerun/route",
@@ -57,6 +58,7 @@ async function route(name: keyof typeof ROUTES, env: Env = {}): Promise<Route> {
     exports: () => import("@/app/api/jobs/[id]/exports/route"),
     files: () => import("@/app/api/jobs/[id]/files/[name]/route"),
     rubbers: () => import("@/app/api/rubbers/route"),
+    blades: () => import("@/app/api/blades/route"),
     health: () => import("@/app/api/health/route"),
     players: () => import("@/app/api/players/detect/route"),
     rerun: () => import("@/app/api/jobs/[id]/rerun/route"),
@@ -418,6 +420,38 @@ describe("GET /api/rubbers", () => {
     expect(body.results[0].price).toBeGreaterThan(0);
     expect(body.results[0].price).toBeLessThanOrEqual(40);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/blades", () => {
+  const url = (q: string, headers: Record<string, string> = {}) => new Request(`http://test/api/blades?${q}`, { headers });
+  it("rejects unknown options, in the caller's language", async () => {
+    const { GET } = await route("blades");
+    await expectError(await GET!(url("style=loop"), ctx({})), 400, "spin or speed");
+    await expectError(await GET!(url("level=pro"), ctx({})), 400, "level");
+    await expectError(await GET!(url("handle=XL"), ctx({})), 400, "handle");
+    await expectError(await GET!(url("feel=wild"), ctx({})), 400, "feel");
+    await expectError(await GET!(url("budget=0"), ctx({})), 400, "budget");
+    await expectError(await GET!(url("handle=XL", { "accept-language": "vi" }), ctx({})), 400, "loại cán");
+  });
+  it("ranks the bundled blades without any backend: within budget, $20 steps, then user score", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+    const { GET } = await route("blades", { BACKEND_URL: "http://backend" });
+    const body = await (await GET!(url("style=spin&level=intermediate&budget=200"), ctx({}))).json();
+    expect(body).toMatchObject({ style: "spin", level: "intermediate", budget: 200, handle: "any", feel: "any" });
+    expect(body.results.length).toBe(8);
+    expect(body.results.every((r: { price: number }) => r.price <= 120)).toBe(true);   // 60% of $200
+    const keys = body.results.map((r: { price: number; overall: number }) => [Math.floor((120 - r.price) / 20 + 1e-9), -r.overall]);
+    expect(keys).toEqual([...keys].sort((a: number[], b: number[]) => a[0] - b[0] || a[1] - b[1]));
+    expect(body.results[0]).toMatchObject({ url: expect.stringMatching(/^https:\/\/revspin\.net\/blade\//), combo: { budget: expect.any(Number) } });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+  it("filters by handle and feel", async () => {
+    const { GET } = await route("blades");
+    const body = await (await GET!(url("style=speed&level=advanced&budget=500&handle=FL&feel=speed"), ctx({}))).json();
+    expect(body.results.length).toBeGreaterThan(0);
+    for (const r of body.results) { expect(r.handles).toContain("FL"); expect(r.speed - r.control).toBeGreaterThanOrEqual(0.4); }
   });
 });
 

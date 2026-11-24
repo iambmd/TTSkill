@@ -151,3 +151,60 @@ test("a broken Wikipedia thumbnail falls back to the player's initials", async (
   await portrait;
   await expect(page.getByRole("article").getByText("CM", { exact: true })).toBeVisible();
 });
+
+test("Blade Finder: filters narrow the list, each blade credits RevSpin and pairs with a rubber", async ({ page }) => {
+  await page.goto("/blades?style=speed&level=advanced&budget=300");
+  const cards = page.locator("main ol > li");
+  await expect(cards.first()).toBeVisible();
+  const first = cards.first();
+  await expect(first.getByRole("link", { name: "RevSpin" })).toHaveAttribute("href", /^https:\/\/revspin\.net\/blade\/[a-z0-9-]+\.html$/);
+  await expect(first).toContainText("Source:");
+  await expect(first).toContainText("Rubber to pair with it");
+  // A blade with no verified store says so; the ones with links (and the paired rubbers) use the shared buy menu.
+  await expect(page.getByRole("group", { name: /^US stores for / }).first()).toBeVisible();
+
+  const before = await cards.allInnerTexts();
+  await page.getByRole("radio", { name: "More control" }).check({ force: true });
+  await expect.poll(async () => (await cards.allInnerTexts()).join()).not.toBe(before.join());
+
+  await page.getByRole("radio", { name: "Flared (FL)" }).check({ force: true });
+  await expect.poll(async () => {
+    const texts = await cards.allInnerTexts();
+    return texts.length > 0 && texts.every((text) => /Handles: .*Flared \(FL\)/.test(text));
+  }).toBe(true);
+
+  await page.getByLabel("Budget for the blade and one rubber").fill("20");
+  await expect(page.getByText("Nothing matches yet.")).toBeVisible();
+});
+
+test("Blade Finder steers a beginner away from fast carbon blades", async ({ page }) => {
+  await page.goto("/blades?style=speed&level=advanced&budget=500");
+  const cards = page.locator("main ol > li");
+  await expect(cards.first()).toBeVisible();
+  await page.getByRole("radio", { name: "Beginner" }).check({ force: true });
+  // Wait for the beginner list to replace the advanced one, then check every card against the rule.
+  await expect.poll(async () => {
+    const texts = await cards.allInnerTexts();
+    return texts.length > 0 && texts.every((text) => Number(/Speed (\d+\.\d)/.exec(text)?.[1] ?? 99) <= 8.8);
+  }).toBe(true);
+  for (const text of await cards.allInnerTexts()) {
+    const speed = Number(/Speed (\d+\.\d)/.exec(text)![1]);
+    // A blade whose layers are carbon or fibre (stated, or hinted by its name) is never a fast one for a beginner.
+    if (/Carbon or fiber layers|Fiber layers|Inner |Outer /.test(text)) expect(speed).toBeLessThan(8.5);
+  }
+});
+
+test("Pro setups link a pro's blade to its blade entry only when the exact blade exists", async ({ page }) => {
+  await page.goto("/pros");
+  await page.getByRole("searchbox", { name: "Player" }).fill("Timo Boll");
+  const card = page.getByRole("article").first();
+  await card.getByRole("link", { name: "Ratings and buy links" }).click();
+  await expect(page).toHaveURL(/\/blades\/butterfly-timo-boll-alc$/);
+  await expect(page.locator("main h1")).toHaveText("Butterfly Timo Boll ALC");
+  await expect(page.locator("main")).toContainText("Source:");
+
+  await page.goto("/pros");
+  await page.getByRole("searchbox", { name: "Player" }).fill("Kuai Man");
+  await expect(page.getByRole("article").first()).toBeVisible();
+  await expect(page.getByRole("article").first().getByRole("link", { name: "Ratings and buy links" })).toHaveCount(0);
+});

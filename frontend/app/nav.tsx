@@ -10,7 +10,7 @@ const LINKS = [
   ["/rubbers", "gear"],
 ] as const;
 // The Gear link covers both equipment pages.
-const GEAR = ["/rubbers", "/pros"];
+const GEAR = ["/rubbers", "/blades", "/pros"];
 
 export function Nav() {
   const t = useTranslations("nav");

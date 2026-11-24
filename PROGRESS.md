@@ -529,3 +529,36 @@ Still English in Vietnamese mode:
 - Country codes.
 
 Not verified: a live Claude call in Vietnamese. There is no API key here.
+
+## Blade Finder from RevSpin ratings and US store specs (2026-11-24)
+
+- **What was built:** `/blades` (Blade Finder) and `/blades/[slug]`, a third gear tab, and a blade dataset with buy links, a matching rubber on every result, and pro-blade links on Pro Setups. Ranking is the rubbers' logic: drop over budget, rank in $20 steps, best rated first. Filters are style (spin = flexible, speed = stiff), level, feel, handle and budget. `BuyMenu` replaces `RubberBuyMenu` and serves both catalogues.
+- **RevSpin stopped us.** The first crawl got HTTP 403 on 2026-11-24, although robots.txt allows `/blade/`. Switching the User-Agent to get past it was blocked, correctly, so it wasn't done. The owner chose to build on the one index page already saved (speed, control, stiffness, overall, ratings count and price for all 3,765 blades; 562 have 10 or more ratings, 3,203 are skipped and listed in `backend/equipment/blades_skipped.csv`) and to ask RevSpin for permission. `fetching.py` now refuses revspin.net outright and `revspin.py` only parses saved pages. THIRD_PARTY_LICENSES.md #5 now covers blades: numbers only, no review text, "Source: RevSpin" with a link on every rating.
+- **Specs from makers and stores, only what a page states.**
+
+| Field | Blades with it (of 562) |
+| --- | ---: |
+| Plies | 88 |
+| Weight | 56 |
+| Composition | 89 (wood 40, composite 39, inner 8, outer 2) |
+| Handles | 98 (FL 82, ST 59, AN 35, CS 26, PH 21) |
+| Verified US store link | 125 (Paddle Palace 74, TableTennisStore 56, eTableTennis 33, Go Table Tennis 30, DHS Sports USA 6, JOOLA USA 5, Double Happiness USA 1) |
+| Hardness | 3 |
+| Amazon link | 0, on purpose |
+
+  Sources: Butterfly's specification table (77 blades, the maker's own plies, weight, material and handle sizes), six Shopify stores' public catalogs, and Paddle Palace's blade pages found through its sitemap. The 100 most-rated blades are covered better than the rest (plies 33, handles 29, links 37). Many of the 562 are discontinued or not sold in these stores, so empty is common, and the finder says so ("N more fit but we have no handle information"; "Specs not confirmed yet").
+- **Accuracy fixes found along the way:** a lone "5-ply wood" next to carbon layers is only the wood count (7 plies in total), so it gives no plies; "5 layers" isn't plies; "without carbon" isn't carbon; "Hurricane Long 5 'Light'" is not "Hurricane Long 5"; a maker's page outranks store prose; sources that disagree leave the field empty; composition and fibre stand or fall together; a penhold listing adds only its handle. The first merge had store prose outvoting Butterfly's own table (23 plies conflicts), which the precedence rule fixed.
+- **Fetching manners:** robots.txt checked, one request every 2 s, pages cached, 403 final, 429 doubles the delay and a host that keeps answering 429 is dropped. Butterfly's US shop answered 429 even at 30 s, so its product pages are off by default (`--butterfly-shop`); its spec table needed none of them. Paddle Palace's agent guide asks for read-only use of public pages found through its sitemap and for identification: done, but Web Bot Auth is not implemented. Amazon returned a bot check to scripted requests and was left alone.
+- **Budget design:** the budget covers the blade and one rubber, with about 60% planned for the blade and at least $20 kept for the rubber. With ranking from the full budget, an $80 pick left $20 and a $130 pick left $20, which made the pairing pointless; with the 60% allowance the same searches pair an $80 blade with a $69 rubber.
+- **Beginner rule:** carbon or fibre blades with speed 8.5 or more are excluded for beginners, using the stored composition or, failing that, a fibre word in the name (shown "from the name", never stored). The beginner speed cap is 8.8 and the control floor 8.5.
+- **Vietnamese:** blade = cốt vợt. The handle, plies, stiffness and all-wood terms are new rows in `docs/glossary_vi.md` marked as proposals (and mirrored in `backend/i18n.py`, which a test enforces).
+- **Link checker:** `scripts/check_buy_links.py --blades` checks `shared/blade-buy-links.json` against blade names, and never fetches Amazon. `docs/amazon_blades_todo.md` lists the top blades by brand (Butterfly, JOOLA, STIGA, others) with the steps for checking the official storefronts in a browser.
+- **Bundle size:** the finder first pulled the whole dataset into the browser (22.8 kB for `/blades`); splitting the data-free types into `lib/blade-types.ts` brought it to 5.8 kB.
+
+Checked:
+- Frontend: vitest 236 passed (28 new: `test/blades.test.ts` and the `/api/blades` route), `tsc` clean, `next build` OK, lint only the 5 existing `<img>` warnings. Playwright 94 passed (78 before): `/blades` and `/blades/[slug]` in both themes at 1440 and 375 px, in Vietnamese, plus flows for filtering with the paired rubber and the RevSpin link, the beginner steer-away, and the pro-to-blade link. A first run of two flow tests read the list before the filter had updated; they now wait for it.
+- Backend: 497 passed, 3 skipped, 1 xfailed, 0 failed (27 new in `tests/test_blades.py`: the parsers, the "never guess" rules, the fetcher's refusals, the generated files). `scripts/` unittest 6 passed (including blade matching and that Amazon is never fetched).
+- Looked at the finder and a blade page at 375 and 1440 px in English and Vietnamese: the three gear tabs fit (the Vietnamese one wraps to two lines), selected tiles follow the existing style, and the card reads cleanly.
+- Two Playwright runs and the first backend run were killed (exit 137) when they ran at the same time as another heavy job on this 7 GB machine; each passed when run alone.
+
+Not verified: no Amazon listing was checked (none added); Butterfly's US shop pages were not read (it rate-limits); the Vietnamese handle and plies terms are proposals for the Vietnamese coach; RevSpin's permission is pending, so the ratings can't be refreshed.

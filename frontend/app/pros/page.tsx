@@ -2,11 +2,13 @@
 
 import { useTranslations } from "next-intl";
 import { useState } from "react";
+import Link from "next/link";
 import { rubberBuyLinks } from "@/lib/buy-links";
+import proBlades from "@/lib/pro-blades.json";
 import data from "@/lib/pros.json";
 import productData from "@/lib/product-images.json";
 import { GearTabs } from "../gear-tabs";
-import { RubberBuyMenu } from "../rubber-buy-menu";
+import { BuyMenu } from "../buy-menu";
 import { PageIntro, inputClass, labelClass, strokeFamily } from "../ui";
 import { ProPhoto, SetupStrip, type ProductImage } from "./pro-photo";
 
@@ -16,6 +18,7 @@ type Pro = {
   img?: { blade?: string; fh?: string; bh?: string };
 };
 const PROS = data.players as Pro[];
+const BLADE_ENTRIES = proBlades as Record<string, string>; // blade label -> slug, where /blades has that exact blade
 const SOURCES = data.sources as Record<string, string>;
 const PRODUCTS = productData.products as Record<string, ProductImage>;
 const images = (p: Pro) => ({
@@ -65,7 +68,10 @@ function ProCard({ p }: { p: Pro }) {
             </dt>
             <dd className="min-w-0 space-y-2 break-words">
               <p className="font-semibold">{v}</p>
-              {k !== "blade" && <RubberBuyMenu product={v} buyLinks={rubberBuyLinks(v)} />}
+              {k !== "blade" && <BuyMenu product={v} buyLinks={rubberBuyLinks(v)} />}
+              {k === "blade" && Object.hasOwn(BLADE_ENTRIES, v) && (
+                <Link href={`/blades/${BLADE_ENTRIES[v]}`} className="inline-block py-1 text-xs font-semibold text-accent underline underline-offset-2">{t("pros.bladeLink")}</Link>
+              )}
             </dd>
           </div>
         ))}

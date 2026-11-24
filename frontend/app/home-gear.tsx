@@ -2,7 +2,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { rubberByName } from "@/lib/rubbers";
 import { GearQuiz } from "./home-quiz";
-import { RubberAffiliateDisclosure, RubberBuyMenu } from "./rubber-buy-menu";
+import { AffiliateDisclosure, BuyMenu } from "./buy-menu";
 import { ChevronIcon } from "./ui";
 
 const featured = [
@@ -36,12 +36,12 @@ export function HomeGear() {
                   </ul>
                 </div>
               </div>
-              <RubberBuyMenu product={rubber.name} buyLinks={rubber.buyLinks} featured />
+              <BuyMenu product={rubber.name} buyLinks={rubber.buyLinks} featured />
             </li>
           );
         })}
       </ul>
-      <RubberAffiliateDisclosure />
+      <AffiliateDisclosure />
       <GearQuiz />
     </section>
   );

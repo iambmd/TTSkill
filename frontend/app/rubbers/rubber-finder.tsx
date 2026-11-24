@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { rating, usd, usdSymbol } from "@/lib/format";
 import { THICKNESS, type Level, type Recommendation, type RubberType, type Style } from "@/lib/rubbers";
 import { GearTabs } from "../gear-tabs";
-import { RubberBuyMenu } from "../rubber-buy-menu";
+import { BuyMenu } from "../buy-menu";
 import { PageIntro, RadioTiles, inputClass, labelClass } from "../ui";
 
 const STYLES = ["spin", "speed"] as const;
@@ -125,7 +125,7 @@ export function RubberFinder({ initialStyle, initialLevel, initialBudget, demo }
                         <p className="text-xs text-muted">{t("score", { score: fmt(r.overall) })}</p>
                       </div>
                     </div>
-                    <RubberBuyMenu product={r.name} buyLinks={r.buyLinks} buyLink={r.buyLink} buyUrl={r.buyUrl} />
+                    <BuyMenu product={r.name} buyLinks={r.buyLinks} buyLink={r.buyLink} buyUrl={r.buyUrl} />
                   </li>
                 ))}
               </ol>

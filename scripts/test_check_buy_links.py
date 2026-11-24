@@ -2,9 +2,11 @@
 from __future__ import annotations
 
 import unittest
+import unittest.mock
 from decimal import Decimal
 
-from check_buy_links import check_amazon, product_url, reference_price
+import check_buy_links
+from check_buy_links import blade_matches, check_amazon, product_url, reference_price
 
 AMAZON_URL = "https://www.amazon.com/dp/B010234567"
 AMAZON_LINK = {"store": "Amazon", "url": AMAZON_URL, "type": "amazon-other"}
@@ -52,3 +54,19 @@ class PurchaseLinksTest(unittest.TestCase):
         self.assertEqual(reference_price(PRODUCT, [palace], {PRODUCT: REFERENCE}, load), REFERENCE)
         self.assertEqual(reference_price(PRODUCT, [palace], {}, load), Decimal("45.99"))
         self.assertIsNone(reference_price("DHS Hurricane 3", [palace], {}, load))
+
+    def test_blade_titles_match_the_exact_blade_only(self):
+        self.assertTrue(blade_matches("Butterfly Viscaria", "Viscaria Blade FL", "Butterfly"))
+        self.assertTrue(blade_matches("Butterfly Viscaria", "Butterfly Viscaria"))
+        self.assertTrue(blade_matches("DHS Hurricane Long 5", "DHS Hurricane Long 5 Table Tennis Blade"))
+        self.assertFalse(blade_matches("DHS Hurricane Long 5", 'DHS Hurricane Long 5 Blade "Light"'))
+        self.assertFalse(blade_matches("Butterfly Viscaria", "Butterfly Viscaria Super ALC Blade"))
+
+    def test_blade_mode_leaves_amazon_to_a_person(self):
+        check_buy_links.BLADE_MODE = True
+        try:
+            with unittest.mock.patch.object(check_buy_links, "fetch", side_effect=AssertionError("must not fetch Amazon")):
+                rows = check_buy_links.check({"Butterfly Viscaria": [AMAZON_LINK]})
+        finally:
+            check_buy_links.BLADE_MODE = False
+        self.assertEqual(rows[0][2], "UNVERIFIED")

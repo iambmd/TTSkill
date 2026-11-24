@@ -8,6 +8,8 @@ const pages = [
   ["/match", "Who do you play like?"],
   ["/pros", "What the pros use"],
   ["/rubbers", "Pick your rubber"],
+  ["/blades", "Pick your blade"],
+  ["/blades/butterfly-viscaria", "Butterfly Viscaria"],
   ["/jobs/demo-autocut", /rallies/i],
   ["/jobs/demo-breakdown", /backspin/i],
   ["/jobs/demo-coach", /fix my forehand/i],
@@ -78,7 +80,7 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 375, height: 844 
           const themeToggle = page.getByRole("button", { name: `Switch to ${theme === "light" ? "dark" : "light"} mode` });
           await expect(themeToggle).toBeVisible();
           if (path === "/") await expect(page.locator("main").getByRole("alert")).toContainText("Live analysis is offline");
-          if (path === "/rubbers") await expect(page.locator("main ol li").first()).toBeVisible();
+          if (path === "/rubbers" || path === "/blades") await expect(page.locator("main ol li").first()).toBeVisible();
 
           await page.keyboard.press("Tab");
           const skip = page.getByRole("link", { name: "Skip to main content" });

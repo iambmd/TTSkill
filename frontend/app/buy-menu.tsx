@@ -20,7 +20,7 @@ function Store({ link }: { link: BuyLink }) {
   </>;
 }
 
-export function RubberAffiliateDisclosure() {
+export function AffiliateDisclosure() {
   const t = useTranslations("buy");
   const { disclosure, amazonDisclosure } = buyMenu({});
   if (!disclosure) return null;
@@ -30,10 +30,14 @@ export function RubberAffiliateDisclosure() {
   </p>;
 }
 
-export function RubberBuyMenu({ product, featured = false, ...data }: BuyLinkData & { product: string; featured?: boolean }) {
+/** The store links for one rubber or blade. `empty` picks the line shown when no verified US link is known;
+ * `disclosure` is off for a second menu on the same card. */
+export function BuyMenu({ product, featured = false, empty = "notSold", disclosure = !featured, ...data }: BuyLinkData & {
+  product: string; featured?: boolean; empty?: "notSold" | "noLink"; disclosure?: boolean;
+}) {
   const t = useTranslations("buy");
   const { links: [first, ...others] } = buyMenu(data);
-  if (!first) return <p className="text-xs text-muted">{t("notSold")}</p>;
+  if (!first) return <p className="text-xs text-muted">{t(empty)}</p>;
   const action = first.status === "unverified" ? t("check") : t("buy");
 
   return (
@@ -52,7 +56,7 @@ export function RubberBuyMenu({ product, featured = false, ...data }: BuyLinkDat
           ))}
         </div>
       )}
-      {!featured && <RubberAffiliateDisclosure />}
+      {disclosure && <AffiliateDisclosure />}
     </div>
   );
 }

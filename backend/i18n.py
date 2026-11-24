@@ -87,6 +87,15 @@ GLOSSARY: list[tuple[str, str]] = [
     ('beginner', 'mới chơi'),
     ('intermediate', 'trung bình'),
     ('advanced', 'nâng cao'),
+    ('handle', 'cán vợt'),
+    ('flared handle (FL)', 'cán loe (FL)'),
+    ('straight handle (ST)', 'cán thẳng (ST)'),
+    ('anatomic handle (AN)', 'cán giải phẫu (AN)'),
+    ('penhold handle (CS / JP)', 'cán cầm dọc (CS / JP)'),
+    ('stiffness (blade)', 'độ cứng (cốt vợt)'),
+    ('plies', 'lớp'),
+    ('all-wood', 'toàn gỗ'),
+    ('carbon / fiber layers', 'lớp carbon / sợi'),
 ]
 
 

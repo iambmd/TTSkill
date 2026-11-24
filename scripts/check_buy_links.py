@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Check US rubber product URLs and exact model names. Run from any directory."""
+"""Check US rubber (or, with --blades, blade) product URLs and exact model names. Run from any directory."""
 from __future__ import annotations
 
 import argparse
 import json
 import re
+import sys
 import unicodedata
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -21,6 +22,9 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 CATALOG = ROOT / "shared" / "rubber-buy-links.json"
 RUBBERS = ROOT / "frontend" / "lib" / "rubbers.json"
+BLADE_CATALOG = ROOT / "shared" / "blade-buy-links.json"
+BLADES = ROOT / "frontend" / "lib" / "blades.json"
+BLADE_MODE = False  # set by --blades: names are blade names, prices come from the blade data
 BROWSER_USER_AGENT = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
                       "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
 AMAZON_TYPES = {"amazon-official", "amazon-other"}
@@ -62,7 +66,17 @@ def model(name: str) -> str:
     return compact(name)
 
 
+def blade_matches(product: str, title: str, brand: str = "") -> bool:
+    """A blade page title names the blade exactly (a trailing handle code and "Table Tennis Blade" don't count)."""
+    sys.path.insert(0, str(ROOT / "backend"))
+    from equipment import blade_specs
+
+    return compact(product) in blade_specs.name_keys(title, brand or product.split()[0])
+
+
 def matches(product: str, title: str, store: str) -> bool:
+    if BLADE_MODE:
+        return blade_matches(product, re.split(r"\s*[|⋆»]\s*", title, maxsplit=1)[0].strip())
     # Marketing and store suffixes are separate from the model. Compare the whole model,
     # including suffixes such as FX, Hard, Neo, Provincial and National.
     names = rf"{re.escape(store)}|Paddle Palace|Megaspin|JOOLA(?: USA)?|Butterfly(?: Online)?|DHS Sports USA"
@@ -339,11 +353,14 @@ def check(entries: dict[str, list[dict[str, str]]], show_ok: bool = False, use_b
           user_agent: str = BROWSER_USER_AGENT, megaspin_delay: float = 2.5) -> list[tuple[str, str, str, str, str]]:
     by_host: dict[str, dict[str, list[tuple[str, dict[str, str]]]]] = defaultdict(lambda: defaultdict(list))
     results: list[tuple[str, str, str, str, str]] = []
-    prices = {entry["name"]: Decimal(str(entry["price"])) for entry in json.loads(RUBBERS.read_text(encoding="utf-8"))
+    prices = {entry["name"]: Decimal(str(entry["price"])) for entry in json.loads((BLADES if BLADE_MODE else RUBBERS).read_text(encoding="utf-8"))
               if entry["price"] and entry["price"] > 0}
     for name, links in entries.items():
         for link in links:
             store, url = link["store"], link["url"]
+            if BLADE_MODE and link["type"] in AMAZON_TYPES:  # never fetched: Amazon shows a bot check, so a person checks these
+                results.append((name, store, "UNVERIFIED", "Amazon blade listings are checked by hand in a browser (docs/amazon_blades_todo.md)", url))
+                continue
             if not product_url(url, store, link["type"]):
                 results.append((name, store, "BROKEN", "Expected a clean HTTPS product URL", url))
                 continue
@@ -389,7 +406,8 @@ def check(entries: dict[str, list[dict[str, str]]], show_ok: bool = False, use_b
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--catalog", type=Path, default=CATALOG)
+    parser.add_argument("--catalog", type=Path, default=None, help="default: the rubber catalog, or the blade catalog with --blades")
+    parser.add_argument("--blades", action="store_true", help="check shared/blade-buy-links.json against blade names")
     parser.add_argument("--show-ok", action="store_true")
     parser.add_argument("--browser", action="store_true", help="use Chromium via the optional Python Playwright package")
     parser.add_argument("--user-agent", default=BROWSER_USER_AGENT, help="User-Agent used for product requests")
@@ -397,7 +415,9 @@ def main() -> int:
     args = parser.parse_args()
     if not 2 <= args.megaspin_delay <= 3:
         parser.error("--megaspin-delay must be between 2 and 3 seconds")
-    entries = json.loads(args.catalog.read_text(encoding="utf-8"))
+    global BLADE_MODE
+    BLADE_MODE = args.blades
+    entries = json.loads((args.catalog or (BLADE_CATALOG if args.blades else CATALOG)).read_text(encoding="utf-8"))
     try:
         results = check(entries, args.show_ok, args.browser, args.user_agent, args.megaspin_delay)
     except ModuleNotFoundError as exc:

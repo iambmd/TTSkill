@@ -8,6 +8,29 @@ From `frontend/`, run `npx playwright install chromium` once, then `npm run test
 
 This WSL install lacks Chromium's `libnss3`/`libnspr4`, and installing them needs sudo (`sudo apt install libnss3`). Without sudo, run `apt-get download libnss3 libnspr4`, unpack both with `dpkg -x <deb> <dir>`, and run the suite with `LD_LIBRARY_PATH=<dir>/usr/lib/x86_64-linux-gnu`.
 
+## Blade Finder and the RevSpin block (2026-11-24)
+
+- **What shipped:** `/blades` (Blade Finder) and `/blades/[slug]` (one blade), a third gear tab, buy links per blade, a matching rubber on every result, and links from Pro Setups to a pro's blade where the exact blade exists (7 of 19 today). It follows the rubbers' logic and the existing visual style, and every string is in both message files. See [AGENTS.md](AGENTS.md) for the rules and `backend/equipment/SOURCE.md` for how the data is built.
+- **RevSpin is paused. Do not crawl it.** Its blade pages answered our crawler with HTTP 403 on 2026-11-24 (robots.txt allows `/blade/`), so the blade ratings come from one saved copy of its index page (`backend/data/revspin_snapshot/`, git-ignored): speed, control, stiffness, overall, ratings count and price for every blade, kept for the 562 with 10 or more ratings, plus hardness for 3 blades. `backend/equipment/fetching.py` refuses revspin.net on purpose. The owner is emailing RevSpin for permission; until RevSpin answers, ratings can't be refreshed, and THIRD_PARTY_LICENSES.md #5 says both rating sets are unlicensed. If permission comes, lift `NEVER` in `fetching.py`, add a fetch step for the index and each blade page, and keep the delay and cache.
+- **Each blade rating says "Source: RevSpin" with a link** to the blade's RevSpin page, in both languages. No review text is stored or shown; the one-line summary is ours, built from the numbers (`blades.summary` in the message files).
+- **Specs are only what a page states.** Plies, weight, composition and handles come from Butterfly's specification page, six Shopify stores' public catalogs and Paddle Palace's blade pages. A field no source states is empty, and a handle no blade has is not offered as a filter. Coverage of the 562 blades:
+
+| Field | Blades with it |
+| --- | ---: |
+| Plies | 88 |
+| Weight | 56 |
+| Composition (wood, inner, outer or composite) | 89 |
+| Handles | 98 |
+| At least one verified US store link | 125 |
+| Hardness | 3 |
+
+  Coverage is low because many of the 562 are discontinued or sold outside these stores, not because of the matching (names must match exactly, so a different model never borrows another's specs). Among the 100 most-rated blades it is better: 33 have plies, 29 handles, 37 a link. The Handle filter therefore hides every blade with no handle data and says how many it hid ("N more fit but we have no handle information").
+- **Beginner rule:** a beginner never sees a carbon or fibre blade with speed 8.5 or more. Carbon is the stored composition when known; when it isn't, the blade's name decides (ALC, ZLC, Carbon, Kevlar, Innerforce...) and the card says "from the name". That inference is never written to the data.
+- **Budget:** the Finder's budget covers the blade and one rubber. About 60% is planned for the blade (at least $20 is always kept for a rubber), blades are ranked in $20 steps down from that, best rated first. Without this, the top-ranked blades used almost the whole budget and left $20 for the paired rubber. The 60%, $20 and $20 are `BLADE_SHARE`, `RUBBER_RESERVE` and `BAND` in `lib/blade-types.ts`. Style is the stiffness side (spin: stiffness 5.8 or less; speed: 4.8 or more), level is a speed range plus a control floor, feel compares speed with control.
+- **Buy links:** same rules as the rubbers (affiliate tags from the same `NEXT_PUBLIC_*` variables, tagged stores first, official stores preferred, other Amazon sellers last and dropped at more than 30% below the reference price, the same disclosure). `BuyMenu` (was `RubberBuyMenu`) is shared. **No Amazon blade link is in yet**: Amazon shows a bot check to scripts. `docs/amazon_blades_todo.md` lists the top blades with the steps for checking the official storefronts in a browser; `python3 scripts/check_buy_links.py --blades` never fetches Amazon. Butterfly's US shop pages are off by default because it answered 429 even at 30 s between requests; Paddle Palace's agent guide asks agents to identify themselves and use public pages found through its sitemap, which the fetcher does (its own name, no Web Bot Auth).
+- **Vietnamese:** blade = cốt vợt. New terms (cán vợt, cán loe FL, cán thẳng ST, cán giải phẫu AN, cán cầm dọc, độ cứng, lớp, toàn gỗ) are in `docs/glossary_vi.md` as proposals for the Vietnamese coach, not settled.
+- **Refresh:** `cd backend && .venv/bin/python -m equipment.build_blades` (cached pages, one request every 2 s for anything new), then `cd ../frontend && npm test`. `--offline` rebuilds from the cache only.
+
 ## English and Vietnamese (2026-11-23)
 
 - **How it works:** the site is bilingual through next-intl, with no locale in the URL. The `NEXT_LOCALE` cookie wins, then Accept-Language, then English. The EN / VI toggle sits beside the theme toggle on every page. All UI text is in `frontend/messages/en.json` and `vi.json`, which must keep the same keys; `test/i18n.test.ts` checks this.

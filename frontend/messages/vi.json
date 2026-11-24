@@ -99,7 +99,9 @@
     "pickStyle": "Hãy chọn xoáy hoặc tốc độ.",
     "pickType": "Hãy chọn loại mặt vợt.",
     "pickLevel": "Hãy chọn trình độ của bạn.",
-    "budget": "Hãy nhập ngân sách từ {min} đến {max}."
+    "budget": "Hãy nhập ngân sách từ {min} đến {max}.",
+    "pickHandle": "Hãy chọn loại cán trong danh sách.",
+    "pickFeel": "Hãy chọn cảm giác bạn muốn."
   },
   "validation": {
     "or": "{list} hoặc {last}",
@@ -598,7 +600,8 @@
   "gear": {
     "rubbers": "Tìm mặt vợt",
     "pros": "Dụng cụ của VĐV",
-    "tabs": "Các trang dụng cụ"
+    "tabs": "Các trang dụng cụ",
+    "blades": "Tìm cốt vợt"
   },
   "rubbers": {
     "eyebrow": "Tìm mặt vợt",
@@ -666,7 +669,8 @@
       "Ma Lin": "Đã giải nghệ; bộ dụng cụ thời còn thi đấu.",
       "Kuai Man": "Chỉ có một danh sách không rõ ngày.",
       "Sabine Winter": "Trang VĐV của cô ghi mặt trái tay là Rasanter R53 mặt trơn, không phải chống xoáy. Chúng tôi chưa tìm thấy nguồn nào cho mặt trái tay chống xoáy."
-    }
+    },
+    "bladeLink": "Đánh giá và nơi mua"
   },
   "buy": {
     "amazonOther": "Amazon (người bán khác)",
@@ -680,7 +684,8 @@
     "stores": "Cửa hàng tại Mỹ bán {product}",
     "linkLabel": "{action}: {product} tại {store}{unverified}",
     "unverifiedSuffix": " (chưa xác minh)",
-    "alsoAt": "Cũng có tại"
+    "alsoAt": "Cũng có tại",
+    "noLink": "Chưa có liên kết cửa hàng tại Mỹ đã xác minh"
   },
   "serverErrors": {
     "unreadable": "Không đọc được tệp này dưới dạng video. Hãy xuất lại thành MP4 hoặc MOV rồi thử lại.",
@@ -761,5 +766,96 @@
       "compile": "Đang ghép phần phân tích của họ...",
       "done": "Bạn giống {name} nhất ({score}% vóc dáng)."
     }
+  },
+  "blades": {
+    "eyebrow": "Tìm cốt vợt",
+    "title": "Chọn cốt vợt",
+    "body": "Cho chúng tôi biết lối chơi và số tiền bạn muốn chi. Cốt vợt đắt hơn thường tốt hơn, nên chúng tôi bắt đầu gần ngân sách của bạn và xếp theo đánh giá của người đã dùng.",
+    "style": "Lối chơi",
+    "styles": {
+      "spin": "Xoáy",
+      "spinSub": "Mềm: giữ bóng lâu hơn để giật",
+      "speed": "Tốc độ",
+      "speedSub": "Cứng: đôi công và đánh nhanh"
+    },
+    "level": "Trình độ",
+    "levels": {
+      "beginner": "Mới chơi",
+      "intermediate": "Trung bình",
+      "advanced": "Nâng cao"
+    },
+    "handle": "Cán vợt",
+    "handles": {
+      "any": "Bất kỳ",
+      "FL": "Cán loe (FL)",
+      "ST": "Cán thẳng (ST)",
+      "AN": "Cán giải phẫu (AN)",
+      "CS": "Cầm dọc Trung Quốc (CS)",
+      "JP": "Cầm dọc Nhật (JP)",
+      "penhold": "Cầm dọc (CS / JP)",
+      "PH": "Cầm dọc"
+    },
+    "handleHint": "Chúng tôi chỉ ghi loại cán khi hãng hoặc một cửa hàng tại Mỹ nói cốt vợt có loại đó.",
+    "feel": "Cảm giác",
+    "feels": {
+      "any": "Bất kỳ",
+      "control": "Kiểm soát hơn",
+      "balanced": "Cân bằng",
+      "speed": "Nhanh hơn"
+    },
+    "budget": "Ngân sách cho cốt vợt và một mặt vợt",
+    "budgetHint": "Ngân sách gồm cốt vợt và một mặt vợt. Chúng tôi dành khoảng {share} cho cốt vợt (và luôn chừa {reserve} cho một mặt vợt), rồi xếp theo từng nấc {step} từ đó trở xuống, cốt được đánh giá cao nhất đứng đầu mỗi nấc.",
+    "loadFailed": "Không tải được cốt vợt. Hãy thử lại.",
+    "nothing": "Chưa có cốt vợt phù hợp. Hãy thử trình độ hoặc cảm giác khác.",
+    "noHandleInfo": "{n, plural, other {Còn # cốt vợt phù hợp nhưng chưa có thông tin về cán vợt.}}",
+    "ratings": "Tốc độ {speed} · Kiểm soát {control} · Độ cứng {stiffness}",
+    "score": "điểm {score}",
+    "source": "Nguồn:",
+    "sourceName": "RevSpin",
+    "ratingCount": "{n, plural, other {# lượt đánh giá}}",
+    "note": "Điểm là trung bình đánh giá của người dùng RevSpin trên thang 10. Giá là giá Mỹ gần đúng của RevSpin. Thông số lấy từ hãng và các cửa hàng tại Mỹ; thông số chưa xác nhận được thì để trống.",
+    "plies": "{n} lớp",
+    "weight": "{n} g",
+    "handlesList": "Cán: {list}",
+    "specsFrom": "Thông số: {site}",
+    "noSpecs": "Chưa xác nhận được thông số.",
+    "layers": {
+      "wood": "Toàn gỗ",
+      "inner": "Lớp {fiber} bên trong",
+      "outer": "Lớp {fiber} bên ngoài",
+      "composite": "Lớp sợi: {fiber}",
+      "inferred": "Có lớp carbon hoặc sợi (suy từ tên)"
+    },
+    "fibers": {
+      "carbon": "carbon",
+      "alc": "ALC",
+      "zlc": "ZLC",
+      "cnf": "CNF",
+      "kevlar": "Kevlar",
+      "glass": "sợi thủy tinh",
+      "other": "sợi composite"
+    },
+    "paces": {
+      "slow": "chậm hơn",
+      "medium": "tốc độ vừa",
+      "fast": "nhanh",
+      "veryFast": "rất nhanh"
+    },
+    "controls": {
+      "high": "kiểm soát cao",
+      "good": "kiểm soát tốt",
+      "fair": "kiểm soát vừa"
+    },
+    "flexes": {
+      "flexible": "mềm",
+      "medium": "độ cứng vừa",
+      "stiff": "cứng"
+    },
+    "summary": "Cốt vợt {pace}, {control}, cảm giác {flex}.",
+    "comboTitle": "Mặt vợt đi kèm",
+    "comboLeft": "Còn {amount} cho mặt vợt",
+    "comboHint": "Một mặt vợt, cùng lối chơi và trình độ. Một cây vợt cần hai mặt.",
+    "comboNone": "Không có mặt vợt nào vừa với {amount} còn lại.",
+    "openFinder": "Mở trang tìm cốt vợt"
   }
 }

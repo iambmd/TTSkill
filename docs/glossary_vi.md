@@ -106,3 +106,19 @@ Cách sửa một thuật ngữ: đổi ở đây, trong `backend/i18n.py` (`GLO
 | beginner | mới chơi | |
 | intermediate | trung bình | |
 | advanced | nâng cao | |
+
+## Cốt vợt (blades)
+
+Các dòng này dùng cho trang Tìm cốt vợt. Chưa có dòng nào được chốt; HLV hãy góp ý ở cột Ghi chú.
+
+| EN | VI | Ghi chú |
+| --- | --- | --- |
+| handle | cán vợt | Đề xuất, chờ HLV xác nhận. Phần cầm của cốt vợt. |
+| flared handle (FL) | cán loe (FL) | Đề xuất. Giữ ký hiệu FL như trên nhãn hãng. |
+| straight handle (ST) | cán thẳng (ST) | Đề xuất. Giữ ký hiệu ST. |
+| anatomic handle (AN) | cán giải phẫu (AN) | Đề xuất. Giữ ký hiệu AN. |
+| penhold handle (CS / JP) | cán cầm dọc (CS / JP) | Đề xuất. CS: kiểu Trung Quốc; JP: kiểu Nhật. |
+| stiffness (blade) | độ cứng (cốt vợt) | Đề xuất. Trên RevSpin: "mềm" = linh hoạt, giữ bóng lâu hơn; "cứng" = đánh thẳng, đôi công. |
+| plies | lớp | Đề xuất. "7 lớp" = số lớp gỗ và sợi. |
+| all-wood | toàn gỗ | Đề xuất. Cốt vợt không có lớp carbon hay sợi. |
+| carbon / fiber layers | lớp carbon / sợi | Đề xuất. Bên trong hoặc bên ngoài: "lớp carbon bên trong". |
